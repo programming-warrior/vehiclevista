@@ -19,9 +19,9 @@ export const mockVehicles: Vehicle[] = [
     longitude: -0.1278,
     category: "luxury",
     images: [
-      "https://images.unsplash.com/photo-1618418721668-0d1f72aa4bab",
-      "https://images.unsplash.com/photo-1581814706561-f5bbfa7d984a",
-      "https://images.unsplash.com/photo-1583573278124-e8d4fd3edf3c"
+      "https://images.unsplash.com/photo-1618418721668-0d1f72aa4bab?auto=format&fit=crop&w=800",
+      "https://images.unsplash.com/photo-1581814706561-f5bbfa7d984a?auto=format&fit=crop&w=800",
+      "https://images.unsplash.com/photo-1583573278124-e8d4fd3edf3c?auto=format&fit=crop&w=800"
     ]
   },
   {
@@ -42,9 +42,9 @@ export const mockVehicles: Vehicle[] = [
     longitude: -2.2426,
     category: "sports",
     images: [
-      "https://images.unsplash.com/photo-1532581140115-3e355d1ed1de",
-      "https://images.unsplash.com/photo-1593427934550-4742b652ac84",
-      "https://images.unsplash.com/photo-1606128031531-52ae98c9707a"
+      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800",
+      "https://images.unsplash.com/photo-1614200187524-dc4b892acf16?auto=format&fit=crop&w=800",
+      "https://images.unsplash.com/photo-1626668893632-6f3a4466d22f?auto=format&fit=crop&w=800"
     ]
   },
   {
@@ -65,9 +65,9 @@ export const mockVehicles: Vehicle[] = [
     longitude: -1.8904,
     category: "classic",
     images: [
-      "https://images.unsplash.com/photo-1505691730847-e62da813ed0e",
-      "https://images.unsplash.com/photo-1522775644932-1e20a2479066",
-      "https://images.unsplash.com/photo-1547731269-e4073e054f12"
+      "https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?auto=format&fit=crop&w=800",
+      "https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800",
+      "https://images.unsplash.com/photo-1587838155980-392e89172c44?auto=format&fit=crop&w=800"
     ]
   }
 ];
