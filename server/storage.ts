@@ -2,6 +2,7 @@ import type { Vehicle, InsertVehicle, SearchParams, User, InsertUser } from "@sh
 import { vehicles, users } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, and, or, between } from "drizzle-orm";
+import { apiKeys, type ApiKey, type InsertApiKey } from "@shared/schema";
 
 export interface IStorage {
   getVehicles(category?: string): Promise<Vehicle[]>;
@@ -13,6 +14,8 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser & { role?: string }): Promise<User>;
+  getApiKeys(): Promise<ApiKey[]>;
+  updateApiKey(name: string, key: string): Promise<ApiKey>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -121,6 +124,23 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return newUser;
+  }
+
+  async getApiKeys(): Promise<ApiKey[]> {
+    return await db.select().from(apiKeys);
+  }
+
+  async updateApiKey(name: string, key: string): Promise<ApiKey> {
+    const [updatedKey] = await db
+      .update(apiKeys)
+      .set({
+        key,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(apiKeys.name, name))
+      .returning();
+
+    return updatedKey;
   }
 }
 

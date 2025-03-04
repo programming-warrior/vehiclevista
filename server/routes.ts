@@ -148,5 +148,35 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // API Keys routes (admin only)
+  app.get("/api/keys", isAdmin, async (req, res) => {
+    try {
+      const keys = await storage.getApiKeys();
+      res.json(keys);
+    } catch (error) {
+      console.error("Error fetching API keys:", error);
+      res.status(500).json({ message: "Failed to fetch API keys" });
+    }
+  });
+
+  app.patch("/api/keys", isAdmin, async (req, res) => {
+    try {
+      const { name, key } = req.body;
+      if (!name || !key) {
+        return res.status(400).json({ message: "Name and key are required" });
+      }
+
+      const updatedKey = await storage.updateApiKey(name, key);
+
+      // Update environment variable
+      process.env[`${name.toUpperCase()}_API_KEY`] = key;
+
+      res.json(updatedKey);
+    } catch (error) {
+      console.error("Error updating API key:", error);
+      res.status(500).json({ message: "Failed to update API key" });
+    }
+  });
+
   return httpServer;
 }

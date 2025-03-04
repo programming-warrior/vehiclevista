@@ -31,6 +31,15 @@ export const users = pgTable("users", {
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
+export const apiKeys = pgTable("api_keys", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  key: text("key").notNull(),
+  description: text("description").notNull(),
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+  updatedAt: text("updated_at").notNull().default(new Date().toISOString()),
+});
+
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({ 
   id: true 
 });
@@ -44,10 +53,18 @@ export const insertUserSchema = createInsertSchema(users).omit({
   email: z.string().email("Invalid email address"),
 });
 
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
 
 export const searchSchema = z.object({
   query: z.string().optional(),
