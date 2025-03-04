@@ -2,7 +2,6 @@ import AdminLayout from "@/components/admin/admin-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import type { Vehicle } from "@shared/schema";
-import ApiKeyManager from "@/components/admin/api-key-manager";
 
 export default function AdminDashboard() {
   const { data: vehicles } = useQuery<Vehicle[]>({
@@ -23,27 +22,19 @@ export default function AdminDashboard() {
   return (
     <AdminLayout>
       <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
-
-      <div className="grid gap-8">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {stats.map((stat) => (
-            <Card key={stat.title}>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div>
-          <h2 className="text-2xl font-bold mb-4">API Key Management</h2>
-          <ApiKeyManager />
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {stats.map((stat) => (
+          <Card key={stat.title}>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {stat.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </AdminLayout>
   );

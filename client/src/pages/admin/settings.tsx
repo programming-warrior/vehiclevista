@@ -1,0 +1,51 @@
+import AdminLayout from "@/components/admin/admin-layout";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import ApiKeyManager from "@/components/admin/api-key-manager";
+
+export default function AdminSettings() {
+  return (
+    <AdminLayout>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Settings</h1>
+      </div>
+
+      <Tabs defaultValue="api" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="api">API Integration</TabsTrigger>
+          <TabsTrigger value="general">General</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="api" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>API Keys</CardTitle>
+              <CardDescription>
+                Manage API keys for external service integrations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ApiKeyManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="general">
+          <Card>
+            <CardHeader>
+              <CardTitle>General Settings</CardTitle>
+              <CardDescription>
+                Configure general application settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                General settings will be available soon.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </AdminLayout>
+  );
+}
