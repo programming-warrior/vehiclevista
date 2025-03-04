@@ -14,6 +14,10 @@ export default function VehicleGallery({ images, title }: GalleryProps) {
   const next = () => setActiveIndex((i) => (i + 1) % images.length);
   const prev = () => setActiveIndex((i) => (i - 1 + images.length) % images.length);
 
+  const getOptimizedImageUrl = (url: string, size: string) => {
+    return `${url}?auto=format&fit=crop&w=${size}&q=80`;
+  };
+
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement;
     target.src = "data:image/svg+xml," + encodeURIComponent(`
@@ -31,7 +35,7 @@ export default function VehicleGallery({ images, title }: GalleryProps) {
     <div className="relative group">
       <div className="aspect-video rounded-lg overflow-hidden bg-muted">
         <img
-          src={images[activeIndex]}
+          src={getOptimizedImageUrl(images[activeIndex], "1200")}
           alt={`${title} - Image ${activeIndex + 1}`}
           className="w-full h-full object-cover"
           onError={handleImageError}
@@ -71,7 +75,7 @@ export default function VehicleGallery({ images, title }: GalleryProps) {
             )}
           >
             <img 
-              src={image} 
+              src={getOptimizedImageUrl(image, "160")} 
               alt="" 
               className="w-full h-full object-cover"
               onError={handleImageError}

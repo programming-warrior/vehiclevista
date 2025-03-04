@@ -19,9 +19,9 @@ export const mockVehicles: Vehicle[] = [
     longitude: -0.1278,
     category: "luxury",
     images: [
-      "https://images.unsplash.com/photo-1616422285623-13ff0162193c?auto=format&fit=crop&w=800",
-      "https://images.unsplash.com/photo-1609619385002-f40f1df9b7eb?auto=format&fit=crop&w=800",
-      "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=800"
+      "https://images.unsplash.com/photo-1563720360172-67b8f3dce741",
+      "https://images.unsplash.com/photo-1605515298946-d864f4a4d715",
+      "https://images.unsplash.com/photo-1554222413-474187503de3"
     ]
   },
   {
@@ -42,9 +42,9 @@ export const mockVehicles: Vehicle[] = [
     longitude: -2.2426,
     category: "sports",
     images: [
-      "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=800",
-      "https://images.unsplash.com/photo-1611016186353-9af58c69a533?auto=format&fit=crop&w=800",
-      "https://images.unsplash.com/photo-1611651338412-8403fa6e3599?auto=format&fit=crop&w=800"
+      "https://images.unsplash.com/photo-1503376780353-7e6692767b70",
+      "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d",
+      "https://images.unsplash.com/photo-1582134133410-c9e3cc35f7d0"
     ]
   },
   {
@@ -65,9 +65,9 @@ export const mockVehicles: Vehicle[] = [
     longitude: -1.8904,
     category: "classic",
     images: [
-      "https://images.unsplash.com/photo-1567784177951-6fa58317e16b?auto=format&fit=crop&w=800",
-      "https://images.unsplash.com/photo-1581059686228-c10d7cd37dd0?auto=format&fit=crop&w=800",
-      "https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800"
+      "https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd",
+      "https://images.unsplash.com/photo-1621800043295-a73fe2f76e2c",
+      "https://images.unsplash.com/photo-1583121274602-3e2820c69888"
     ]
   },
   {
@@ -88,9 +88,9 @@ export const mockVehicles: Vehicle[] = [
     longitude: -3.1883,
     category: "suv",
     images: [
-      "https://images.unsplash.com/photo-1617469767053-3f7c82b426f4?auto=format&fit=crop&w=800",
-      "https://images.unsplash.com/photo-1616422285623-13ff0162193c?auto=format&fit=crop&w=800",
-      "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?auto=format&fit=crop&w=800"
+      "https://images.unsplash.com/photo-1555215695-3004980ad54e",
+      "https://images.unsplash.com/photo-1549399542-7e3f8b79c341",
+      "https://images.unsplash.com/photo-1506015391300-4802dc74de2e"
     ]
   },
   {
@@ -111,9 +111,9 @@ export const mockVehicles: Vehicle[] = [
     longitude: -1.5491,
     category: "van",
     images: [
-      "https://images.unsplash.com/photo-1631793740332-49a6b399f6ef?auto=format&fit=crop&w=800",
-      "https://images.unsplash.com/photo-1632923047346-3f9f35cf3a6f?auto=format&fit=crop&w=800",
-      "https://images.unsplash.com/photo-1632923048791-89b6fab7dc2a?auto=format&fit=crop&w=800"
+      "https://images.unsplash.com/photo-1558185348-c1f6e23de77c",
+      "https://images.unsplash.com/photo-1559416523-140ddc3d238c",
+      "https://images.unsplash.com/photo-1586190848861-99aa4a171e90"
     ]
   }
 ];

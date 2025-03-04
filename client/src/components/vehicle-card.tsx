@@ -13,7 +13,7 @@ export default function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
         <CardContent className="p-0">
           <AspectRatio ratio={16/9}>
             <img 
-              src={vehicle.images[0]} 
+              src={`${vehicle.images[0]}?auto=format&fit=crop&w=800&q=80`}
               alt={vehicle.title}
               className="object-cover w-full h-full rounded-t-lg"
               onError={(e) => {
