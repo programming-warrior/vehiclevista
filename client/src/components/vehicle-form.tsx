@@ -36,6 +36,18 @@ const conditions = [
   { value: "catN", label: "Cat N (Non-Structural Damage)" },
 ];
 
+const categories = [
+  { value: "dealer", label: "Dealer Listing" },
+  { value: "classified", label: "Classified (Private Sale)" },
+  { value: "auction", label: "Auction" },
+];
+
+const contactPreferences = [
+  { value: "phone", label: "Phone Only" },
+  { value: "email", label: "Email Only" },
+  { value: "both", label: "Both Phone & Email" },
+];
+
 export default function VehicleForm({
   defaultValues,
   onSubmit,
@@ -59,10 +71,12 @@ export default function VehicleForm({
       latitude: 0,
       longitude: 0,
       images: [],
-      category: "",
+      category: "classified", // Default to classified
       openToPX: false,
       condition: "clean",
       sellerType: "private",
+      contactPreference: "both",
+      negotiable: true,
       sellerId: 0, // This will be set from the logged-in user
       ...defaultValues,
     },
@@ -101,13 +115,27 @@ export default function VehicleForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="title"
+            name="category"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Title</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
+                <FormLabel>Listing Type</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select listing type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Choose 'Classified' for private sale listings
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -163,6 +191,33 @@ export default function VehicleForm({
 
           <FormField
             control={form.control}
+            name="contactPreference"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Contact Preference</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select contact preference" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {contactPreferences.map((pref) => (
+                      <SelectItem key={pref.value} value={pref.value}>
+                        {pref.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
             name="openToPX"
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
@@ -176,6 +231,27 @@ export default function VehicleForm({
                   <FormLabel>Open to Part Exchange (PX)</FormLabel>
                   <FormDescription>
                     Check this if you're willing to consider vehicle part exchanges
+                  </FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="negotiable"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Price Negotiable</FormLabel>
+                  <FormDescription>
+                    Check this if you're open to price negotiations
                   </FormDescription>
                 </div>
               </FormItem>

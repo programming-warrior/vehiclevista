@@ -21,8 +21,13 @@ export default function Navbar() {
           Auto World Trader
         </Link>
 
-        <div className="hidden md:block flex-1 max-w-xl mx-8">
-          <SearchBar />
+        <div className="hidden md:flex items-center gap-4">
+          <Link href="/classified">
+            <Button variant="ghost">Classified Cars</Button>
+          </Link>
+          <div className="w-[300px]">
+            <SearchBar />
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -54,7 +59,12 @@ export default function Navbar() {
       </div>
 
       <div className="md:hidden border-t p-4">
-        <SearchBar />
+        <div className="flex flex-col gap-4">
+          <Link href="/classified">
+            <Button variant="ghost" className="w-full">Classified Cars</Button>
+          </Link>
+          <SearchBar />
+        </div>
       </div>
     </nav>
   );

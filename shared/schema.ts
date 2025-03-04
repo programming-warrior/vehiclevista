@@ -2,7 +2,7 @@ import { pgTable, text, serial, boolean, real, integer, timestamp, jsonb } from 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Keep existing tables unchanged
+// Update vehicles table with classified listing fields
 export const vehicles = pgTable("vehicles", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -20,11 +20,14 @@ export const vehicles = pgTable("vehicles", {
   latitude: real("latitude").notNull(),
   longitude: real("longitude").notNull(),
   images: text("images").array().notNull(),
-  category: text("category").notNull(),
+  category: text("category").notNull(), // 'dealer', 'classified', 'auction'
   condition: text("condition").default("clean"), // clean, catS, catN
   openToPX: boolean("open_to_px").default(false),
   sellerId: integer("seller_id").notNull(),
   sellerType: text("seller_type").notNull(), // private, trader, garage
+  contactPreference: text("contact_preference"), // 'phone', 'email', 'both'
+  listingStatus: text("listing_status").default("active"), // 'active', 'sold', 'expired'
+  negotiable: boolean("negotiable").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   views: integer("views").default(0),
   clicks: integer("clicks").default(0),
@@ -169,7 +172,6 @@ export const insertBulkUploadSchema = createInsertSchema(bulkUploads).omit({
   errors: true,
   createdAt: true,
 });
-
 
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;

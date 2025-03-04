@@ -15,6 +15,7 @@ import AdminDashboard from "@/pages/admin";
 import AdminVehicles from "@/pages/admin/vehicles";
 import AdminSettings from "@/pages/admin/settings";
 import AdminUsers from "@/pages/admin/users";
+import Classified from "@/pages/classified";
 
 export default function App() {
   return (
@@ -29,6 +30,9 @@ export default function App() {
               </Route>
               <Route path="/signin">
                 <SignIn />
+              </Route>
+              <Route path="/classified">
+                <Classified />
               </Route>
               <Route path="/admin/vehicles">
                 <ProtectedRoute 
