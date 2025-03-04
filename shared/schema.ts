@@ -20,9 +20,8 @@ export const vehicles = pgTable("vehicles", {
   longitude: real("longitude").notNull(),
   images: text("images").array().notNull(),
   category: text("category").notNull(),
-  // New fields for PX and condition
+  // Only keep PX option
   openToPX: boolean("open_to_px").default(false),
-  condition: text("condition").default("clean"), // clean, catS, catN
   sellerId: integer("seller_id").notNull(),
   sellerType: text("seller_type").notNull(), // private, trader, garage
   createdAt: timestamp("created_at").defaultNow(),
@@ -94,8 +93,6 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({
   clicks: true,
   leads: true,
   createdAt: true,
-}).extend({
-  condition: z.enum(["clean", "catS", "catN"]).default("clean"),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
