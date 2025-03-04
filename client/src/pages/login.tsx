@@ -10,7 +10,7 @@ export default function LoginPage() {
   const { login, user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm({
+  const { register, handleSubmit, formState: { isSubmitting, errors }, setError } = useForm({
     defaultValues: {
       username: "",
       password: ""
@@ -27,8 +27,8 @@ export default function LoginPage() {
     try {
       await login(data.username, data.password);
       setLocation("/admin");
-    } catch (error) {
-      // Error is handled by the useAuth hook
+    } catch (error: any) {
+      setError("root", { message: error.message });
     }
   };
 
@@ -47,8 +47,10 @@ export default function LoginPage() {
                 {...register("username", { required: "Username is required" })}
                 type="text"
                 placeholder="Enter your username"
-                error={errors.username?.message}
               />
+              {errors.username && (
+                <p className="text-sm text-destructive">{errors.username.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -57,9 +59,14 @@ export default function LoginPage() {
                 {...register("password", { required: "Password is required" })}
                 type="password"
                 placeholder="Enter your password"
-                error={errors.password?.message}
               />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
             </div>
+            {errors.root && (
+              <p className="text-sm text-destructive text-center">{errors.root.message}</p>
+            )}
             <Button
               type="submit"
               className="w-full"
