@@ -3,6 +3,7 @@ import { createServer } from "http";
 import { storage } from "./storage";
 import { searchSchema, insertVehicleSchema } from "@shared/schema";
 import { setupAuth } from "./auth";
+import fetch from 'node-fetch'; // Added import for node-fetch
 
 // Middleware to check if user is admin
 const isAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
@@ -106,6 +107,45 @@ export async function registerRoutes(app: Express) {
 
     const vehicles = await storage.searchVehicles(result.data);
     res.json(vehicles);
+  });
+
+  // Add vehicle lookup endpoint (admin only)
+  app.post("/api/vehicles/lookup", isAdmin, async (req, res) => {
+    try {
+      const { registrationNumber } = req.body;
+
+      if (!process.env.DVSA_API_KEY) {
+        return res.status(500).json({ message: "DVSA API key not configured" });
+      }
+
+      const response = await fetch("https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles", {
+        method: "POST",
+        headers: {
+          "x-api-key": process.env.DVSA_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ registrationNumber }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch vehicle details");
+      }
+
+      const data = await response.json();
+
+      res.json({
+        registrationNumber: data.registrationNumber,
+        make: data.make,
+        model: data.model,
+        yearOfManufacture: data.yearOfManufacture,
+        engineCapacity: data.engineCapacity,
+        fuelType: data.fuelType,
+        color: data.colour,
+      });
+    } catch (error) {
+      console.error("DVLA lookup error:", error);
+      res.status(500).json({ message: "Failed to lookup vehicle details" });
+    }
   });
 
   return httpServer;

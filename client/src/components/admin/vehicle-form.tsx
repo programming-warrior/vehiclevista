@@ -20,9 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image, Plus, X, Loader2 } from "lucide-react";
+import { Image, Plus, X, Loader2, Search } from "lucide-react";
 import { categories, makes, bodyTypes } from "@/lib/mock-data";
 import { optimizeImages } from "@/lib/image-optimizer";
+import { lookupVehicle } from "@/lib/dvsa-service";
+import { useToast } from "@/hooks/use-toast";
 
 interface VehicleFormProps {
   defaultValues?: Partial<InsertVehicle>;
@@ -36,6 +38,9 @@ export default function VehicleForm({
   isSubmitting,
 }: VehicleFormProps) {
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const { toast } = useToast();
+  const [registrationNumber, setRegistrationNumber] = useState("");
 
   const form = useForm<InsertVehicle>({
     resolver: zodResolver(insertVehicleSchema),
@@ -59,6 +64,43 @@ export default function VehicleForm({
       ...defaultValues,
     },
   });
+
+  const handleLookup = async () => {
+    if (!registrationNumber) {
+      toast({
+        title: "Error",
+        description: "Please enter a registration number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLookingUp(true);
+    try {
+      const vehicleDetails = await lookupVehicle(registrationNumber);
+
+      // Update form with fetched details
+      form.setValue("make", vehicleDetails.make);
+      form.setValue("model", vehicleDetails.model);
+      form.setValue("year", vehicleDetails.yearOfManufacture);
+      form.setValue("fuelType", vehicleDetails.fuelType.toLowerCase());
+      form.setValue("color", vehicleDetails.color);
+      form.setValue("title", `${vehicleDetails.year} ${vehicleDetails.make} ${vehicleDetails.model}`);
+
+      toast({
+        title: "Success",
+        description: "Vehicle details fetched successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch vehicle details",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
 
   const handleImageAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -90,6 +132,34 @@ export default function VehicleForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <FormItem>
+              <FormLabel>Registration Number</FormLabel>
+              <div className="flex gap-2">
+                <Input
+                  value={registrationNumber}
+                  onChange={(e) => setRegistrationNumber(e.target.value.toUpperCase())}
+                  placeholder="Enter registration"
+                  className="uppercase"
+                />
+                <Button
+                  type="button"
+                  onClick={handleLookup}
+                  disabled={isLookingUp}
+                  variant="secondary"
+                >
+                  {isLookingUp ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </FormItem>
+          </div>
+        </div>
+
         <FormField
           control={form.control}
           name="title"
