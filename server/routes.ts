@@ -1,8 +1,19 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { searchSchema } from "@shared/schema";
+import { searchSchema, insertVehicleSchema } from "@shared/schema";
 import { setupAuth } from "./auth";
+
+// Middleware to check if user is admin
+const isAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ message: "Access denied. Admin privileges required." });
+  }
+  next();
+};
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -30,6 +41,52 @@ export async function registerRoutes(app: Express) {
     }
 
     res.json(vehicle);
+  });
+
+  // Create new vehicle (admin only)
+  app.post("/api/vehicles", isAdmin, async (req, res) => {
+    const result = insertVehicleSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ message: "Invalid vehicle data" });
+    }
+
+    const vehicle = await storage.createVehicle(result.data);
+    res.status(201).json(vehicle);
+  });
+
+  // Update vehicle (admin only)
+  app.patch("/api/vehicles/:id", isAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
+
+    const result = insertVehicleSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ message: "Invalid vehicle data" });
+    }
+
+    const vehicle = await storage.updateVehicle(id, result.data);
+    if (!vehicle) {
+      return res.status(404).json({ message: "Vehicle not found" });
+    }
+
+    res.json(vehicle);
+  });
+
+  // Delete vehicle (admin only)
+  app.delete("/api/vehicles/:id", isAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
+
+    const success = await storage.deleteVehicle(id);
+    if (!success) {
+      return res.status(404).json({ message: "Vehicle not found" });
+    }
+
+    res.sendStatus(204);
   });
 
   // Search vehicles
