@@ -5,6 +5,7 @@ import ApiKeyManager from "@/components/admin/api-key-manager";
 import RolePermissions from "@/components/admin/role-permissions";
 import PerformanceReport from "@/components/admin/performance-report";
 import BulkUpload from "@/components/admin/bulk-upload";
+import PricingPackages from "@/components/packages/pricing-packages";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function AdminSettings() {
@@ -23,7 +24,10 @@ export default function AdminSettings() {
           <TabsTrigger value="permissions">Role Permissions</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
           {isTraderOrGarage && (
-            <TabsTrigger value="inventory">Inventory Management</TabsTrigger>
+            <>
+              <TabsTrigger value="inventory">Inventory Management</TabsTrigger>
+              <TabsTrigger value="packages">Packages</TabsTrigger>
+            </>
           )}
           <TabsTrigger value="general">General</TabsTrigger>
         </TabsList>
@@ -71,19 +75,35 @@ export default function AdminSettings() {
         </TabsContent>
 
         {isTraderOrGarage && (
-          <TabsContent value="inventory" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Bulk Upload</CardTitle>
-                <CardDescription>
-                  Upload multiple vehicle listings at once using CSV or Excel files
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <BulkUpload />
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <>
+            <TabsContent value="inventory" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Bulk Upload</CardTitle>
+                  <CardDescription>
+                    Upload multiple vehicle listings at once using CSV or Excel files
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <BulkUpload />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="packages" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Available Packages</CardTitle>
+                  <CardDescription>
+                    Choose a listing package that suits your needs
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PricingPackages />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </>
         )}
 
         <TabsContent value="general">

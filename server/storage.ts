@@ -5,6 +5,9 @@ import { eq, ilike, and, or, between, desc } from "drizzle-orm";
 import { apiKeys, type ApiKey, type InsertApiKey } from "@shared/schema";
 import { rolePermissions, type RolePermission } from "@shared/schema";
 import { bulkUploads, type BulkUpload, type InsertBulkUpload } from "@shared/schema";
+import type { Package, InsertPackage, UserPackage, InsertUserPackage } from "@shared/schema"; // Assuming these types are defined elsewhere
+import { packages, userPackages } from "@shared/schema"; // Assuming these tables are defined elsewhere
+
 
 export interface IStorage {
   getVehicles(category?: string): Promise<Vehicle[]>;
@@ -28,6 +31,10 @@ export interface IStorage {
   createBulkUpload(upload: InsertBulkUpload): Promise<BulkUpload>;
   getBulkUploads(userId: number): Promise<BulkUpload[]>;
   updateBulkUpload(id: number, data: Partial<BulkUpload>): Promise<BulkUpload>;
+  getPackages(): Promise<Package[]>;
+  createPackage(data: InsertPackage): Promise<Package>;
+  getUserPackages(userId: number): Promise<UserPackage[]>;
+  createUserPackage(data: InsertUserPackage): Promise<UserPackage>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -248,6 +255,32 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bulkUploads.id, id))
       .returning();
     return updated;
+  }
+  async getPackages(): Promise<Package[]> {
+    return await db.select().from(packages);
+  }
+
+  async createPackage(data: InsertPackage): Promise<Package> {
+    const [newPackage] = await db
+      .insert(packages)
+      .values(data)
+      .returning();
+    return newPackage;
+  }
+
+  async getUserPackages(userId: number): Promise<UserPackage[]> {
+    return await db
+      .select()
+      .from(userPackages)
+      .where(eq(userPackages.userId, userId));
+  }
+
+  async createUserPackage(data: InsertUserPackage): Promise<UserPackage> {
+    const [newUserPackage] = await db
+      .insert(userPackages)
+      .values(data)
+      .returning();
+    return newUserPackage;
   }
 }
 

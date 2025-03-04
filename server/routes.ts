@@ -389,6 +389,50 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // Add to the existing routes file, after the existing routes
+  app.get("/api/packages", async (req, res) => {
+    try {
+      const packages = await storage.getPackages();
+      res.json(packages);
+    } catch (error) {
+      console.error("Error fetching packages:", error);
+      res.status(500).json({ message: "Failed to fetch packages" });
+    }
+  });
+
+  app.post("/api/user-packages", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const userPackage = await storage.createUserPackage({
+        ...req.body,
+        userId: req.user.id,
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + req.body.duration * 24 * 60 * 60 * 1000).toISOString(),
+      });
+      res.status(201).json(userPackage);
+    } catch (error) {
+      console.error("Error creating user package:", error);
+      res.status(500).json({ message: "Failed to create user package" });
+    }
+  });
+
+  app.get("/api/user-packages", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const userPackages = await storage.getUserPackages(req.user.id);
+      res.json(userPackages);
+    } catch (error) {
+      console.error("Error fetching user packages:", error);
+      res.status(500).json({ message: "Failed to fetch user packages" });
+    }
+  });
+
   return httpServer;
 }
 

@@ -2,6 +2,7 @@ import { pgTable, text, serial, boolean, real, integer, timestamp, jsonb } from 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Keep existing tables unchanged
 export const vehicles = pgTable("vehicles", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -45,8 +46,54 @@ export const users = pgTable("users", {
   monthlyAllowance: integer("monthly_allowance"), // number of listings allowed per month
   usedAllowance: integer("used_allowance").default(0),
   performanceTracking: jsonb("performance_tracking").default("{}"), // Add performance tracking field
-
 });
+
+// Update packages table with new structure
+export const packages = pgTable("packages", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // 'standard_2week', 'standard_4week', 'ultra'
+  basePrice: integer("base_price").notNull(),
+  vehicleValueThresholds: jsonb("vehicle_value_thresholds").notNull(), // Array of price tiers
+  duration: integer("duration").notNull(), // in days (14, 28, or 365 for ultra)
+  features: jsonb("features").array().notNull(),
+  isUltra: boolean("is_ultra").default(false),
+  relistingPeriod: integer("relisting_period"), // in days, for ultra package
+  youtubeShowcase: boolean("youtube_showcase").default(false),
+  premiumPlacement: boolean("premium_placement").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Add user packages table
+export const userPackages = pgTable("user_packages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  packageId: integer("package_id").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  vehicleValue: integer("vehicle_value").notNull(),
+  finalPrice: integer("final_price").notNull(),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Add package-related schemas
+export const insertPackageSchema = createInsertSchema(packages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserPackageSchema = createInsertSchema(userPackages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Add package-related types
+export type Package = typeof packages.$inferSelect;
+export type InsertPackage = z.infer<typeof insertPackageSchema>;
+export type UserPackage = typeof userPackages.$inferSelect;
+export type InsertUserPackage = z.infer<typeof insertUserPackageSchema>;
+
 
 export const bulkUploads = pgTable("bulk_uploads", {
   id: serial("id").primaryKey(),
@@ -56,17 +103,6 @@ export const bulkUploads = pgTable("bulk_uploads", {
   totalVehicles: integer("total_vehicles"),
   processedVehicles: integer("processed_vehicles").default(0),
   errors: jsonb("errors").array(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const packages = pgTable("packages", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  type: text("type").notNull(), // standard, premium, enterprise
-  price: integer("price").notNull(),
-  duration: integer("duration").notNull(), // in months
-  monthlyAllowance: integer("monthly_allowance").notNull(),
-  features: jsonb("features").array(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -89,7 +125,7 @@ export const apiKeys = pgTable("api_keys", {
   updatedAt: text("updated_at").notNull().default(new Date().toISOString()),
 });
 
-export const insertVehicleSchema = createInsertSchema(vehicles).omit({ 
+export const insertVehicleSchema = createInsertSchema(vehicles).omit({
   id: true,
   views: true,
   clicks: true,
@@ -134,10 +170,6 @@ export const insertBulkUploadSchema = createInsertSchema(bulkUploads).omit({
   createdAt: true,
 });
 
-export const insertPackageSchema = createInsertSchema(packages).omit({
-  id: true,
-  createdAt: true,
-});
 
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
@@ -149,8 +181,9 @@ export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 export type BulkUpload = typeof bulkUploads.$inferSelect;
 export type InsertBulkUpload = z.infer<typeof insertBulkUploadSchema>;
-export type Package = typeof packages.$inferSelect;
-export type InsertPackage = z.infer<typeof insertPackageSchema>;
+
+export type UserPackage = typeof userPackages.$inferSelect;
+export type InsertUserPackage = z.infer<typeof insertUserPackageSchema>;
 
 export const searchSchema = z.object({
   query: z.string().optional(),
