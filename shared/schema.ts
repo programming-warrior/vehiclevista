@@ -22,12 +22,28 @@ export const vehicles = pgTable("vehicles", {
   category: text("category").notNull(),
 });
 
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  isAdmin: boolean("is_admin").notNull().default(false),
+});
+
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({ 
   id: true 
 });
 
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  isAdmin: true,
+}).extend({
+  password: z.string().min(6, "Password must be at least 6 characters")
+});
+
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
 
 export const searchSchema = z.object({
   query: z.string().optional(),

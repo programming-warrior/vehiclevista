@@ -1,10 +1,13 @@
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
+import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/toaster";
+import { ProtectedRoute } from "@/lib/protected-route";
 import Home from "@/pages/home";
 import Vehicle from "@/pages/vehicle";
 import Search from "@/pages/search";
+import Login from "@/pages/login";
 import Navbar from "@/components/navbar";
 import NotFound from "@/pages/not-found";
 import AdminDashboard from "@/pages/admin";
@@ -16,33 +19,40 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/vehicle/:id" component={Vehicle} />
       <Route path="/search" component={Search} />
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/vehicles" component={AdminVehicles} />
+      <Route path="/login" component={Login} />
+      <Route path="/admin">
+        <ProtectedRoute component={AdminDashboard} adminOnly />
+      </Route>
+      <Route path="/admin/vehicles">
+        <ProtectedRoute component={AdminVehicles} adminOnly />
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-background">
-        {/* Only show Navbar if not in admin routes */}
-        <Switch>
-          <Route path="/admin/*">
-            <Router />
-          </Route>
-          <Route>
-            <Navbar />
-            <main className="container mx-auto px-4 py-8">
+      <AuthProvider>
+        <div className="min-h-screen bg-background">
+          <Switch>
+            <Route path="/admin/*">
               <Router />
-            </main>
-          </Route>
-        </Switch>
-      </div>
-      <Toaster />
+            </Route>
+            <Route path="/login">
+              <Router />
+            </Route>
+            <Route>
+              <Navbar />
+              <main className="container mx-auto px-4 py-8">
+                <Router />
+              </main>
+            </Route>
+          </Switch>
+        </div>
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
-
-export default App;

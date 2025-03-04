@@ -2,9 +2,13 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import { searchSchema } from "@shared/schema";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
+
+  // Set up authentication routes and middleware
+  setupAuth(app);
 
   // Get all vehicles with optional category filter
   app.get("/api/vehicles", async (req, res) => {
@@ -17,11 +21,11 @@ export async function registerRoutes(app: Express) {
   app.get("/api/vehicles/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const vehicle = await storage.getVehicle(id);
-    
+
     if (!vehicle) {
       return res.status(404).json({ message: "Vehicle not found" });
     }
-    
+
     res.json(vehicle);
   });
 

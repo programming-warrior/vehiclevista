@@ -1,5 +1,5 @@
-import type { Vehicle, InsertVehicle, SearchParams } from "@shared/schema";
-import { vehicles } from "@shared/schema";
+import type { Vehicle, InsertVehicle, SearchParams, User, InsertUser } from "@shared/schema";
+import { vehicles, users } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, and, or, between } from "drizzle-orm";
 
@@ -8,6 +8,9 @@ export interface IStorage {
   getVehicle(id: number): Promise<Vehicle | undefined>;
   searchVehicles(params: SearchParams): Promise<Vehicle[]>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -58,10 +61,6 @@ export class DatabaseStorage implements IStorage {
       conditions.push(
         between(vehicles.price, params.minPrice, params.maxPrice)
       );
-    } else if (params.minPrice !== undefined) {
-      conditions.push(and(vehicles.price >= params.minPrice));
-    } else if (params.maxPrice !== undefined) {
-      conditions.push(and(vehicles.price <= params.maxPrice));
     }
 
     return await db
@@ -76,6 +75,30 @@ export class DatabaseStorage implements IStorage {
       .values(vehicle)
       .returning();
     return newVehicle;
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db
+      .insert(users)
+      .values(user)
+      .returning();
+    return newUser;
   }
 }
 
