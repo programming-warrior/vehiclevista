@@ -1,13 +1,13 @@
 import sharp from 'sharp';
 
-interface OptimizationOptions {
+export interface OptimizationOptions {
   maxWidth?: number;
   maxHeight?: number;
   quality?: number;
   format?: 'jpeg' | 'webp' | 'png';
 }
 
-interface OptimizedImage {
+export interface OptimizedImage {
   original: {
     width: number;
     height: number;
@@ -100,7 +100,7 @@ export async function optimizeImage(
 }
 
 export async function optimizeMultipleImages(
-  files: FileList,
+  files: FileList | File[],
   options?: OptimizationOptions
 ): Promise<OptimizedImage[]> {
   const optimizationPromises = Array.from(files).map(file => 
@@ -108,6 +108,9 @@ export async function optimizeMultipleImages(
   );
   return Promise.all(optimizationPromises);
 }
+
+// Backward compatibility export
+export const optimizeImages = optimizeMultipleImages;
 
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes';

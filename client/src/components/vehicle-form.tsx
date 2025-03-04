@@ -78,25 +78,41 @@ export default function VehicleForm({
     }
   };
 
-  const handleOptimized = (optimizedImages: OptimizedImage[]) => {
-    const optimizedFiles = optimizedImages.map(async (img) => {
-      const response = await fetch(img.optimized.url);
-      const blob = await response.blob();
-      return new File([blob], "optimized_image.webp", { type: "image/webp" });
-    });
+  const handleOptimized = async (optimizedImages: OptimizedImage[]) => {
+    try {
+      const optimizedFiles = await Promise.all(
+        optimizedImages.map(async (img) => {
+          const response = await fetch(img.optimized.url);
+          const blob = await response.blob();
+          return new File([blob], "optimized_image.webp", { type: "image/webp" });
+        })
+      );
 
-    Promise.all(optimizedFiles).then((files) => {
-      setSelectedFiles(files);
-      form.setValue("images", files);
-    });
+      form.setValue("images", optimizedFiles.map(file => URL.createObjectURL(file)));
+      setSelectedFiles(optimizedFiles);
+    } catch (error) {
+      console.error("Error processing optimized images:", error);
+    }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {/* Existing form fields */}
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        {/* New fields for PX and condition */}
+
         <FormField
           control={form.control}
           name="openToPX"
@@ -155,7 +171,7 @@ export default function VehicleForm({
                   multiple
                   accept="image/*"
                   onChange={handleFileSelect}
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                 />
               </FormControl>
               <FormDescription>
@@ -170,6 +186,7 @@ export default function VehicleForm({
           {isSubmitting ? "Saving..." : "Save Vehicle"}
         </Button>
       </form>
+
       <ImageOptimizerDialog
         images={selectedFiles}
         onOptimized={handleOptimized}
