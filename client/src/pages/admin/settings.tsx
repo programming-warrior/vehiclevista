@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import ApiKeyManager from "@/components/admin/api-key-manager";
 import RolePermissions from "@/components/admin/role-permissions";
+import PerformanceReport from "@/components/admin/performance-report";
 
 export default function AdminSettings() {
   return (
@@ -15,6 +16,7 @@ export default function AdminSettings() {
         <TabsList>
           <TabsTrigger value="api">API Integration</TabsTrigger>
           <TabsTrigger value="permissions">Role Permissions</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="general">General</TabsTrigger>
         </TabsList>
 
@@ -42,6 +44,20 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent>
               <RolePermissions />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Reports</CardTitle>
+              <CardDescription>
+                Generate and view detailed performance reports
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PerformanceReport />
             </CardContent>
           </Card>
         </TabsContent>
