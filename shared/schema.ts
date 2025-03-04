@@ -1,4 +1,4 @@
-import { pgTable, text, serial, boolean, real, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, real, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -20,6 +20,15 @@ export const vehicles = pgTable("vehicles", {
   longitude: real("longitude").notNull(),
   images: text("images").array().notNull(),
   category: text("category").notNull(),
+  // New fields for PX and condition
+  openToPX: boolean("open_to_px").default(false),
+  condition: text("condition").default("clean"), // clean, catS, catN
+  sellerId: integer("seller_id").notNull(),
+  sellerType: text("seller_type").notNull(), // private, trader, garage
+  createdAt: timestamp("created_at").defaultNow(),
+  views: integer("views").default(0),
+  clicks: integer("clicks").default(0),
+  leads: integer("leads").default(0),
 });
 
 export const users = pgTable("users", {
@@ -29,6 +38,35 @@ export const users = pgTable("users", {
   email: text("email").notNull(),
   role: text("role").notNull().default("buyer"), // "admin", "buyer", "seller", "trader", "garage"
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
+  // New fields for trader/garage accounts
+  businessName: text("business_name"),
+  businessAddress: text("business_address"),
+  packageType: text("package_type"), // standard, premium, enterprise
+  packageExpiresAt: timestamp("package_expires_at"),
+  monthlyAllowance: integer("monthly_allowance"), // number of listings allowed per month
+  usedAllowance: integer("used_allowance").default(0),
+});
+
+export const bulkUploads = pgTable("bulk_uploads", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  status: text("status").notNull(), // pending, processing, completed, failed
+  fileName: text("file_name").notNull(),
+  totalVehicles: integer("total_vehicles"),
+  processedVehicles: integer("processed_vehicles").default(0),
+  errors: jsonb("errors").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const packages = pgTable("packages", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // standard, premium, enterprise
+  price: integer("price").notNull(),
+  duration: integer("duration").notNull(), // in months
+  monthlyAllowance: integer("monthly_allowance").notNull(),
+  features: jsonb("features").array(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const rolePermissions = pgTable("role_permissions", {
@@ -51,17 +89,29 @@ export const apiKeys = pgTable("api_keys", {
 });
 
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({ 
-  id: true 
+  id: true,
+  views: true,
+  clicks: true,
+  leads: true,
+  createdAt: true,
+}).extend({
+  condition: z.enum(["clean", "catS", "catN"]).default("clean"),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   role: true,
   createdAt: true,
+  packageType: true,
+  packageExpiresAt: true,
+  monthlyAllowance: true,
+  usedAllowance: true,
 }).extend({
   password: z.string().min(6, "Password must be at least 6 characters"),
   email: z.string().email("Invalid email address"),
   role: z.enum(["admin", "buyer", "seller", "trader", "garage"]).default("buyer"),
+  businessName: z.string().optional(),
+  businessAddress: z.string().optional(),
 });
 
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
@@ -74,6 +124,19 @@ export const insertRolePermissionSchema = createInsertSchema(rolePermissions).om
   id: true,
 });
 
+export const insertBulkUploadSchema = createInsertSchema(bulkUploads).omit({
+  id: true,
+  status: true,
+  processedVehicles: true,
+  errors: true,
+  createdAt: true,
+});
+
+export const insertPackageSchema = createInsertSchema(packages).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -82,6 +145,10 @@ export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
+export type BulkUpload = typeof bulkUploads.$inferSelect;
+export type InsertBulkUpload = z.infer<typeof insertBulkUploadSchema>;
+export type Package = typeof packages.$inferSelect;
+export type InsertPackage = z.infer<typeof insertPackageSchema>;
 
 export const searchSchema = z.object({
   query: z.string().optional(),
