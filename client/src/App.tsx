@@ -29,10 +29,16 @@ export default function App() {
                 <SignIn />
               </Route>
               <Route path="/admin/vehicles">
-                <ProtectedRoute component={AdminVehicles} adminOnly />
+                <ProtectedRoute 
+                  component={AdminVehicles}
+                  adminOnly
+                />
               </Route>
               <Route path="/admin">
-                <ProtectedRoute component={AdminDashboard} adminOnly />
+                <ProtectedRoute 
+                  component={AdminDashboard}
+                  adminOnly
+                />
               </Route>
               <Route path="/vehicle/:id">
                 <Vehicle />
