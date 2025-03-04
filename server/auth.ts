@@ -30,7 +30,7 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
-export function setupAuth(app: Express) {
+export async function setupAuth(app: Express) {
   const PostgresStore = connectPg(session);
 
   const sessionSettings: session.SessionOptions = {
@@ -58,9 +58,6 @@ export function setupAuth(app: Express) {
         if (!user || !(await comparePasswords(password, user.password))) {
           return done(null, false, { message: "Invalid username or password" });
         }
-        if (!user.isAdmin) {
-          return done(null, false, { message: "Not authorized" });
-        }
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -85,7 +82,10 @@ export function setupAuth(app: Express) {
     passport.authenticate("local", (err, user, info) => {
       if (err) return next(err);
       if (!user) {
-        return res.status(401).json({ message: info.message });
+        return res.status(401).json({ message: info?.message || "Authentication failed" });
+      }
+      if (!user.isAdmin) {
+        return res.status(403).json({ message: "Access denied. Admin privileges required." });
       }
       req.logIn(user, (err) => {
         if (err) return next(err);
@@ -105,5 +105,13 @@ export function setupAuth(app: Express) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     res.json(req.user);
+  });
+
+  // Create initial admin user if it doesn't exist
+  const hashedPassword = await hashPassword("admin123");
+  await storage.createUser({
+    username: "admin",
+    password: hashedPassword,
+    isAdmin: true
   });
 }

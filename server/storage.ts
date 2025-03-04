@@ -10,7 +10,7 @@ export interface IStorage {
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: InsertUser & { isAdmin?: boolean }): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -93,10 +93,13 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(user: InsertUser): Promise<User> {
+  async createUser(user: InsertUser & { isAdmin?: boolean }): Promise<User> {
     const [newUser] = await db
       .insert(users)
-      .values(user)
+      .values({
+        ...user,
+        isAdmin: user.isAdmin || false,
+      })
       .returning();
     return newUser;
   }
