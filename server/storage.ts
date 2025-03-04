@@ -1,5 +1,7 @@
 import type { Vehicle, InsertVehicle, SearchParams } from "@shared/schema";
-import { mockVehicles } from "../client/src/lib/mock-data";
+import { vehicles } from "@shared/schema";
+import { db } from "./db";
+import { eq, ilike, and, or, between } from "drizzle-orm";
 
 export interface IStorage {
   getVehicles(category?: string): Promise<Vehicle[]>;
@@ -8,74 +10,73 @@ export interface IStorage {
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
 }
 
-export class MemStorage implements IStorage {
-  private vehicles: Map<number, Vehicle>;
-  private currentId: number;
-
-  constructor() {
-    this.vehicles = new Map();
-    this.currentId = 1;
-    
-    // Initialize with mock data
-    mockVehicles.forEach(vehicle => {
-      this.vehicles.set(vehicle.id, vehicle);
-      this.currentId = Math.max(this.currentId, vehicle.id + 1);
-    });
-  }
-
+export class DatabaseStorage implements IStorage {
   async getVehicles(category?: string): Promise<Vehicle[]> {
-    const vehicles = Array.from(this.vehicles.values());
     if (category && category !== "all") {
-      return vehicles.filter(v => v.category === category);
+      return await db
+        .select()
+        .from(vehicles)
+        .where(eq(vehicles.category, category));
     }
-    return vehicles;
+    return await db.select().from(vehicles);
   }
 
   async getVehicle(id: number): Promise<Vehicle | undefined> {
-    return this.vehicles.get(id);
+    const [vehicle] = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.id, id));
+    return vehicle;
   }
 
   async searchVehicles(params: SearchParams): Promise<Vehicle[]> {
-    let vehicles = Array.from(this.vehicles.values());
+    const conditions = [];
 
     if (params.query) {
-      const query = params.query.toLowerCase();
-      vehicles = vehicles.filter(v => 
-        v.title.toLowerCase().includes(query) ||
-        v.make.toLowerCase().includes(query) ||
-        v.model.toLowerCase().includes(query)
+      conditions.push(
+        or(
+          ilike(vehicles.title, `%${params.query}%`),
+          ilike(vehicles.make, `%${params.query}%`),
+          ilike(vehicles.model, `%${params.query}%`)
+        )
       );
     }
 
     if (params.category) {
-      vehicles = vehicles.filter(v => v.category === params.category);
+      conditions.push(eq(vehicles.category, params.category));
     }
 
     if (params.make) {
-      vehicles = vehicles.filter(v => v.make === params.make);
+      conditions.push(eq(vehicles.make, params.make));
     }
 
     if (params.bodyType) {
-      vehicles = vehicles.filter(v => v.bodyType === params.bodyType);
+      conditions.push(eq(vehicles.bodyType, params.bodyType));
     }
 
-    if (params.minPrice !== undefined) {
-      vehicles = vehicles.filter(v => v.price >= params.minPrice!);
+    if (params.minPrice !== undefined && params.maxPrice !== undefined) {
+      conditions.push(
+        between(vehicles.price, params.minPrice, params.maxPrice)
+      );
+    } else if (params.minPrice !== undefined) {
+      conditions.push(and(vehicles.price >= params.minPrice));
+    } else if (params.maxPrice !== undefined) {
+      conditions.push(and(vehicles.price <= params.maxPrice));
     }
 
-    if (params.maxPrice !== undefined) {
-      vehicles = vehicles.filter(v => v.price <= params.maxPrice!);
-    }
-
-    return vehicles;
+    return await db
+      .select()
+      .from(vehicles)
+      .where(and(...conditions));
   }
 
   async createVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
-    const id = this.currentId++;
-    const newVehicle = { ...vehicle, id };
-    this.vehicles.set(id, newVehicle);
+    const [newVehicle] = await db
+      .insert(vehicles)
+      .values(vehicle)
+      .returning();
     return newVehicle;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
