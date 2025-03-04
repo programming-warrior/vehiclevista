@@ -28,7 +28,9 @@ export default function LoginPage() {
       await login(data.username, data.password);
       setLocation("/admin");
     } catch (error: any) {
-      setError("root", { message: error.message });
+      setError("root", { 
+        message: error.message || "Failed to login. Please check your credentials."
+      });
     }
   };
 

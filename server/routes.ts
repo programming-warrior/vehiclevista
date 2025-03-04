@@ -8,7 +8,7 @@ export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
   // Set up authentication routes and middleware
-  setupAuth(app);
+  await setupAuth(app);
 
   // Get all vehicles with optional category filter
   app.get("/api/vehicles", async (req, res) => {

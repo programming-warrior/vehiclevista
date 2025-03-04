@@ -33,6 +33,7 @@ async function comparePasswords(supplied: string, stored: string) {
 export async function setupAuth(app: Express) {
   const PostgresStore = connectPg(session);
 
+  // Configure session middleware
   const sessionSettings: session.SessionOptions = {
     store: new PostgresStore({
       pool,
@@ -43,7 +44,8 @@ export async function setupAuth(app: Express) {
     saveUninitialized: false,
     cookie: {
       secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true,
     }
   };
 
@@ -51,15 +53,28 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Configure passport strategy
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log(`Attempting login for user: ${username}`);
         const user = await storage.getUserByUsername(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
+
+        if (!user) {
+          console.log(`User not found: ${username}`);
           return done(null, false, { message: "Invalid username or password" });
         }
+
+        const isValidPassword = await comparePasswords(password, user.password);
+        if (!isValidPassword) {
+          console.log(`Invalid password for user: ${username}`);
+          return done(null, false, { message: "Invalid username or password" });
+        }
+
+        console.log(`Successful login for user: ${username}`);
         return done(null, user);
       } catch (err) {
+        console.error("Login error:", err);
         return done(err);
       }
     }),
@@ -78,9 +93,13 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  // Authentication routes
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
-      if (err) return next(err);
+      if (err) {
+        console.error("Authentication error:", err);
+        return next(err);
+      }
       if (!user) {
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
@@ -107,11 +126,24 @@ export async function setupAuth(app: Express) {
     res.json(req.user);
   });
 
-  // Create initial admin user if it doesn't exist
-  const hashedPassword = await hashPassword("admin123");
-  await storage.createUser({
-    username: "admin",
-    password: hashedPassword,
-    isAdmin: true
-  });
+  // Create initial admin user
+  try {
+    console.log("Checking for existing admin user...");
+    const existingAdmin = await storage.getUserByUsername("admin");
+
+    if (!existingAdmin) {
+      console.log("Creating admin user...");
+      const hashedPassword = await hashPassword("admin123");
+      await storage.createUser({
+        username: "admin",
+        password: hashedPassword,
+        isAdmin: true
+      });
+      console.log("Admin user created successfully");
+    } else {
+      console.log("Admin user already exists");
+    }
+  } catch (error) {
+    console.error("Error managing admin user:", error);
+  }
 }
