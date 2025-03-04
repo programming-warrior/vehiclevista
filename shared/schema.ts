@@ -20,7 +20,7 @@ export const vehicles = pgTable("vehicles", {
   longitude: real("longitude").notNull(),
   images: text("images").array().notNull(),
   category: text("category").notNull(),
-  // Only keep PX option
+  condition: text("condition").default("clean"), // clean, catS, catN
   openToPX: boolean("open_to_px").default(false),
   sellerId: integer("seller_id").notNull(),
   sellerType: text("seller_type").notNull(), // private, trader, garage
@@ -44,6 +44,8 @@ export const users = pgTable("users", {
   packageExpiresAt: timestamp("package_expires_at"),
   monthlyAllowance: integer("monthly_allowance"), // number of listings allowed per month
   usedAllowance: integer("used_allowance").default(0),
+  performanceTracking: jsonb("performance_tracking").default("{}"), // Add performance tracking field
+
 });
 
 export const bulkUploads = pgTable("bulk_uploads", {
@@ -93,6 +95,8 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({
   clicks: true,
   leads: true,
   createdAt: true,
+}).extend({
+  condition: z.enum(["clean", "catS", "catN"]).default("clean"),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -103,6 +107,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   packageExpiresAt: true,
   monthlyAllowance: true,
   usedAllowance: true,
+  performanceTracking: true,
 }).extend({
   password: z.string().min(6, "Password must be at least 6 characters"),
   email: z.string().email("Invalid email address"),

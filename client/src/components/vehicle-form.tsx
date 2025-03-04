@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,16 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { insertVehicleSchema, type InsertVehicle } from "@shared/schema";
 import { ImageOptimizerDialog } from "@/components/image-optimizer-dialog";
-import { useState } from "react";
 import type { OptimizedImage } from "@/lib/image-optimizer";
 
 interface VehicleFormProps {
@@ -22,6 +29,12 @@ interface VehicleFormProps {
   onSubmit: (data: InsertVehicle) => Promise<void>;
   isSubmitting?: boolean;
 }
+
+const conditions = [
+  { value: "clean", label: "Clean" },
+  { value: "catS", label: "Cat S (Structural Damage)" },
+  { value: "catN", label: "Cat N (Non-Structural Damage)" },
+];
 
 export default function VehicleForm({
   defaultValues,
@@ -48,6 +61,7 @@ export default function VehicleForm({
       images: [],
       category: "",
       openToPX: false,
+      condition: "clean",
       sellerType: "private",
       sellerId: 0, // This will be set from the logged-in user
       ...defaultValues,
@@ -118,26 +132,56 @@ export default function VehicleForm({
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="openToPX"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel>Open to Part Exchange (PX)</FormLabel>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="condition"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Vehicle Condition</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select condition" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {conditions.map((condition) => (
+                      <SelectItem key={condition.value} value={condition.value}>
+                        {condition.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormDescription>
-                  Check this if you're willing to consider vehicle part exchanges
+                  Choose 'Cat S' for structural damage or 'Cat N' for non-structural damage
                 </FormDescription>
-              </div>
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="openToPX"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Open to Part Exchange (PX)</FormLabel>
+                  <FormDescription>
+                    Check this if you're willing to consider vehicle part exchanges
+                  </FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}

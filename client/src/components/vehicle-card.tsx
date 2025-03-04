@@ -6,6 +6,18 @@ import { Heart, MapPin, Car, Repeat } from "lucide-react";
 import { Link } from "wouter";
 import type { Vehicle } from "@shared/schema";
 
+const conditionColors = {
+  clean: "bg-green-100 text-green-800",
+  catS: "bg-red-100 text-red-800",
+  catN: "bg-yellow-100 text-yellow-800",
+} as const;
+
+const conditionLabels = {
+  clean: "Clean",
+  catS: "Cat S",
+  catN: "Cat N",
+} as const;
+
 export default function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
   return (
     <Card className="group hover:shadow-lg transition-shadow">
@@ -29,15 +41,22 @@ export default function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
                 target.classList.add("bg-muted", "p-4");
               }}
             />
-            {vehicle.openToPX && (
+            <div className="absolute top-2 left-2 flex gap-2">
+              {vehicle.openToPX && (
+                <Badge 
+                  variant="secondary" 
+                  className="flex items-center gap-1"
+                >
+                  <Repeat className="h-3 w-3" />
+                  PX Available
+                </Badge>
+              )}
               <Badge 
-                variant="secondary" 
-                className="absolute top-2 left-2 flex items-center gap-1"
+                className={`${conditionColors[vehicle.condition as keyof typeof conditionColors]} border-none`}
               >
-                <Repeat className="h-3 w-3" />
-                PX Available
+                {conditionLabels[vehicle.condition as keyof typeof conditionLabels]}
               </Badge>
-            )}
+            </div>
           </AspectRatio>
           <div className="p-4">
             <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
