@@ -10,13 +10,13 @@ const conditionColors = {
   clean: "bg-green-100 text-green-800",
   catS: "bg-red-100 text-red-800",
   catN: "bg-yellow-100 text-yellow-800",
-};
+} as const;
 
 const conditionLabels = {
   clean: "Clean",
   catS: "Cat S",
   catN: "Cat N",
-};
+} as const;
 
 export default function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
   return (
@@ -25,7 +25,7 @@ export default function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
         <CardContent className="p-0">
           <AspectRatio ratio={16/9}>
             <img 
-              src={`${vehicle.images[0]}?auto=format&fit=crop&w=800&q=80`}
+              src={vehicle.images[0]}
               alt={vehicle.title}
               className="object-cover w-full h-full rounded-t-lg"
               onError={(e) => {
@@ -49,9 +49,9 @@ export default function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
                 </Badge>
               )}
               <Badge 
-                className={`${conditionColors[vehicle.condition]} border-none`}
+                className={`${conditionColors[vehicle.condition as keyof typeof conditionColors]} border-none`}
               >
-                {conditionLabels[vehicle.condition]}
+                {conditionLabels[vehicle.condition as keyof typeof conditionLabels]}
               </Badge>
             </div>
           </AspectRatio>
