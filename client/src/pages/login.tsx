@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 interface LoginForm {
   username: string;
@@ -12,7 +13,7 @@ interface LoginForm {
 }
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
+  const { login, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   const { register, handleSubmit, formState: { isSubmitting, errors }, setError } = useForm<LoginForm>({
@@ -21,6 +22,15 @@ export default function LoginPage() {
       password: ""
     }
   });
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   // Redirect if already logged in
   if (user) {
@@ -33,6 +43,7 @@ export default function LoginPage() {
       await login(data.username, data.password);
       setLocation("/admin");
     } catch (error: any) {
+      console.error("Login error:", error);
       setError("root", { 
         message: error?.message || "Failed to login. Please check your credentials."
       });
@@ -79,7 +90,14 @@ export default function LoginPage() {
               className="w-full"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Logging in..." : "Login"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                "Login"
+              )}
             </Button>
           </form>
         </CardContent>

@@ -1,11 +1,17 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Car, Heart } from "lucide-react";
 import SearchBar from "./search-bar";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function Navbar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const handleLogout = async () => {
+    await logout();
+    setLocation("/");
+  };
 
   return (
     <nav className="border-b bg-white">
@@ -24,9 +30,14 @@ export default function Navbar() {
             <Heart className="h-5 w-5" />
           </Button>
           {user ? (
-            <Link href="/admin">
-              <Button>Admin Panel</Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/admin">
+                <Button variant="outline">Admin Panel</Button>
+              </Link>
+              <Button onClick={handleLogout} variant="secondary">
+                Logout
+              </Button>
+            </div>
           ) : (
             <Link href="/login">
               <Button>Admin Login</Button>
