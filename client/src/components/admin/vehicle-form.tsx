@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Image, Plus, X } from "lucide-react";
 import { categories, makes, bodyTypes } from "@/lib/mock-data";
 
 interface VehicleFormProps {
@@ -54,6 +55,26 @@ export default function VehicleForm({
       ...defaultValues,
     },
   });
+
+  const handleImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+
+    // Convert File objects to URLs
+    const newImages = Array.from(files).map((file) => URL.createObjectURL(file));
+
+    // Get current images from form
+    const currentImages = form.getValues("images") || [];
+
+    // Update form with combined images
+    form.setValue("images", [...currentImages, ...newImages]);
+  };
+
+  const removeImage = (index: number) => {
+    const currentImages = form.getValues("images") || [];
+    const newImages = currentImages.filter((_, i) => i !== index);
+    form.setValue("images", newImages);
+  };
 
   return (
     <Form {...form}>
@@ -213,6 +234,50 @@ export default function VehicleForm({
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="images"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Images</FormLabel>
+              <div className="space-y-4">
+                <div className="grid grid-cols-4 gap-4">
+                  {field.value?.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Vehicle image ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-2 right-2 p-1 bg-background/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <label className="flex items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary">
+                    <div className="flex flex-col items-center">
+                      <Plus className="h-8 w-8 mb-2" />
+                      <span className="text-sm">Add Image</span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleImageAdd}
+                    />
+                  </label>
+                </div>
+                <FormMessage />
+              </div>
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
