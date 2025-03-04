@@ -93,7 +93,38 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Authentication routes
+  // Register route
+  app.post("/api/register", async (req, res, next) => {
+    try {
+      const { username, password, email } = req.body;
+
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      // Hash password and create user
+      const hashedPassword = await hashPassword(password);
+      const user = await storage.createUser({
+        username,
+        password: hashedPassword,
+        email,
+        role: "user"
+      });
+
+      // Log the user in after registration
+      req.login(user, (err) => {
+        if (err) return next(err);
+        return res.status(201).json(user);
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      return res.status(500).json({ message: "Failed to register user" });
+    }
+  });
+
+  // Login route
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
       if (err) {
@@ -102,9 +133,6 @@ export async function setupAuth(app: Express) {
       }
       if (!user) {
         return res.status(401).json({ message: info?.message || "Authentication failed" });
-      }
-      if (!user.isAdmin) {
-        return res.status(403).json({ message: "Access denied. Admin privileges required." });
       }
       req.logIn(user, (err) => {
         if (err) return next(err);
@@ -137,7 +165,8 @@ export async function setupAuth(app: Express) {
       await storage.createUser({
         username: "admin",
         password: hashedPassword,
-        isAdmin: true
+        email: "admin@example.com",
+        role: "admin"
       });
       console.log("Admin user created successfully");
     } else {

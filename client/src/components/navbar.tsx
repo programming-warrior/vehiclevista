@@ -31,17 +31,24 @@ export default function Navbar() {
           </Button>
           {user ? (
             <div className="flex items-center gap-2">
-              <Link href="/admin">
-                <Button variant="outline">Admin Panel</Button>
-              </Link>
+              {user.role === 'admin' && (
+                <Link href="/admin">
+                  <Button variant="outline">Admin Panel</Button>
+                </Link>
+              )}
               <Button onClick={handleLogout} variant="secondary">
                 Logout
               </Button>
             </div>
           ) : (
-            <Link href="/login">
-              <Button>Admin Login</Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/signin">
+                <Button variant="outline">Sign Up</Button>
+              </Link>
+              <Link href="/login">
+                <Button>Login</Button>
+              </Link>
+            </div>
           )}
         </div>
       </div>

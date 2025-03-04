@@ -8,6 +8,7 @@ import Home from "@/pages/home";
 import Vehicle from "@/pages/vehicle";
 import Search from "@/pages/search";
 import Login from "@/pages/login";
+import SignIn from "@/pages/signin";
 import Navbar from "@/components/navbar";
 import NotFound from "@/pages/not-found";
 import AdminDashboard from "@/pages/admin";
@@ -23,6 +24,9 @@ export default function App() {
             <Switch>
               <Route path="/login">
                 <Login />
+              </Route>
+              <Route path="/signin">
+                <SignIn />
               </Route>
               <Route path="/admin/vehicles">
                 <ProtectedRoute component={AdminVehicles} adminOnly />

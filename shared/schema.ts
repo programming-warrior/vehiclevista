@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, real, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -26,7 +26,9 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  isAdmin: boolean("is_admin").notNull().default(false),
+  email: text("email").notNull(),
+  role: text("role").notNull().default("user"), // "admin" or "user"
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({ 
@@ -35,9 +37,11 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
-  isAdmin: true,
+  role: true,
+  createdAt: true,
 }).extend({
-  password: z.string().min(6, "Password must be at least 6 characters")
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Invalid email address"),
 });
 
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
