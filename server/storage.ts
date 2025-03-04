@@ -1,9 +1,10 @@
 import type { Vehicle, InsertVehicle, SearchParams, User, InsertUser } from "@shared/schema";
 import { vehicles, users } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, and, or, between } from "drizzle-orm";
+import { eq, ilike, and, or, between, desc } from "drizzle-orm";
 import { apiKeys, type ApiKey, type InsertApiKey } from "@shared/schema";
 import { rolePermissions, type RolePermission } from "@shared/schema";
+import { bulkUploads, type BulkUpload, type InsertBulkUpload } from "@shared/schema";
 
 export interface IStorage {
   getVehicles(category?: string): Promise<Vehicle[]>;
@@ -24,6 +25,9 @@ export interface IStorage {
   getRolePermissions(): Promise<RolePermission[]>;
   updateRolePermission(id: number, permission: Partial<RolePermission>): Promise<RolePermission>;
   checkPermission(role: string, resource: string, action: "create" | "read" | "update" | "delete"): Promise<boolean>;
+  createBulkUpload(upload: InsertBulkUpload): Promise<BulkUpload>;
+  getBulkUploads(userId: number): Promise<BulkUpload[]>;
+  updateBulkUpload(id: number, data: Partial<BulkUpload>): Promise<BulkUpload>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -217,6 +221,33 @@ export class DatabaseStorage implements IStorage {
       case "update": return permission.canUpdate;
       case "delete": return permission.canDelete;
     }
+  }
+  async createBulkUpload(upload: InsertBulkUpload): Promise<BulkUpload> {
+    const [newUpload] = await db
+      .insert(bulkUploads)
+      .values({
+        ...upload,
+        status: "pending",
+      })
+      .returning();
+    return newUpload;
+  }
+
+  async getBulkUploads(userId: number): Promise<BulkUpload[]> {
+    return await db
+      .select()
+      .from(bulkUploads)
+      .where(eq(bulkUploads.userId, userId))
+      .orderBy(desc(bulkUploads.createdAt));
+  }
+
+  async updateBulkUpload(id: number, data: Partial<BulkUpload>): Promise<BulkUpload> {
+    const [updated] = await db
+      .update(bulkUploads)
+      .set(data)
+      .where(eq(bulkUploads.id, id))
+      .returning();
+    return updated;
   }
 }
 

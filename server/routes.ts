@@ -3,7 +3,19 @@ import { createServer } from "http";
 import { storage } from "./storage";
 import { searchSchema, insertVehicleSchema } from "@shared/schema";
 import { setupAuth } from "./auth";
-import fetch from 'node-fetch'; // Added import for node-fetch
+import fetch from 'node-fetch';
+import multer from 'multer';
+import * as csv from 'csv-parse';
+import * as XLSX from 'xlsx';
+import { Readable } from 'stream';
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+});
 
 // Middleware to check if user is admin
 const isAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
@@ -330,11 +342,135 @@ export async function registerRoutes(app: Express) {
   // Replace isAdmin middleware with checkPermission where appropriate
   app.use("/api/:resource", checkPermission);
 
+  // Bulk upload routes (trader/garage only)
+  app.post("/api/bulk-uploads", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const user = req.user as User;
+      if (!['trader', 'garage'].includes(user.role)) {
+        return res.status(403).json({ message: "Only traders and garages can perform bulk uploads" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Create bulk upload record
+      const bulkUpload = await storage.createBulkUpload({
+        userId: user.id,
+        fileName: req.file.originalname,
+      });
+
+      // Process the file asynchronously
+      processUploadedFile(req.file, bulkUpload.id, user.id).catch(console.error);
+
+      res.status(201).json(bulkUpload);
+    } catch (error) {
+      console.error("Error handling bulk upload:", error);
+      res.status(500).json({ message: "Failed to process bulk upload" });
+    }
+  });
+
+  app.get("/api/bulk-uploads", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const user = req.user as User;
+      const uploads = await storage.getBulkUploads(user.id);
+      res.json(uploads);
+    } catch (error) {
+      console.error("Error fetching bulk uploads:", error);
+      res.status(500).json({ message: "Failed to fetch bulk uploads" });
+    }
+  });
+
   return httpServer;
+}
+
+async function processUploadedFile(file: Express.Multer.File, uploadId: number, userId: number) {
+  try {
+    let vehicles: any[] = [];
+
+    if (file.mimetype === 'text/csv') {
+      // Process CSV file
+      const parser = csv.parse({ columns: true, skip_empty_lines: true });
+      vehicles = await new Promise((resolve, reject) => {
+        const records: any[] = [];
+        Readable.from(file.buffer)
+          .pipe(parser)
+          .on('data', (record) => records.push(record))
+          .on('end', () => resolve(records))
+          .on('error', reject);
+      });
+    } else {
+      // Process Excel file
+      const workbook = XLSX.read(file.buffer);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      vehicles = XLSX.utils.sheet_to_json(worksheet);
+    }
+
+    // Update total count
+    await storage.updateBulkUpload(uploadId, {
+      status: "processing",
+      totalVehicles: vehicles.length,
+    });
+
+    const errors: any[] = [];
+    let processedCount = 0;
+
+    // Process each vehicle
+    for (const vehicleData of vehicles) {
+      try {
+        const result = insertVehicleSchema.safeParse({
+          ...vehicleData,
+          sellerId: userId,
+          sellerType: vehicleData.sellerType || "trader",
+        });
+
+        if (result.success) {
+          await storage.createVehicle(result.data);
+          processedCount++;
+        } else {
+          errors.push({
+            row: processedCount + 1,
+            errors: result.error.errors,
+          });
+        }
+
+        // Update progress
+        await storage.updateBulkUpload(uploadId, {
+          processedVehicles: processedCount,
+        });
+      } catch (error) {
+        errors.push({
+          row: processedCount + 1,
+          error: error.message,
+        });
+      }
+    }
+
+    // Update final status
+    await storage.updateBulkUpload(uploadId, {
+      status: errors.length > 0 ? "completed_with_errors" : "completed",
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error) {
+    console.error("Error processing bulk upload:", error);
+    await storage.updateBulkUpload(uploadId, {
+      status: "failed",
+      errors: [{ error: error.message }],
+    });
+  }
 }
 
 //This is a placeholder;  You need to define the User interface yourself.
 interface User {
+  id: number;
   role: string;
 }
 
