@@ -1,62 +1,118 @@
-export async function optimizeImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    // Create elements
-    const img = new Image();
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+import sharp from 'sharp';
 
-    // Handle image load
-    img.onload = () => {
-      try {
-        // Calculate new dimensions (max 1200x800 while maintaining aspect ratio)
-        let width = img.width;
-        let height = img.height;
-
-        if (width > 1200) {
-          height = (height * 1200) / width;
-          width = 1200;
-        }
-
-        if (height > 800) {
-          width = (width * 800) / height;
-          height = 800;
-        }
-
-        // Set canvas size
-        canvas.width = width;
-        canvas.height = height;
-
-        // Draw and optimize
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        // Convert to JPEG with quality 0.8
-        const optimizedUrl = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(optimizedUrl);
-      } catch (error) {
-        console.error('Image optimization failed:', error);
-        // Fallback to original file if optimization fails
-        resolve(URL.createObjectURL(file));
-      }
-    };
-
-    // Handle load error
-    img.onerror = () => {
-      console.error('Failed to load image');
-      resolve(URL.createObjectURL(file));
-    };
-
-    // Load image
-    img.src = URL.createObjectURL(file);
-  });
+interface OptimizationOptions {
+  maxWidth?: number;
+  maxHeight?: number;
+  quality?: number;
+  format?: 'jpeg' | 'webp' | 'png';
 }
 
-export async function optimizeImages(files: FileList): Promise<string[]> {
-  const optimizedUrls: string[] = [];
+interface OptimizedImage {
+  original: {
+    width: number;
+    height: number;
+    size: number;
+  };
+  optimized: {
+    width: number;
+    height: number;
+    size: number;
+    url: string;
+  };
+  compressionRatio: number;
+}
 
-  for (const file of Array.from(files)) {
-    const optimizedUrl = await optimizeImage(file);
-    optimizedUrls.push(optimizedUrl);
+const defaultOptions: OptimizationOptions = {
+  maxWidth: 1920,
+  maxHeight: 1080,
+  quality: 80,
+  format: 'webp'
+};
+
+export async function optimizeImage(
+  file: File,
+  options: OptimizationOptions = defaultOptions
+): Promise<OptimizedImage> {
+  // Create a blob URL for the original image
+  const originalUrl = URL.createObjectURL(file);
+
+  // Load the image into a canvas to get dimensions
+  const img = new Image();
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = originalUrl;
+  });
+
+  // Calculate new dimensions maintaining aspect ratio
+  const aspectRatio = img.width / img.height;
+  let newWidth = img.width;
+  let newHeight = img.height;
+
+  if (options.maxWidth && newWidth > options.maxWidth) {
+    newWidth = options.maxWidth;
+    newHeight = newWidth / aspectRatio;
   }
 
-  return optimizedUrls;
+  if (options.maxHeight && newHeight > options.maxHeight) {
+    newHeight = options.maxHeight;
+    newWidth = newHeight * aspectRatio;
+  }
+
+  // Create canvas for resizing
+  const canvas = document.createElement('canvas');
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+  const ctx = canvas.getContext('2d');
+  ctx?.drawImage(img, 0, 0, newWidth, newHeight);
+
+  // Convert to blob with quality setting
+  const blob = await new Promise<Blob>((resolve) => {
+    canvas.toBlob(
+      (b) => resolve(b!),
+      `image/${options.format}`,
+      options.quality ? options.quality / 100 : 0.8
+    );
+  });
+
+  // Create optimized image URL
+  const optimizedUrl = URL.createObjectURL(blob);
+
+  const result: OptimizedImage = {
+    original: {
+      width: img.width,
+      height: img.height,
+      size: file.size,
+    },
+    optimized: {
+      width: newWidth,
+      height: newHeight,
+      size: blob.size,
+      url: optimizedUrl,
+    },
+    compressionRatio: (file.size - blob.size) / file.size * 100,
+  };
+
+  // Clean up original URL
+  URL.revokeObjectURL(originalUrl);
+
+  return result;
+}
+
+export async function optimizeMultipleImages(
+  files: FileList,
+  options?: OptimizationOptions
+): Promise<OptimizedImage[]> {
+  const optimizationPromises = Array.from(files).map(file => 
+    optimizeImage(file, options)
+  );
+  return Promise.all(optimizationPromises);
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
