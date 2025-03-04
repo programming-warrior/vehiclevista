@@ -14,6 +14,7 @@ import NotFound from "@/pages/not-found";
 import AdminDashboard from "@/pages/admin";
 import AdminVehicles from "@/pages/admin/vehicles";
 import AdminSettings from "@/pages/admin/settings";
+import AdminUsers from "@/pages/admin/users";
 
 export default function App() {
   return (
@@ -32,6 +33,12 @@ export default function App() {
               <Route path="/admin/vehicles">
                 <ProtectedRoute 
                   component={AdminVehicles}
+                  adminOnly
+                />
+              </Route>
+              <Route path="/admin/users">
+                <ProtectedRoute 
+                  component={AdminUsers}
                   adminOnly
                 />
               </Route>

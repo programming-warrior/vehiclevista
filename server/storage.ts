@@ -16,6 +16,10 @@ export interface IStorage {
   createUser(user: InsertUser & { role?: string }): Promise<User>;
   getApiKeys(): Promise<ApiKey[]>;
   updateApiKey(name: string, key: string): Promise<ApiKey>;
+  getUsers(): Promise<User[]>;
+  getUsersByRole(role: string): Promise<User[]>;
+  updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -141,6 +145,34 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updatedKey;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async getUsersByRole(role: string): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(eq(users.role, role));
+  }
+
+  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    const [deleted] = await db
+      .delete(users)
+      .where(eq(users.id, id))
+      .returning();
+    return !!deleted;
   }
 }
 
