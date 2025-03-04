@@ -268,5 +268,78 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+
+  // Role Permissions routes (admin only)
+  app.get("/api/permissions", isAdmin, async (req, res) => {
+    try {
+      const permissions = await storage.getRolePermissions();
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ message: "Failed to fetch permissions" });
+    }
+  });
+
+  app.patch("/api/permissions/:id", isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid permission ID" });
+      }
+
+      const permission = await storage.updateRolePermission(id, req.body);
+      res.json(permission);
+    } catch (error) {
+      console.error("Error updating permission:", error);
+      res.status(500).json({ message: "Failed to update permission" });
+    }
+  });
+
+  // Update the middleware to check permissions
+  const checkPermission = async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const user = req.user as User;
+    if (user.role === "admin") {
+      return next();
+    }
+
+    const path = req.path.split("/")[2]; // Get resource from path, e.g., "vehicles" from "/api/vehicles"
+    const method = req.method.toLowerCase();
+
+    let action: "create" | "read" | "update" | "delete";
+    switch (method) {
+      case "post": action = "create"; break;
+      case "get": action = "read"; break;
+      case "patch":
+      case "put": action = "update"; break;
+      case "delete": action = "delete"; break;
+      default: return res.status(405).json({ message: "Method not allowed" });
+    }
+
+    const hasPermission = await storage.checkPermission(user.role, path, action);
+    if (!hasPermission) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    next();
+  };
+
+  // Replace isAdmin middleware with checkPermission where appropriate
+  app.use("/api/:resource", checkPermission);
+
   return httpServer;
+}
+
+//This is a placeholder;  You need to define the User interface yourself.
+interface User {
+  role: string;
+}
+
+//This is a placeholder; You'll need to implement this function in your codebase.
+async function hashPassword(password: string): Promise<string> {
+  //Implement your password hashing logic here.  For example, using bcrypt.
+  return password; //REPLACE THIS WITH ACTUAL HASHING
 }

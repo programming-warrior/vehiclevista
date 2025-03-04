@@ -31,6 +31,16 @@ export const users = pgTable("users", {
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
+export const rolePermissions = pgTable("role_permissions", {
+  id: serial("id").primaryKey(),
+  role: text("role").notNull(),
+  resource: text("resource").notNull(), // e.g., "vehicles", "users", "api_keys"
+  canCreate: boolean("can_create").notNull().default(false),
+  canRead: boolean("can_read").notNull().default(true),
+  canUpdate: boolean("can_update").notNull().default(false),
+  canDelete: boolean("can_delete").notNull().default(false),
+});
+
 export const apiKeys = pgTable("api_keys", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
@@ -60,12 +70,18 @@ export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
   updatedAt: true,
 });
 
+export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({
+  id: true,
+});
+
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 export type ApiKey = typeof apiKeys.$inferSelect;
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 
 export const searchSchema = z.object({
   query: z.string().optional(),

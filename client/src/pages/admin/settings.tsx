@@ -2,6 +2,7 @@ import AdminLayout from "@/components/admin/admin-layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import ApiKeyManager from "@/components/admin/api-key-manager";
+import RolePermissions from "@/components/admin/role-permissions";
 
 export default function AdminSettings() {
   return (
@@ -13,6 +14,7 @@ export default function AdminSettings() {
       <Tabs defaultValue="api" className="space-y-6">
         <TabsList>
           <TabsTrigger value="api">API Integration</TabsTrigger>
+          <TabsTrigger value="permissions">Role Permissions</TabsTrigger>
           <TabsTrigger value="general">General</TabsTrigger>
         </TabsList>
 
@@ -26,6 +28,20 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent>
               <ApiKeyManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="permissions" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Role Permissions</CardTitle>
+              <CardDescription>
+                Manage access permissions for different user roles
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RolePermissions />
             </CardContent>
           </Card>
         </TabsContent>

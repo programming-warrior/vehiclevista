@@ -3,6 +3,7 @@ import { vehicles, users } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, and, or, between } from "drizzle-orm";
 import { apiKeys, type ApiKey, type InsertApiKey } from "@shared/schema";
+import { rolePermissions, type RolePermission } from "@shared/schema";
 
 export interface IStorage {
   getVehicles(category?: string): Promise<Vehicle[]>;
@@ -20,6 +21,9 @@ export interface IStorage {
   getUsersByRole(role: string): Promise<User[]>;
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
+  getRolePermissions(): Promise<RolePermission[]>;
+  updateRolePermission(id: number, permission: Partial<RolePermission>): Promise<RolePermission>;
+  checkPermission(role: string, resource: string, action: "create" | "read" | "update" | "delete"): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -173,6 +177,46 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return !!deleted;
+  }
+
+  async getRolePermissions(): Promise<RolePermission[]> {
+    return await db.select().from(rolePermissions);
+  }
+
+  async updateRolePermission(id: number, permission: Partial<RolePermission>): Promise<RolePermission> {
+    const [updated] = await db
+      .update(rolePermissions)
+      .set(permission)
+      .where(eq(rolePermissions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async checkPermission(
+    role: string,
+    resource: string,
+    action: "create" | "read" | "update" | "delete"
+  ): Promise<boolean> {
+    if (role === "admin") return true;
+
+    const [permission] = await db
+      .select()
+      .from(rolePermissions)
+      .where(
+        and(
+          eq(rolePermissions.role, role),
+          eq(rolePermissions.resource, resource)
+        )
+      );
+
+    if (!permission) return false;
+
+    switch (action) {
+      case "create": return permission.canCreate;
+      case "read": return permission.canRead;
+      case "update": return permission.canUpdate;
+      case "delete": return permission.canDelete;
+    }
   }
 }
 
