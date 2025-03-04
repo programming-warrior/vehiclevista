@@ -26,7 +26,7 @@ export function ProtectedRoute({
     return null;
   }
 
-  if (adminOnly && !user.isAdmin) {
+  if (adminOnly && user.role !== "admin") {
     console.log("User is not admin, redirecting to home");
     setLocation("/");
     return null;
