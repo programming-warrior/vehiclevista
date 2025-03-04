@@ -20,8 +20,15 @@ export function ProtectedRoute({
     );
   }
 
-  if (!user || (adminOnly && !user.isAdmin)) {
+  if (!user) {
+    console.log("No user found, redirecting to login");
     setLocation("/login");
+    return null;
+  }
+
+  if (adminOnly && !user.isAdmin) {
+    console.log("User is not admin, redirecting to home");
+    setLocation("/");
     return null;
   }
 
