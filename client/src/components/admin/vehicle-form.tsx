@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertVehicleSchema, type InsertVehicle } from "@shared/schema";
@@ -19,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image, Plus, X } from "lucide-react";
+import { Image, Plus, X, Loader2 } from "lucide-react";
 import { categories, makes, bodyTypes } from "@/lib/mock-data";
+import { optimizeImages } from "@/lib/image-optimizer";
 
 interface VehicleFormProps {
   defaultValues?: Partial<InsertVehicle>;
@@ -33,6 +35,8 @@ export default function VehicleForm({
   onSubmit,
   isSubmitting,
 }: VehicleFormProps) {
+  const [isOptimizing, setIsOptimizing] = useState(false);
+
   const form = useForm<InsertVehicle>({
     resolver: zodResolver(insertVehicleSchema),
     defaultValues: {
@@ -56,18 +60,25 @@ export default function VehicleForm({
     },
   });
 
-  const handleImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
 
-    // Convert File objects to URLs
-    const newImages = Array.from(files).map((file) => URL.createObjectURL(file));
+    setIsOptimizing(true);
+    try {
+      // Optimize all images
+      const optimizedUrls = await optimizeImages(files);
 
-    // Get current images from form
-    const currentImages = form.getValues("images") || [];
+      // Get current images from form
+      const currentImages = form.getValues("images") || [];
 
-    // Update form with combined images
-    form.setValue("images", [...currentImages, ...newImages]);
+      // Update form with combined images
+      form.setValue("images", [...currentImages, ...optimizedUrls]);
+    } catch (error) {
+      console.error("Image optimization failed:", error);
+    } finally {
+      setIsOptimizing(false);
+    }
   };
 
   const removeImage = (index: number) => {
@@ -261,8 +272,18 @@ export default function VehicleForm({
                   ))}
                   <label className="flex items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary">
                     <div className="flex flex-col items-center">
-                      <Plus className="h-8 w-8 mb-2" />
-                      <span className="text-sm">Add Image</span>
+                      {isOptimizing ? (
+                        <>
+                          <Loader2 className="h-8 w-8 mb-2 animate-spin" />
+                          <span className="text-sm">Optimizing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-8 w-8 mb-2" />
+                          <span className="text-sm">Add Image</span>
+                          <span className="text-xs text-muted-foreground">Images will be optimized</span>
+                        </>
+                      )}
                     </div>
                     <input
                       type="file"
@@ -270,6 +291,7 @@ export default function VehicleForm({
                       multiple
                       className="hidden"
                       onChange={handleImageAdd}
+                      disabled={isOptimizing}
                     />
                   </label>
                 </div>
@@ -297,7 +319,7 @@ export default function VehicleForm({
           )}
         />
 
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || isOptimizing}>
           {isSubmitting ? "Saving..." : "Save Vehicle"}
         </Button>
       </form>
