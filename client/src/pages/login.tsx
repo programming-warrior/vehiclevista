@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 export default function LoginPage() {
   const { login, user } = useAuth();
   const [, setLocation] = useLocation();
-  
-  const { register, handleSubmit, formState: { isSubmitting } } = useForm({
+
+  const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm({
     defaultValues: {
       username: "",
       password: ""
@@ -44,18 +44,20 @@ export default function LoginPage() {
               <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
-                {...register("username", { required: true })}
+                {...register("username", { required: "Username is required" })}
                 type="text"
                 placeholder="Enter your username"
+                error={errors.username?.message}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
-                {...register("password", { required: true })}
+                {...register("password", { required: "Password is required" })}
                 type="password"
                 placeholder="Enter your password"
+                error={errors.password?.message}
               />
             </div>
             <Button
