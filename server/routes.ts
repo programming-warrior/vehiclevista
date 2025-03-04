@@ -19,9 +19,12 @@ export async function registerRoutes(app: Express) {
 
   // Get single vehicle by ID
   app.get("/api/vehicles/:id", async (req, res) => {
-    const id = parseInt(req.params.id);
-    const vehicle = await storage.getVehicle(id);
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
 
+    const vehicle = await storage.getVehicle(id);
     if (!vehicle) {
       return res.status(404).json({ message: "Vehicle not found" });
     }

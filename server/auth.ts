@@ -2,9 +2,11 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";
+import connectPg from "connect-pg-simple";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
+import { pool } from "./db";
 import { User as SelectUser } from "@shared/schema";
 
 declare global {
@@ -29,7 +31,13 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  const PostgresStore = connectPg(session);
+
   const sessionSettings: session.SessionOptions = {
+    store: new PostgresStore({
+      pool,
+      createTableIfMissing: true,
+    }),
     secret: "your-secret-key",
     resave: false,
     saveUninitialized: false,
