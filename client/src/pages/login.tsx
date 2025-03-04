@@ -6,11 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
+interface LoginForm {
+  username: string;
+  password: string;
+}
+
 export default function LoginPage() {
   const { login, user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { register, handleSubmit, formState: { isSubmitting, errors }, setError } = useForm({
+  const { register, handleSubmit, formState: { isSubmitting, errors }, setError } = useForm<LoginForm>({
     defaultValues: {
       username: "",
       password: ""
@@ -23,19 +28,19 @@ export default function LoginPage() {
     return null;
   }
 
-  const onSubmit = async (data: { username: string; password: string }) => {
+  const onSubmit = async (data: LoginForm) => {
     try {
       await login(data.username, data.password);
       setLocation("/admin");
     } catch (error: any) {
       setError("root", { 
-        message: error.message || "Failed to login. Please check your credentials."
+        message: error?.message || "Failed to login. Please check your credentials."
       });
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/50">
+    <div className="min-h-[80vh] flex items-center justify-center">
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
           <CardTitle className="text-2xl text-center">Admin Login</CardTitle>
