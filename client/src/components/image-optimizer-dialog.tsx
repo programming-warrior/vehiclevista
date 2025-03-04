@@ -35,20 +35,24 @@ export function ImageOptimizerDialog({
     try {
       setOptimizing(true);
       setProgress(0);
-      
-      const optimized = await optimizeMultipleImages(images);
+
+      const optimized = await optimizeMultipleImages(
+        images,
+        undefined,
+        (progress) => setProgress(progress)
+      );
       setResults(optimized);
-      
+
       const totalSaved = optimized.reduce(
         (acc, img) => acc + (img.original.size - img.optimized.size),
         0
       );
-      
+
       toast({
         title: "Images Optimized Successfully",
         description: `Saved ${formatBytes(totalSaved)} of space across ${optimized.length} images`,
       });
-      
+
       onOptimized(optimized);
       onOpenChange(false);
     } catch (error) {
@@ -79,7 +83,7 @@ export function ImageOptimizerDialog({
             <div className="space-y-4">
               <Progress value={progress} />
               <p className="text-sm text-muted-foreground text-center">
-                Optimizing images... Please wait
+                Optimizing images... {Math.round(progress)}%
               </p>
             </div>
           ) : results.length > 0 ? (
@@ -93,7 +97,7 @@ export function ImageOptimizerDialog({
                   <span className="text-muted-foreground">
                     {formatBytes(result.original.size)} →{" "}
                     {formatBytes(result.optimized.size)} (
-                    {result.compressionRatio.toFixed(1)}% saved)
+                    {Math.round(result.compressionRatio)}% saved)
                   </span>
                 </div>
               ))}

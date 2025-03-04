@@ -59,14 +59,14 @@ export async function optimizeImage(
     newWidth = newHeight * aspectRatio;
   }
 
-  // Create canvas for resizing
+  // Create a canvas for resizing
   const canvas = document.createElement('canvas');
   canvas.width = newWidth;
   canvas.height = newHeight;
   const ctx = canvas.getContext('2d');
   ctx?.drawImage(img, 0, 0, newWidth, newHeight);
 
-  // Convert to blob with quality setting
+  // Convert to WebP with quality setting
   const blob = await new Promise<Blob>((resolve) => {
     canvas.toBlob(
       (b) => resolve(b!),
@@ -90,7 +90,7 @@ export async function optimizeImage(
       size: blob.size,
       url: optimizedUrl,
     },
-    compressionRatio: (file.size - blob.size) / file.size * 100,
+    compressionRatio: ((file.size - blob.size) / file.size) * 100,
   };
 
   // Clean up original URL
@@ -101,15 +101,24 @@ export async function optimizeImage(
 
 export async function optimizeMultipleImages(
   files: FileList | File[],
-  options?: OptimizationOptions
+  options?: OptimizationOptions,
+  onProgress?: (progress: number) => void
 ): Promise<OptimizedImage[]> {
-  const optimizationPromises = Array.from(files).map(file => 
-    optimizeImage(file, options)
-  );
-  return Promise.all(optimizationPromises);
+  const results: OptimizedImage[] = [];
+  const total = files.length;
+
+  for (let i = 0; i < total; i++) {
+    const result = await optimizeImage(files[i], options);
+    results.push(result);
+    if (onProgress) {
+      onProgress((i + 1) / total * 100);
+    }
+  }
+
+  return results;
 }
 
-// Backward compatibility export
+// Keep backward compatibility export
 export const optimizeImages = optimizeMultipleImages;
 
 export function formatBytes(bytes: number): string {
