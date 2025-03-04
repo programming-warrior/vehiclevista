@@ -27,7 +27,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull(),
-  role: text("role").notNull().default("user"), // "admin" or "user"
+  role: text("role").notNull().default("buyer"), // "admin", "buyer", "seller", "trader", "garage"
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
@@ -51,6 +51,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 }).extend({
   password: z.string().min(6, "Password must be at least 6 characters"),
   email: z.string().email("Invalid email address"),
+  role: z.enum(["admin", "buyer", "seller", "trader", "garage"]).default("buyer"),
 });
 
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({

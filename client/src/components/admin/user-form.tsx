@@ -26,8 +26,11 @@ interface UserFormProps {
 }
 
 const roles = [
-  { value: "user", label: "User" },
-  { value: "admin", label: "Admin" },
+  { value: "admin", label: "Administrator" },
+  { value: "buyer", label: "Buyer" },
+  { value: "seller", label: "Seller" },
+  { value: "trader", label: "Trader" },
+  { value: "garage", label: "Garage" }
 ];
 
 export default function UserForm({
@@ -45,7 +48,7 @@ export default function UserForm({
       username: "",
       email: "",
       password: "",
-      role: "user",
+      role: "buyer",
       ...defaultValues,
     },
   });
