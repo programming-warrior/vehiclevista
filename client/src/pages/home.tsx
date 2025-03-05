@@ -8,6 +8,7 @@ import type { Vehicle } from "@shared/schema";
 import HeroSection from "@/components/hero-section";
 import LiveAuctionSection from "@/components/live-auction-section";
 import ExploreCategories from "@/components/explore-categories";
+import SuperAdSection from "@/components/super-ad-section";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -76,6 +77,9 @@ export default function Home() {
 
       {/* Explore Categories Section */}
       <ExploreCategories />
+
+      {/* Super Ad Section */}
+      <SuperAdSection />
     </div>
   );
 }
