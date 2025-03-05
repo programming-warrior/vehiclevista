@@ -13,6 +13,7 @@ import SearchMakes from "@/components/search-makes";
 import SelectedPartsSection from "@/components/selected-parts-section";
 import QualityBikesSection from "@/components/quality-bikes-section";
 import BikesCollection from "@/components/bikes-collection";
+import VansCollection from "@/components/vans-collection";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -96,6 +97,9 @@ export default function Home() {
 
       {/* Bikes Collection Section */}
       <BikesCollection />
+
+      {/* Vans Collection Section */}
+      <VansCollection />
     </div>
   );
 }
