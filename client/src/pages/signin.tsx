@@ -4,27 +4,32 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema } from "@shared/schema";
+import RoleSelect from "@/components/ui/role-select";
 
 interface SignInForm {
   username: string;
   password: string;
   email: string;
+  role: "buyer" | "trader" | "garage";
+  businessName?: string;
+  businessAddress?: string;
 }
 
 export default function SignInPage() {
   const { register: registerUser, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { register, handleSubmit, formState: { isSubmitting, errors }, setError } = useForm<SignInForm>({
+  const form = useForm<SignInForm>({
     resolver: zodResolver(insertUserSchema),
     defaultValues: {
       username: "",
       password: "",
-      email: ""
+      email: "",
+      role: "buyer",
     }
   });
 
@@ -49,11 +54,13 @@ export default function SignInPage() {
       setLocation("/");
     } catch (error: any) {
       console.error("Registration error:", error);
-      setError("root", { 
+      form.setError("root", { 
         message: error?.message || "Failed to register. Please try again."
       });
     }
   };
+
+  const showBusinessFields = form.watch("role") === "trader" || form.watch("role") === "garage";
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center">
@@ -65,61 +72,101 @@ export default function SignInPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                {...register("username")}
-                type="text"
-                placeholder="Choose a username"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Choose a username" />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-              {errors.username && (
-                <p className="text-sm text-destructive">{errors.username.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                {...register("email")}
-                type="email"
-                placeholder="Enter your email"
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="email" placeholder="Enter your email" />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                {...register("password")}
-                type="password"
-                placeholder="Create a password"
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="password" placeholder="Create a password" />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-            </div>
-            {errors.root && (
-              <p className="text-sm text-destructive text-center">{errors.root.message}</p>
-            )}
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
+
+              <RoleSelect form={form} />
+
+              {showBusinessFields && (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
+                  <FormField
+                    control={form.control}
+                    name="businessName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your business name" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="businessAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Address</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Enter your business address" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 </>
-              ) : (
-                "Create Account"
               )}
-            </Button>
-          </form>
+
+              {form.formState.errors.root && (
+                <p className="text-sm text-destructive text-center">
+                  {form.formState.errors.root.message}
+                </p>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={form.formState.isSubmitting}
+              >
+                {form.formState.isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
