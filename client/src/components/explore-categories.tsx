@@ -16,7 +16,7 @@ const categories = [
   {
     id: "air-cooled",
     title: "AIR COOLED",
-    image: "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=800",
+    image: "https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800",
   },
 ];
 

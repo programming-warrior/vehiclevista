@@ -16,7 +16,6 @@ export default function LiveAuctionSection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Example auction items - replace with real data */}
           {[
             {
               id: 1,
@@ -27,7 +26,8 @@ export default function LiveAuctionSection() {
               fuelType: "Diesel",
               transmission: "Manual",
               condition: "catS",
-              timeLeft: "09:09:24:52"
+              timeLeft: "00:02:51:28",
+              images: ["https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800"]
             },
             {
               id: 2,
@@ -37,23 +37,43 @@ export default function LiveAuctionSection() {
               mileage: 50,
               fuelType: "Petrol",
               transmission: "Automatic",
-              condition: "catA",
-              timeLeft: "00:02:51:28"
+              condition: "clean",
+              timeLeft: "00:02:51:28",
+              images: ["https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800"]
+            },
+            {
+              id: 3,
+              title: "Audi A6 3.5 - New",
+              description: "3.5 D5 PowerPulse Momentum 5dr AW...",
+              price: 58000,
+              mileage: 100,
+              fuelType: "Petrol",
+              transmission: "Automatic",
+              condition: "clean",
+              timeLeft: "01:12:43:26",
+              images: ["https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800"]
+            },
+            {
+              id: 4,
+              title: "Corolla Altis - 2023",
+              description: "3.5 D5 PowerPulse Momentum 5dr AW...",
+              price: 45000,
+              mileage: 15000,
+              fuelType: "Petrol",
+              transmission: "Automatic",
+              condition: "clean",
+              timeLeft: "01:03:46:51",
+              images: ["https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800"]
             }
           ].map((vehicle) => (
             <Card key={vehicle.id} className="group hover:shadow-lg transition-shadow">
               <CardContent className="p-0">
                 <AspectRatio ratio={16/9} className="relative">
                   <img 
-                    src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800"
+                    src={vehicle.images[0]}
                     alt={vehicle.title}
                     className="object-cover w-full h-full rounded-t-lg"
                   />
-                  <div className="absolute top-3 left-3">
-                    <Badge className="bg-red-100 text-red-800 border-none font-medium px-3 py-1">
-                      Cat S
-                    </Badge>
-                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -67,14 +87,9 @@ export default function LiveAuctionSection() {
 
                   {/* Countdown Timer */}
                   <div className="absolute bottom-3 right-3">
-                    <div className="bg-white shadow-md rounded-lg px-3 py-1">
+                    <div className="bg-white shadow-md rounded-full px-3 py-1">
                       <div className="font-mono text-sm font-medium text-gray-900">
-                        {vehicle.timeLeft.split(':').map((unit, i) => (
-                          <span key={i} className="inline-block">
-                            {unit}
-                            {i < 3 && <span className="mx-1">:</span>}
-                          </span>
-                        ))}
+                        {vehicle.timeLeft}
                       </div>
                     </div>
                   </div>
