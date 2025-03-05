@@ -22,18 +22,10 @@ import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { insertEventSchema } from "@shared/schema";
 
-const eventFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  eventType: z.enum(["auction", "showcase", "meetup"], {
-    required_error: "Event type is required",
-  }),
-  date: z.string().min(1, "Date is required"),
-  location: z.string().min(1, "Location is required"),
-  capacity: z.number().min(1, "Capacity must be at least 1"),
-  status: z.enum(["upcoming", "ongoing", "completed"]),
-});
+// Use the schema from shared/schema.ts
+const eventFormSchema = insertEventSchema;
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
 
@@ -47,9 +39,13 @@ export function EventForm({ onSuccess }: EventFormProps) {
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: {
-      status: "upcoming",
-      capacity: 1,
+      title: "",
+      description: "",
       eventType: "showcase",
+      date: new Date().toISOString().slice(0, 16), // Format: YYYY-MM-DDTHH:mm
+      location: "",
+      capacity: 1,
+      status: "upcoming",
     },
   });
 
