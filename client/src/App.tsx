@@ -19,6 +19,8 @@ import Classified from "@/pages/classified";
 import TraderDashboard from "@/pages/trader/dashboard";
 import TraderBulkUpload from "@/pages/trader/bulk-upload";
 import TraderPackages from "@/pages/trader/packages";
+import MakesPage from "@/pages/makes";
+import BrandPage from "@/pages/makes/[brand]";
 
 export default function App() {
   return (
@@ -26,7 +28,7 @@ export default function App() {
       <AuthProvider>
         <div className="min-h-screen bg-background">
           <Navbar />
-          <main className="container mx-auto px-4 py-8">
+          <main>
             <Switch>
               <Route path="/login">
                 <Login />
@@ -36,6 +38,14 @@ export default function App() {
               </Route>
               <Route path="/classified">
                 <Classified />
+              </Route>
+
+              {/* Makes Routes */}
+              <Route path="/makes">
+                <MakesPage />
+              </Route>
+              <Route path="/makes/:brand">
+                <BrandPage />
               </Route>
 
               {/* Trader/Garage Routes */}
