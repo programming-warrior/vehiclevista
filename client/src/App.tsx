@@ -12,7 +12,7 @@ import Login from "@/pages/login";
 import SignIn from "@/pages/signin";
 import Navbar from "@/components/navbar";
 import NotFound from "@/pages/not-found";
-import AdminDashboard from "@/pages/admin";
+import AdminDashboard from "@/pages/admin/dashboard";
 import AdminVehicles from "@/pages/admin/vehicles";
 import AdminSettings from "@/pages/admin/settings";
 import AdminUsers from "@/pages/admin/users";
