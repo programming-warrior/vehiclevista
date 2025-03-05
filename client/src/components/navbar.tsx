@@ -89,9 +89,22 @@ export default function Navbar() {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-background md:hidden">
-          <div className="container mx-auto px-4 py-6 space-y-6">
+          <div className="container mx-auto px-4 py-6">
+            {/* Close Button */}
+            <div className="flex justify-end mb-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-full hover:bg-gray-100"
+              >
+                <X className="h-6 w-6" />
+                <span className="sr-only">Close menu</span>
+              </Button>
+            </div>
+
             {/* Mobile Search */}
-            <div className="relative">
+            <div className="relative mb-6">
               <input
                 type="text"
                 placeholder="Search..."
@@ -101,7 +114,7 @@ export default function Navbar() {
             </div>
 
             {/* Mobile Navigation Links */}
-            <nav className="flex flex-col space-y-4">
+            <nav className="flex flex-col space-y-4 mb-6">
               <Link href="/" className="text-lg font-medium hover:text-primary">Home</Link>
               <Link href="/classified" className="text-lg font-medium hover:text-primary">Classified</Link>
               <Link href="/auction" className="text-lg font-medium hover:text-primary">Auction</Link>
