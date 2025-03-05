@@ -9,6 +9,7 @@ import HeroSection from "@/components/hero-section";
 import LiveAuctionSection from "@/components/live-auction-section";
 import ExploreCategories from "@/components/explore-categories";
 import SuperAdSection from "@/components/super-ad-section";
+import SearchMakes from "@/components/search-makes";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -80,6 +81,9 @@ export default function Home() {
 
       {/* Super Ad Section */}
       <SuperAdSection />
+
+      {/* Search Makes Section */}
+      <SearchMakes />
     </div>
   );
 }
