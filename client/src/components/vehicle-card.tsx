@@ -51,21 +51,9 @@ export default function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
             </Button>
           </AspectRatio>
 
-          {/* Price Display in Speedometer Style */}
-          <div className="absolute -bottom-6 left-3">
-            <div className="bg-black rounded-lg px-4 py-2 text-center">
-              <div className="font-mono text-2xl font-bold text-white flex items-center justify-center">
-                <span className="text-xl mr-1">$</span>
-                {vehicle.price.toString().split('').map((digit, i) => (
-                  <span key={i} className="inline-block w-[1ch] text-center">{digit}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-
           {/* Vehicle Details */}
-          <div className="p-4 pt-8">
-            <h3 className="text-lg font-semibold mb-2 mt-2">
+          <div className="p-4">
+            <h3 className="text-lg font-semibold mb-2">
               {vehicle.title}
             </h3>
             <p className="text-sm text-gray-600 mb-4">
@@ -92,11 +80,14 @@ export default function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
       </Link>
 
       <CardFooter className="px-4 pb-4 pt-2">
-        <Link href={`/vehicle/${vehicle.id}`} className="w-full">
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-            Buy →
-          </Button>
-        </Link>
+        <div className="w-full flex justify-between items-center">
+          <span className="text-xl font-bold">${vehicle.price.toLocaleString()}</span>
+          <Link href={`/vehicle/${vehicle.id}`}>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+              Buy →
+            </Button>
+          </Link>
+        </div>
       </CardFooter>
     </Card>
   );
