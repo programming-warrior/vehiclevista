@@ -16,6 +16,13 @@ import AdminDashboard from "@/pages/admin";
 import AdminVehicles from "@/pages/admin/vehicles";
 import AdminSettings from "@/pages/admin/settings";
 import AdminUsers from "@/pages/admin/users";
+import AdminAuctions from "@/pages/admin/auctions";
+import AdminEvents from "@/pages/admin/events";
+import AdminFeedback from "@/pages/admin/feedback";
+import AdminSpareParts from "@/pages/admin/spare-parts";
+import AdminInventory from "@/pages/admin/inventory";
+import AdminOffers from "@/pages/admin/offers";
+import AdminPricing from "@/pages/admin/pricing";
 import Classified from "@/pages/classified";
 import TraderDashboard from "@/pages/trader/dashboard";
 import TraderBulkUpload from "@/pages/trader/bulk-upload";
@@ -70,6 +77,48 @@ export default function App() {
               </Route>
 
               {/* Admin Routes */}
+              <Route path="/admin/auctions">
+                <ProtectedRoute 
+                  component={AdminAuctions}
+                  adminOnly
+                />
+              </Route>
+              <Route path="/admin/events">
+                <ProtectedRoute 
+                  component={AdminEvents}
+                  adminOnly
+                />
+              </Route>
+              <Route path="/admin/feedback">
+                <ProtectedRoute 
+                  component={AdminFeedback}
+                  adminOnly
+                />
+              </Route>
+              <Route path="/admin/spare-parts">
+                <ProtectedRoute 
+                  component={AdminSpareParts}
+                  adminOnly
+                />
+              </Route>
+              <Route path="/admin/inventory">
+                <ProtectedRoute 
+                  component={AdminInventory}
+                  adminOnly
+                />
+              </Route>
+              <Route path="/admin/offers">
+                <ProtectedRoute 
+                  component={AdminOffers}
+                  adminOnly
+                />
+              </Route>
+              <Route path="/admin/pricing">
+                <ProtectedRoute 
+                  component={AdminPricing}
+                  adminOnly
+                />
+              </Route>
               <Route path="/admin/vehicles">
                 <ProtectedRoute 
                   component={AdminVehicles}
