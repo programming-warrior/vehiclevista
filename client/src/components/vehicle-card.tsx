@@ -52,10 +52,13 @@ export default function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
           </AspectRatio>
 
           {/* Price Display in Speedometer Style */}
-          <div className="absolute -bottom-6 left-3 w-32 h-16 bg-black rounded-lg overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black flex items-center justify-center">
-              <div className="text-white text-center">
-                <span className="text-2xl font-bold">£{(vehicle.price / 1000).toFixed(0)}k</span>
+          <div className="absolute -bottom-6 left-3">
+            <div className="bg-black rounded-lg px-4 py-2 text-center">
+              <div className="font-mono text-2xl font-bold text-white flex items-center justify-center">
+                <span className="text-xl mr-1">$</span>
+                {vehicle.price.toString().split('').map((digit, i) => (
+                  <span key={i} className="inline-block w-[1ch] text-center">{digit}</span>
+                ))}
               </div>
             </div>
           </div>
