@@ -10,6 +10,7 @@ import LiveAuctionSection from "@/components/live-auction-section";
 import ExploreCategories from "@/components/explore-categories";
 import SuperAdSection from "@/components/super-ad-section";
 import SearchMakes from "@/components/search-makes";
+import SelectedPartsSection from "@/components/selected-parts-section";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -84,6 +85,9 @@ export default function Home() {
 
       {/* Search Makes Section */}
       <SearchMakes />
+
+      {/* Selected Parts Section */}
+      <SelectedPartsSection />
     </div>
   );
 }
