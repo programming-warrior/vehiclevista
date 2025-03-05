@@ -76,7 +76,13 @@ export default function App() {
                 />
               </Route>
 
-              {/* Admin Routes */}
+              {/* Admin Routes - Place the root admin route first */}
+              <Route path="/admin">
+                <ProtectedRoute 
+                  component={AdminDashboard}
+                  adminOnly
+                />
+              </Route>
               <Route path="/admin/auctions">
                 <ProtectedRoute 
                   component={AdminAuctions}
@@ -134,12 +140,6 @@ export default function App() {
               <Route path="/admin/settings">
                 <ProtectedRoute 
                   component={AdminSettings}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin">
-                <ProtectedRoute 
-                  component={AdminDashboard}
                   adminOnly
                 />
               </Route>
