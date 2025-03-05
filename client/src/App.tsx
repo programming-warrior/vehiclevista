@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/toaster";
 import { ProtectedRoute } from "@/lib/protected-route";
+import Footer from "@/components/footer";
 import Home from "@/pages/home";
 import Vehicle from "@/pages/vehicle";
 import Search from "@/pages/search";
@@ -26,9 +27,9 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background flex flex-col">
           <Navbar />
-          <main>
+          <main className="flex-1">
             <Switch>
               <Route path="/login">
                 <Login />
@@ -107,6 +108,7 @@ export default function App() {
               </Route>
             </Switch>
           </main>
+          <Footer />
           <Toaster />
         </div>
       </AuthProvider>
