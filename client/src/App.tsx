@@ -16,6 +16,9 @@ import AdminVehicles from "@/pages/admin/vehicles";
 import AdminSettings from "@/pages/admin/settings";
 import AdminUsers from "@/pages/admin/users";
 import Classified from "@/pages/classified";
+import TraderDashboard from "@/pages/trader/dashboard";
+import TraderBulkUpload from "@/pages/trader/bulk-upload";
+import TraderPackages from "@/pages/trader/packages";
 
 export default function App() {
   return (
@@ -34,6 +37,28 @@ export default function App() {
               <Route path="/classified">
                 <Classified />
               </Route>
+
+              {/* Trader/Garage Routes */}
+              <Route path="/trader/dashboard">
+                <ProtectedRoute 
+                  component={TraderDashboard}
+                  requiredRoles={["trader", "garage"]}
+                />
+              </Route>
+              <Route path="/trader/bulk-upload">
+                <ProtectedRoute 
+                  component={TraderBulkUpload}
+                  requiredRoles={["trader", "garage"]}
+                />
+              </Route>
+              <Route path="/trader/packages">
+                <ProtectedRoute 
+                  component={TraderPackages}
+                  requiredRoles={["trader", "garage"]}
+                />
+              </Route>
+
+              {/* Admin Routes */}
               <Route path="/admin/vehicles">
                 <ProtectedRoute 
                   component={AdminVehicles}

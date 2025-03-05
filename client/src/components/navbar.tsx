@@ -1,12 +1,13 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Car, Heart } from "lucide-react";
+import { Car, Heart, BarChart2, Upload, Package } from "lucide-react";
 import SearchBar from "./search-bar";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
+  const isTraderOrGarage = user?.role === "trader" || user?.role === "garage";
 
   const handleLogout = async () => {
     await logout();
@@ -25,6 +26,28 @@ export default function Navbar() {
           <Link href="/classified">
             <Button variant="ghost">Classified Cars</Button>
           </Link>
+          {isTraderOrGarage && (
+            <>
+              <Link href="/trader/dashboard">
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <BarChart2 className="h-4 w-4" />
+                  Performance
+                </Button>
+              </Link>
+              <Link href="/trader/bulk-upload">
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Bulk Upload
+                </Button>
+              </Link>
+              <Link href="/trader/packages">
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Packages
+                </Button>
+              </Link>
+            </>
+          )}
           <div className="w-[300px]">
             <SearchBar />
           </div>
@@ -63,6 +86,28 @@ export default function Navbar() {
           <Link href="/classified">
             <Button variant="ghost" className="w-full">Classified Cars</Button>
           </Link>
+          {isTraderOrGarage && (
+            <>
+              <Link href="/trader/dashboard">
+                <Button variant="ghost" className="w-full flex items-center gap-2 justify-center">
+                  <BarChart2 className="h-4 w-4" />
+                  Performance
+                </Button>
+              </Link>
+              <Link href="/trader/bulk-upload">
+                <Button variant="ghost" className="w-full flex items-center gap-2 justify-center">
+                  <Upload className="h-4 w-4" />
+                  Bulk Upload
+                </Button>
+              </Link>
+              <Link href="/trader/packages">
+                <Button variant="ghost" className="w-full flex items-center gap-2 justify-center">
+                  <Package className="h-4 w-4" />
+                  Packages
+                </Button>
+              </Link>
+            </>
+          )}
           <SearchBar />
         </div>
       </div>

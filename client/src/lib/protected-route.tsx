@@ -5,9 +5,11 @@ import { Loader2 } from "lucide-react";
 export function ProtectedRoute({
   component: Component,
   adminOnly = false,
+  requiredRoles,
 }: {
   component: () => JSX.Element;
   adminOnly?: boolean;
+  requiredRoles?: string[];
 }) {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -28,6 +30,12 @@ export function ProtectedRoute({
 
   if (adminOnly && user.role !== "admin") {
     console.log("User is not admin, redirecting to home");
+    setLocation("/");
+    return null;
+  }
+
+  if (requiredRoles && !requiredRoles.includes(user.role)) {
+    console.log("User does not have required role, redirecting to home");
     setLocation("/");
     return null;
   }
