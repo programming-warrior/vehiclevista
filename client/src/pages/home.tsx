@@ -12,6 +12,7 @@ import SuperAdSection from "@/components/super-ad-section";
 import SearchMakes from "@/components/search-makes";
 import SelectedPartsSection from "@/components/selected-parts-section";
 import QualityBikesSection from "@/components/quality-bikes-section";
+import BikesCollection from "@/components/bikes-collection";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -92,6 +93,9 @@ export default function Home() {
 
       {/* Quality Bikes Section */}
       <QualityBikesSection />
+
+      {/* Bikes Collection Section */}
+      <BikesCollection />
     </div>
   );
 }
