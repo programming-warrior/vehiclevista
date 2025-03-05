@@ -71,11 +71,11 @@ export default function Home() {
         )}
       </div>
 
-      {/* Explore Categories Section */}
-      <ExploreCategories />
-
       {/* Live Auction Section */}
       <LiveAuctionSection />
+
+      {/* Explore Categories Section */}
+      <ExploreCategories />
     </div>
   );
 }
