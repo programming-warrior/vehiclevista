@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { EventForm } from "@/components/admin/forms/event-form";
 
 interface Event {
   id: string;
@@ -136,7 +137,7 @@ export default function EventManagement() {
           <DialogHeader>
             <DialogTitle>Add New Event</DialogTitle>
           </DialogHeader>
-          {/* Add Event Form will go here */}
+          <EventForm onSuccess={() => setIsAddDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </AdminLayout>

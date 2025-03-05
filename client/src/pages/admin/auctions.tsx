@@ -2,11 +2,11 @@ import AdminLayout from "@/components/admin/admin-layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Gavel, Plus, Pencil, Trash } from "lucide-react";
-import { DataTable } from "@/components/ui/data-table";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { AuctionForm } from "@/components/admin/forms/auction-form";
 
 interface Auction {
   id: string;
@@ -135,7 +135,7 @@ export default function AuctionManagement() {
           <DialogHeader>
             <DialogTitle>Add New Auction</DialogTitle>
           </DialogHeader>
-          {/* Add Auction Form will go here */}
+          <AuctionForm onSuccess={() => setIsAddDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </AdminLayout>
