@@ -80,94 +80,115 @@ export const userPackages = pgTable("user_packages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Add auctions table
+// Auction table with proper schema
 export const auctions = pgTable("auctions", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  startDate: text("start_date").notNull(),
-  endDate: text("end_date").notNull(),
-  status: text("status").notNull().default("upcoming"), // upcoming, active, ended
-  currentBid: integer("current_bid").default(0),
-  totalBids: integer("total_bids").default(0),
+  description: text("description").notNull(),
+  startingPrice: real("starting_price").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
   vehicleId: integer("vehicle_id").notNull(),
+  status: text("status").notNull().default("upcoming"), // upcoming, active, ended
+  currentBid: real("current_bid").default(0),
+  totalBids: integer("total_bids").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Add events table
+// Events table with proper schema
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  date: text("date").notNull(),
-  location: text("location").notNull(),
-  type: text("type").notNull(),
-  status: text("status").notNull().default("upcoming"), // upcoming, ongoing, completed
-  attendees: integer("attendees").default(0),
   description: text("description").notNull(),
+  eventType: text("event_type").notNull(), // auction, showcase, meetup
+  date: timestamp("date").notNull(),
+  location: text("location").notNull(),
+  capacity: integer("capacity").notNull(),
+  registeredCount: integer("registered_count").default(0),
+  status: text("status").notNull().default("upcoming"), // upcoming, ongoing, completed
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Add feedback table
+// Feedback table with proper schema
 export const feedbacks = pgTable("feedbacks", {
   id: serial("id").primaryKey(),
   subject: text("subject").notNull(),
   message: text("message").notNull(),
+  category: text("category").notNull(), // general, bug, feature, support
+  priority: text("priority").notNull(), // low, medium, high
   status: text("status").notNull().default("new"), // new, in-progress, resolved
-  priority: text("priority").notNull().default("low"), // low, medium, high
   submittedBy: text("submitted_by").notNull(),
   submittedAt: timestamp("submitted_at").defaultNow(),
-  response: text("response"),
   resolvedAt: timestamp("resolved_at"),
+  resolution: text("resolution"),
 });
 
-// Add spare parts table
+// Spare Parts table with proper schema
 export const spareParts = pgTable("spare_parts", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   partNumber: text("part_number").notNull(),
   manufacturer: text("manufacturer").notNull(),
   category: text("category").notNull(),
+  compatibleModels: text("compatible_models").array(),
   price: real("price").notNull(),
   stockLevel: integer("stock_level").notNull(),
-  status: text("status").notNull().default("available"), // available, out-of-stock, discontinued
+  minStockLevel: integer("min_stock_level").notNull(),
+  status: text("status").notNull().default("available"), // available, low-stock, out-of-stock
+  location: text("location").notNull(),
   description: text("description").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Add inventory table
+// Inventory table with proper schema
 export const inventory = pgTable("inventory", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  sku: text("sku").notNull(),
   category: text("category").notNull(),
   quantity: integer("quantity").notNull(),
   price: real("price").notNull(),
+  cost: real("cost").notNull(),
+  supplier: text("supplier"),
+  location: text("location").notNull(),
   status: text("status").notNull().default("in-stock"), // in-stock, low-stock, out-of-stock
   description: text("description").notNull(),
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
-// Add offers table
+// Offers table with proper schema
 export const offers = pgTable("offers", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull(),
+  offerType: text("offer_type").notNull(), // discount, bundle, seasonal
   discount: real("discount").notNull(),
-  type: text("type").notNull(), // percentage, fixed
+  discountType: text("discount_type").notNull(), // percentage, fixed
+  minPurchase: real("min_purchase"),
   validFrom: timestamp("valid_from").notNull(),
   validTo: timestamp("valid_to").notNull(),
+  applicableItems: text("applicable_items").array(),
+  termsConditions: text("terms_conditions").notNull(),
   status: text("status").notNull().default("draft"), // draft, active, expired
   redemptions: integer("redemptions").default(0),
+  maxRedemptions: integer("max_redemptions"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Add pricing plans table
+// Pricing Plans table with proper schema
 export const pricingPlans = pgTable("pricing_plans", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
   price: real("price").notNull(),
-  billingCycle: text("billing_cycle").notNull(), // monthly, yearly
+  billingCycle: text("billing_cycle").notNull(), // monthly, quarterly, yearly
   features: text("features").array().notNull(),
+  maxListings: integer("max_listings").notNull(),
+  maxImages: integer("max_images").notNull(),
+  prioritySupport: boolean("priority_support").default(false),
+  featuredListings: integer("featured_listings").default(0),
   status: text("status").notNull().default("draft"), // draft, active, archived
+  trialDays: integer("trial_days").default(0),
   subscriptions: integer("subscriptions").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -214,24 +235,34 @@ export const insertUserPackageSchema = createInsertSchema(userPackages).omit({
 });
 
 // Create insert schemas for new tables
-export const insertAuctionSchema = createInsertSchema(auctions).omit({
+export const insertAuctionSchema = createInsertSchema(auctions, {
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required")
+}).omit({
   id: true,
   currentBid: true,
   totalBids: true,
   createdAt: true,
 });
 
-export const insertEventSchema = createInsertSchema(events).omit({
+export const insertEventSchema = createInsertSchema(events, {
+  date: z.string().min(1, "Event date is required"),
+  eventType: z.enum(["auction", "showcase", "meetup"]),
+  capacity: z.number().min(1, "Capacity must be at least 1")
+}).omit({
   id: true,
-  attendees: true,
+  registeredCount: true,
   createdAt: true,
 });
 
-export const insertFeedbackSchema = createInsertSchema(feedbacks).omit({
+export const insertFeedbackSchema = createInsertSchema(feedbacks, {
+  category: z.enum(["general", "bug", "feature", "support"]),
+  priority: z.enum(["low", "medium", "high"])
+}).omit({
   id: true,
   submittedAt: true,
-  response: true,
   resolvedAt: true,
+  resolution: true,
 });
 
 export const insertSparePartSchema = createInsertSchema(spareParts).omit({
@@ -244,13 +275,22 @@ export const insertInventorySchema = createInsertSchema(inventory).omit({
   lastUpdated: true,
 });
 
-export const insertOfferSchema = createInsertSchema(offers).omit({
+export const insertOfferSchema = createInsertSchema(offers, {
+  offerType: z.enum(["discount", "bundle", "seasonal"]),
+  discountType: z.enum(["percentage", "fixed"]),
+  validFrom: z.string().min(1, "Valid from date is required"),
+  validTo: z.string().min(1, "Valid to date is required")
+}).omit({
   id: true,
   redemptions: true,
   createdAt: true,
 });
 
-export const insertPricingPlanSchema = createInsertSchema(pricingPlans).omit({
+export const insertPricingPlanSchema = createInsertSchema(pricingPlans, {
+  billingCycle: z.enum(["monthly", "quarterly", "yearly"]),
+  maxListings: z.number().min(1, "Maximum listings must be at least 1"),
+  maxImages: z.number().min(1, "Maximum images must be at least 1")
+}).omit({
   id: true,
   subscriptions: true,
   createdAt: true,

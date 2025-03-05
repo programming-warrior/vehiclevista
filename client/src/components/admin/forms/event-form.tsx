@@ -9,12 +9,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,9 +25,13 @@ import { apiRequest } from "@/lib/queryClient";
 
 const eventFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  eventType: z.enum(["auction", "showcase", "meetup"], {
+    required_error: "Event type is required",
+  }),
   date: z.string().min(1, "Date is required"),
   location: z.string().min(1, "Location is required"),
-  type: z.string().min(1, "Event type is required"),
+  capacity: z.number().min(1, "Capacity must be at least 1"),
   status: z.enum(["upcoming", "ongoing", "completed"]),
 });
 
@@ -38,11 +43,13 @@ interface EventFormProps {
 
 export function EventForm({ onSuccess }: EventFormProps) {
   const queryClient = useQueryClient();
-  
+
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: {
       status: "upcoming",
+      capacity: 1,
+      eventType: "showcase",
     },
   });
 
@@ -88,12 +95,52 @@ export function EventForm({ onSuccess }: EventFormProps) {
 
         <FormField
           control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Enter event description"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="eventType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Event Type</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select event type" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="auction">Auction</SelectItem>
+                  <SelectItem value="showcase">Showcase</SelectItem>
+                  <SelectItem value="meetup">Meetup</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="date"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Date</FormLabel>
               <FormControl>
-                <Input type="date" {...field} />
+                <Input type="datetime-local" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -116,12 +163,17 @@ export function EventForm({ onSuccess }: EventFormProps) {
 
         <FormField
           control={form.control}
-          name="type"
+          name="capacity"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Event Type</FormLabel>
+              <FormLabel>Capacity</FormLabel>
               <FormControl>
-                <Input placeholder="Car Show, Auction, Meet-up" {...field} />
+                <Input 
+                  type="number" 
+                  min={1}
+                  {...field}
+                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
