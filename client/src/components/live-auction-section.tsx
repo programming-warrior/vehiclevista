@@ -64,25 +64,25 @@ export default function LiveAuctionSection() {
                       <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
                     </svg>
                   </Button>
-                </AspectRatio>
 
-                {/* Countdown Timer */}
-                <div className="absolute -bottom-6 right-3">
-                  <div className="bg-white shadow-md rounded-lg px-3 py-1">
-                    <div className="font-mono text-sm font-medium text-gray-900">
-                      {vehicle.timeLeft.split(':').map((unit, i) => (
-                        <span key={i} className="inline-block">
-                          {unit}
-                          {i < 3 && <span className="mx-1">:</span>}
-                        </span>
-                      ))}
+                  {/* Countdown Timer */}
+                  <div className="absolute bottom-3 right-3">
+                    <div className="bg-white shadow-md rounded-lg px-3 py-1">
+                      <div className="font-mono text-sm font-medium text-gray-900">
+                        {vehicle.timeLeft.split(':').map((unit, i) => (
+                          <span key={i} className="inline-block">
+                            {unit}
+                            {i < 3 && <span className="mx-1">:</span>}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </AspectRatio>
 
                 {/* Vehicle Details */}
-                <div className="p-4 pt-8">
-                  <h3 className="text-lg font-semibold mb-2 mt-2">
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold mb-2">
                     {vehicle.title}
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
