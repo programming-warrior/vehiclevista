@@ -13,11 +13,10 @@ import {
   type SparePart, type InsertSparePart,
   type InventoryItem, type InsertInventoryItem,
   type Offer, type InsertOffer,
-  type PricingPlan, type InsertPricingPlan
+  type PricingPlan
 } from "@shared/schema";
 import type { Package, InsertPackage, UserPackage, InsertUserPackage } from "@shared/schema"; 
 import { packages, userPackages } from "@shared/schema"; 
-
 
 export interface IStorage {
   getVehicles(category?: string): Promise<Vehicle[]>;
@@ -342,7 +341,11 @@ export class DatabaseStorage implements IStorage {
   async createEvent(event: InsertEvent): Promise<Event> {
     const [newEvent] = await db
       .insert(events)
-      .values(event)
+      .values({
+        ...event,
+        date: new Date(event.date).toISOString(), // Ensure proper date format
+        registeredCount: 0, // Set default value
+      })
       .returning();
     return newEvent;
   }

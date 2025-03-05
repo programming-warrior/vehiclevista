@@ -484,7 +484,11 @@ export async function registerRoutes(app: Express) {
     try {
       const result = insertEventSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ message: "Invalid event data" });
+        console.error("Validation errors:", result.error.errors);
+        return res.status(400).json({ 
+          message: "Invalid event data",
+          errors: result.error.errors 
+        });
       }
 
       const event = await storage.createEvent(result.data);

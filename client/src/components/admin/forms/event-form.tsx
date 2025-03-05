@@ -24,8 +24,10 @@ import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertEventSchema } from "@shared/schema";
 
-// Use the schema from shared/schema.ts
-const eventFormSchema = insertEventSchema;
+// Extended form schema with client-side validations
+const eventFormSchema = insertEventSchema.extend({
+  date: z.string().min(1, "Event date is required"),
+});
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
 
@@ -51,8 +53,25 @@ export function EventForm({ onSuccess }: EventFormProps) {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (values: EventFormValues) => {
-      const res = await apiRequest("POST", "/api/events", values);
-      return res.json();
+      try {
+        // Format the date to ISO string
+        const formattedValues = {
+          ...values,
+          date: new Date(values.date).toISOString(),
+        };
+
+        const res = await apiRequest("POST", "/api/events", formattedValues);
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || 'Failed to create event');
+        }
+
+        return await res.json();
+      } catch (error) {
+        console.error("Form submission error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -63,10 +82,11 @@ export function EventForm({ onSuccess }: EventFormProps) {
       form.reset();
       onSuccess?.();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error("Mutation error:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to create event",
         variant: "destructive",
       });
     },
@@ -82,7 +102,7 @@ export function EventForm({ onSuccess }: EventFormProps) {
             <FormItem>
               <FormLabel>Title</FormLabel>
               <FormControl>
-                <Input placeholder="Annual Car Show" {...field} />
+                <Input placeholder="Event Title" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -134,9 +154,12 @@ export function EventForm({ onSuccess }: EventFormProps) {
           name="date"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Date</FormLabel>
+              <FormLabel>Date and Time</FormLabel>
               <FormControl>
-                <Input type="datetime-local" {...field} />
+                <Input 
+                  type="datetime-local" 
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -150,7 +173,7 @@ export function EventForm({ onSuccess }: EventFormProps) {
             <FormItem>
               <FormLabel>Location</FormLabel>
               <FormControl>
-                <Input placeholder="London Exhibition Center" {...field} />
+                <Input placeholder="Event Location" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
