@@ -8,7 +8,11 @@ app.use(express.urlencoded({ extended: false }));
 
 // Add CORS configuration for development
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "http://localhost:5000");
+  // Allow requests from all subdomains of replit.dev in development
+  const origin = req.headers.origin;
+  if (origin && (origin.endsWith('.replit.dev') || origin === 'http://localhost:5000')) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
