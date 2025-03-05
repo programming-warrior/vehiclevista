@@ -484,18 +484,23 @@ export async function registerRoutes(app: Express) {
     try {
       const result = insertEventSchema.safeParse(req.body);
       if (!result.success) {
-        console.error("Validation errors:", result.error.errors);
+        console.error("Event validation errors:", result.error.errors);
         return res.status(400).json({ 
           message: "Invalid event data",
           errors: result.error.errors 
         });
       }
 
-      const event = await storage.createEvent(result.data);
-      res.status(201).json(event);
+      try {
+        const event = await storage.createEvent(result.data);
+        res.status(201).json(event);
+      } catch (error) {
+        console.error("Error creating event:", error);
+        res.status(500).json({ message: "Failed to create event in database" });
+      }
     } catch (error) {
-      console.error("Error creating event:", error);
-      res.status(500).json({ message: "Failed to create event" });
+      console.error("Unexpected error in event creation:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

@@ -13,7 +13,7 @@ import {
   type SparePart, type InsertSparePart,
   type InventoryItem, type InsertInventoryItem,
   type Offer, type InsertOffer,
-  type PricingPlan
+  type PricingPlan, type InsertPricingPlan
 } from "@shared/schema";
 import type { Package, InsertPackage, UserPackage, InsertUserPackage } from "@shared/schema"; 
 import { packages, userPackages } from "@shared/schema"; 
@@ -339,15 +339,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEvent(event: InsertEvent): Promise<Event> {
-    const [newEvent] = await db
-      .insert(events)
-      .values({
+    try {
+      // Format and validate the event data
+      const eventData = {
         ...event,
-        date: new Date(event.date).toISOString(), // Ensure proper date format
-        registeredCount: 0, // Set default value
-      })
-      .returning();
-    return newEvent;
+        // Ensure date is in proper format
+        date: new Date(event.date).toISOString(),
+        // Set default values
+        registeredCount: 0,
+        status: event.status || "upcoming"
+      };
+
+      const [newEvent] = await db
+        .insert(events)
+        .values(eventData)
+        .returning();
+
+      return newEvent;
+    } catch (error) {
+      console.error("Error creating event in storage:", error);
+      throw new Error("Failed to create event in database");
+    }
   }
 
   // Implement feedback methods
