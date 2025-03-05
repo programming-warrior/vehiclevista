@@ -14,6 +14,7 @@ import SelectedPartsSection from "@/components/selected-parts-section";
 import QualityBikesSection from "@/components/quality-bikes-section";
 import BikesCollection from "@/components/bikes-collection";
 import VansCollection from "@/components/vans-collection";
+import LatestBlogPost from "@/components/latest-blog-post";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -100,6 +101,9 @@ export default function Home() {
 
       {/* Vans Collection Section */}
       <VansCollection />
+
+      {/* Latest Blog Post Section */}
+      <LatestBlogPost />
     </div>
   );
 }
