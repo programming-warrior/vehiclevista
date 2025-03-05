@@ -7,6 +7,7 @@ import { categories } from "@/lib/mock-data";
 import type { Vehicle } from "@shared/schema";
 import HeroSection from "@/components/hero-section";
 import LiveAuctionSection from "@/components/live-auction-section";
+import ExploreCategories from "@/components/explore-categories";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -69,6 +70,9 @@ export default function Home() {
           </>
         )}
       </div>
+
+      {/* Explore Categories Section */}
+      <ExploreCategories />
 
       {/* Live Auction Section */}
       <LiveAuctionSection />
