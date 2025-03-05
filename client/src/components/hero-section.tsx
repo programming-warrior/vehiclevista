@@ -29,80 +29,79 @@ export default function HeroSection() {
         </div>
 
         {/* Hero Content */}
-        <div className="max-w-4xl mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight">
-            Discover The Best Vehicles Near You Through An Exceptional Classifieds Experience And Exciting Auctions
-          </h1>
-          <p className="text-lg text-white/80">
-            Find your perfect vehicle with ease through classifieds and auctions
-          </p>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          <div className="max-w-2xl">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight">
+              Discover The Best Vehicles Near You Through An Exceptional Classifieds Experience And Exciting Auctions
+            </h1>
+            <p className="text-lg text-white/80">
+              Find your perfect vehicle with ease through classifieds and auctions
+            </p>
 
-        {/* Quick Finder Form */}
-        <div className="bg-white rounded-lg p-6 max-w-3xl">
-          <h2 className="text-xl font-semibold mb-4">Find your vehicle with quick finder</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="All Brands" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mercedes">Mercedes-Benz</SelectItem>
-                <SelectItem value="bmw">BMW</SelectItem>
-                <SelectItem value="audi">Audi</SelectItem>
-                {/* Add more brands */}
-              </SelectContent>
-            </Select>
-
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="All Models" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="a-class">A-Class</SelectItem>
-                <SelectItem value="c-class">C-Class</SelectItem>
-                <SelectItem value="e-class">E-Class</SelectItem>
-                {/* Add more models */}
-              </SelectContent>
-            </Select>
-
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="All Model Variants" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="amg">AMG</SelectItem>
-                <SelectItem value="sport">Sport</SelectItem>
-                <SelectItem value="se">SE</SelectItem>
-                {/* Add more variants */}
-              </SelectContent>
-            </Select>
-
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Budget" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10000">Up to £10,000</SelectItem>
-                <SelectItem value="20000">Up to £20,000</SelectItem>
-                <SelectItem value="30000">Up to £30,000</SelectItem>
-                {/* Add more budget ranges */}
-              </SelectContent>
-            </Select>
+            {/* Action Buttons */}
+            <div className="flex gap-4 mt-8">
+              <Button variant="secondary" className="bg-blue-600 hover:bg-blue-700 text-white px-8">
+                Live Auction
+              </Button>
+              <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white px-8">
+                How it works
+              </Button>
+            </div>
           </div>
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-            SEARCH
-          </Button>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-4 mt-8">
-          <Button variant="secondary" className="bg-blue-600 hover:bg-blue-700 text-white px-8">
-            Live Auction
-          </Button>
-          <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white px-8">
-            How it works
-          </Button>
+          {/* Quick Finder Form */}
+          <div className="bg-white rounded-3xl p-8 shadow-lg">
+            <h2 className="text-2xl font-semibold mb-6">Find your vehicle with quick finder</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <Select>
+                <SelectTrigger className="h-12 bg-gray-100">
+                  <SelectValue placeholder="All Brands" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mercedes">Mercedes-Benz</SelectItem>
+                  <SelectItem value="bmw">BMW</SelectItem>
+                  <SelectItem value="audi">Audi</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select>
+                <SelectTrigger className="h-12 bg-gray-100">
+                  <SelectValue placeholder="All Models" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="a-class">A-Class</SelectItem>
+                  <SelectItem value="c-class">C-Class</SelectItem>
+                  <SelectItem value="e-class">E-Class</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select>
+                <SelectTrigger className="h-12 bg-gray-100">
+                  <SelectValue placeholder="All Model Variants" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="amg">AMG</SelectItem>
+                  <SelectItem value="sport">Sport</SelectItem>
+                  <SelectItem value="se">SE</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select>
+                <SelectTrigger className="h-12 bg-gray-100">
+                  <SelectValue placeholder="Budget" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10000">Up to £10,000</SelectItem>
+                  <SelectItem value="20000">Up to £20,000</SelectItem>
+                  <SelectItem value="30000">Up to £30,000</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button className="w-full mt-6 h-12 bg-blue-600 hover:bg-blue-700 text-white text-lg">
+              SEARCH
+            </Button>
+          </div>
         </div>
       </div>
     </div>
