@@ -18,9 +18,9 @@ export default function Home() {
   return (
     <div>
       <HeroSection />
-      <LiveAuctionSection />
 
-      <div className="container mx-auto px-4 py-16">
+      {/* Featured Vehicles Section */}
+      <div className="container mx-auto px-4 py-12">
         <header className="mb-8">
           <h2 className="text-2xl font-bold mb-4">Featured Vehicles</h2>
           <p className="text-lg text-muted-foreground">
@@ -69,6 +69,9 @@ export default function Home() {
           </>
         )}
       </div>
+
+      {/* Live Auction Section */}
+      <LiveAuctionSection />
     </div>
   );
 }
