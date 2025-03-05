@@ -5,8 +5,18 @@ import { eq, ilike, and, or, between, desc } from "drizzle-orm";
 import { apiKeys, type ApiKey, type InsertApiKey } from "@shared/schema";
 import { rolePermissions, type RolePermission } from "@shared/schema";
 import { bulkUploads, type BulkUpload, type InsertBulkUpload } from "@shared/schema";
-import type { Package, InsertPackage, UserPackage, InsertUserPackage } from "@shared/schema"; // Assuming these types are defined elsewhere
-import { packages, userPackages } from "@shared/schema"; // Assuming these tables are defined elsewhere
+import { 
+  auctions, events, feedbacks, spareParts, inventory, offers, pricingPlans,
+  type Auction, type InsertAuction,
+  type Event, type InsertEvent,
+  type Feedback, type InsertFeedback,
+  type SparePart, type InsertSparePart,
+  type InventoryItem, type InsertInventoryItem,
+  type Offer, type InsertOffer,
+  type PricingPlan, type InsertPricingPlan
+} from "@shared/schema";
+import type { Package, InsertPackage, UserPackage, InsertUserPackage } from "@shared/schema"; 
+import { packages, userPackages } from "@shared/schema"; 
 
 
 export interface IStorage {
@@ -35,6 +45,34 @@ export interface IStorage {
   createPackage(data: InsertPackage): Promise<Package>;
   getUserPackages(userId: number): Promise<UserPackage[]>;
   createUserPackage(data: InsertUserPackage): Promise<UserPackage>;
+
+  // Add new methods for auctions
+  getAuctions(): Promise<Auction[]>;
+  createAuction(auction: InsertAuction): Promise<Auction>;
+
+  // Add new methods for events
+  getEvents(): Promise<Event[]>;
+  createEvent(event: InsertEvent): Promise<Event>;
+
+  // Add new methods for feedback
+  getFeedbacks(): Promise<Feedback[]>;
+  createFeedback(feedback: InsertFeedback): Promise<Feedback>;
+
+  // Add new methods for spare parts
+  getSpareParts(): Promise<SparePart[]>;
+  createSparePart(sparePart: InsertSparePart): Promise<SparePart>;
+
+  // Add new methods for inventory
+  getInventory(): Promise<InventoryItem[]>;
+  createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem>;
+
+  // Add new methods for offers
+  getOffers(): Promise<Offer[]>;
+  createOffer(offer: InsertOffer): Promise<Offer>;
+
+  // Add new methods for pricing plans
+  getPricingPlans(): Promise<PricingPlan[]>;
+  createPricingPlan(plan: InsertPricingPlan): Promise<PricingPlan>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -281,6 +319,97 @@ export class DatabaseStorage implements IStorage {
       .values(data)
       .returning();
     return newUserPackage;
+  }
+
+  // Implement auction methods
+  async getAuctions(): Promise<Auction[]> {
+    return await db.select().from(auctions);
+  }
+
+  async createAuction(auction: InsertAuction): Promise<Auction> {
+    const [newAuction] = await db
+      .insert(auctions)
+      .values(auction)
+      .returning();
+    return newAuction;
+  }
+
+  // Implement event methods
+  async getEvents(): Promise<Event[]> {
+    return await db.select().from(events);
+  }
+
+  async createEvent(event: InsertEvent): Promise<Event> {
+    const [newEvent] = await db
+      .insert(events)
+      .values(event)
+      .returning();
+    return newEvent;
+  }
+
+  // Implement feedback methods
+  async getFeedbacks(): Promise<Feedback[]> {
+    return await db.select().from(feedbacks);
+  }
+
+  async createFeedback(feedback: InsertFeedback): Promise<Feedback> {
+    const [newFeedback] = await db
+      .insert(feedbacks)
+      .values(feedback)
+      .returning();
+    return newFeedback;
+  }
+
+  // Implement spare parts methods
+  async getSpareParts(): Promise<SparePart[]> {
+    return await db.select().from(spareParts);
+  }
+
+  async createSparePart(sparePart: InsertSparePart): Promise<SparePart> {
+    const [newSparePart] = await db
+      .insert(spareParts)
+      .values(sparePart)
+      .returning();
+    return newSparePart;
+  }
+
+  // Implement inventory methods
+  async getInventory(): Promise<InventoryItem[]> {
+    return await db.select().from(inventory);
+  }
+
+  async createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem> {
+    const [newItem] = await db
+      .insert(inventory)
+      .values(item)
+      .returning();
+    return newItem;
+  }
+
+  // Implement offer methods
+  async getOffers(): Promise<Offer[]> {
+    return await db.select().from(offers);
+  }
+
+  async createOffer(offer: InsertOffer): Promise<Offer> {
+    const [newOffer] = await db
+      .insert(offers)
+      .values(offer)
+      .returning();
+    return newOffer;
+  }
+
+  // Implement pricing plan methods
+  async getPricingPlans(): Promise<PricingPlan[]> {
+    return await db.select().from(pricingPlans);
+  }
+
+  async createPricingPlan(plan: InsertPricingPlan): Promise<PricingPlan> {
+    const [newPlan] = await db
+      .insert(pricingPlans)
+      .values(plan)
+      .returning();
+    return newPlan;
   }
 }
 

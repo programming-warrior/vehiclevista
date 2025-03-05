@@ -80,23 +80,97 @@ export const userPackages = pgTable("user_packages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Add package-related schemas
-export const insertPackageSchema = createInsertSchema(packages).omit({
-  id: true,
-  createdAt: true,
+// Add auctions table
+export const auctions = pgTable("auctions", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  status: text("status").notNull().default("upcoming"), // upcoming, active, ended
+  currentBid: integer("current_bid").default(0),
+  totalBids: integer("total_bids").default(0),
+  vehicleId: integer("vehicle_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertUserPackageSchema = createInsertSchema(userPackages).omit({
-  id: true,
-  createdAt: true,
+// Add events table
+export const events = pgTable("events", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  date: text("date").notNull(),
+  location: text("location").notNull(),
+  type: text("type").notNull(),
+  status: text("status").notNull().default("upcoming"), // upcoming, ongoing, completed
+  attendees: integer("attendees").default(0),
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Add package-related types
-export type Package = typeof packages.$inferSelect;
-export type InsertPackage = z.infer<typeof insertPackageSchema>;
-export type UserPackage = typeof userPackages.$inferSelect;
-export type InsertUserPackage = z.infer<typeof insertUserPackageSchema>;
+// Add feedback table
+export const feedbacks = pgTable("feedbacks", {
+  id: serial("id").primaryKey(),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("new"), // new, in-progress, resolved
+  priority: text("priority").notNull().default("low"), // low, medium, high
+  submittedBy: text("submitted_by").notNull(),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  response: text("response"),
+  resolvedAt: timestamp("resolved_at"),
+});
 
+// Add spare parts table
+export const spareParts = pgTable("spare_parts", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  partNumber: text("part_number").notNull(),
+  manufacturer: text("manufacturer").notNull(),
+  category: text("category").notNull(),
+  price: real("price").notNull(),
+  stockLevel: integer("stock_level").notNull(),
+  status: text("status").notNull().default("available"), // available, out-of-stock, discontinued
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Add inventory table
+export const inventory = pgTable("inventory", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  quantity: integer("quantity").notNull(),
+  price: real("price").notNull(),
+  status: text("status").notNull().default("in-stock"), // in-stock, low-stock, out-of-stock
+  description: text("description").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+// Add offers table
+export const offers = pgTable("offers", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  discount: real("discount").notNull(),
+  type: text("type").notNull(), // percentage, fixed
+  validFrom: timestamp("valid_from").notNull(),
+  validTo: timestamp("valid_to").notNull(),
+  status: text("status").notNull().default("draft"), // draft, active, expired
+  redemptions: integer("redemptions").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Add pricing plans table
+export const pricingPlans = pgTable("pricing_plans", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  price: real("price").notNull(),
+  billingCycle: text("billing_cycle").notNull(), // monthly, yearly
+  features: text("features").array().notNull(),
+  status: text("status").notNull().default("draft"), // draft, active, archived
+  subscriptions: integer("subscriptions").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 export const bulkUploads = pgTable("bulk_uploads", {
   id: serial("id").primaryKey(),
@@ -126,6 +200,60 @@ export const apiKeys = pgTable("api_keys", {
   description: text("description").notNull(),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   updatedAt: text("updated_at").notNull().default(new Date().toISOString()),
+});
+
+// Add package-related schemas
+export const insertPackageSchema = createInsertSchema(packages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserPackageSchema = createInsertSchema(userPackages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Create insert schemas for new tables
+export const insertAuctionSchema = createInsertSchema(auctions).omit({
+  id: true,
+  currentBid: true,
+  totalBids: true,
+  createdAt: true,
+});
+
+export const insertEventSchema = createInsertSchema(events).omit({
+  id: true,
+  attendees: true,
+  createdAt: true,
+});
+
+export const insertFeedbackSchema = createInsertSchema(feedbacks).omit({
+  id: true,
+  submittedAt: true,
+  response: true,
+  resolvedAt: true,
+});
+
+export const insertSparePartSchema = createInsertSchema(spareParts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInventorySchema = createInsertSchema(inventory).omit({
+  id: true,
+  lastUpdated: true,
+});
+
+export const insertOfferSchema = createInsertSchema(offers).omit({
+  id: true,
+  redemptions: true,
+  createdAt: true,
+});
+
+export const insertPricingPlanSchema = createInsertSchema(pricingPlans).omit({
+  id: true,
+  subscriptions: true,
+  createdAt: true,
 });
 
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({
@@ -173,6 +301,13 @@ export const insertBulkUploadSchema = createInsertSchema(bulkUploads).omit({
   createdAt: true,
 });
 
+// Add package-related types
+export type Package = typeof packages.$inferSelect;
+export type InsertPackage = z.infer<typeof insertPackageSchema>;
+export type UserPackage = typeof userPackages.$inferSelect;
+export type InsertUserPackage = z.infer<typeof insertUserPackageSchema>;
+
+
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -184,8 +319,26 @@ export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 export type BulkUpload = typeof bulkUploads.$inferSelect;
 export type InsertBulkUpload = z.infer<typeof insertBulkUploadSchema>;
 
-export type UserPackage = typeof userPackages.$inferSelect;
-export type InsertUserPackage = z.infer<typeof insertUserPackageSchema>;
+export type Auction = typeof auctions.$inferSelect;
+export type InsertAuction = z.infer<typeof insertAuctionSchema>;
+
+export type Event = typeof events.$inferSelect;
+export type InsertEvent = z.infer<typeof insertEventSchema>;
+
+export type Feedback = typeof feedbacks.$inferSelect;
+export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+
+export type SparePart = typeof spareParts.$inferSelect;
+export type InsertSparePart = z.infer<typeof insertSparePartSchema>;
+
+export type InventoryItem = typeof inventory.$inferSelect;
+export type InsertInventoryItem = z.infer<typeof insertInventorySchema>;
+
+export type Offer = typeof offers.$inferSelect;
+export type InsertOffer = z.infer<typeof insertOfferSchema>;
+
+export type PricingPlan = typeof pricingPlans.$inferSelect;
+export type InsertPricingPlan = z.infer<typeof insertPricingPlanSchema>;
 
 export const searchSchema = z.object({
   query: z.string().optional(),

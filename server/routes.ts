@@ -1,7 +1,17 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { searchSchema, insertVehicleSchema } from "@shared/schema";
+import { 
+  searchSchema, 
+  insertVehicleSchema,
+  insertAuctionSchema,
+  insertEventSchema,
+  insertFeedbackSchema,
+  insertSparePartSchema,
+  insertInventorySchema,
+  insertOfferSchema,
+  insertPricingPlanSchema 
+} from "@shared/schema";
 import { setupAuth } from "./auth";
 import fetch from 'node-fetch';
 import multer from 'multer';
@@ -430,6 +440,188 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching user packages:", error);
       res.status(500).json({ message: "Failed to fetch user packages" });
+    }
+  });
+
+  // Auction routes
+  app.get("/api/auctions", async (req, res) => {
+    try {
+      const auctions = await storage.getAuctions();
+      res.json(auctions);
+    } catch (error) {
+      console.error("Error fetching auctions:", error);
+      res.status(500).json({ message: "Failed to fetch auctions" });
+    }
+  });
+
+  app.post("/api/auctions", isAdmin, async (req, res) => {
+    try {
+      const result = insertAuctionSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid auction data" });
+      }
+
+      const auction = await storage.createAuction(result.data);
+      res.status(201).json(auction);
+    } catch (error) {
+      console.error("Error creating auction:", error);
+      res.status(500).json({ message: "Failed to create auction" });
+    }
+  });
+
+  // Event routes
+  app.get("/api/events", async (req, res) => {
+    try {
+      const events = await storage.getEvents();
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+
+  app.post("/api/events", isAdmin, async (req, res) => {
+    try {
+      const result = insertEventSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid event data" });
+      }
+
+      const event = await storage.createEvent(result.data);
+      res.status(201).json(event);
+    } catch (error) {
+      console.error("Error creating event:", error);
+      res.status(500).json({ message: "Failed to create event" });
+    }
+  });
+
+  // Feedback routes
+  app.get("/api/feedbacks", async (req, res) => {
+    try {
+      const feedbacks = await storage.getFeedbacks();
+      res.json(feedbacks);
+    } catch (error) {
+      console.error("Error fetching feedbacks:", error);
+      res.status(500).json({ message: "Failed to fetch feedbacks" });
+    }
+  });
+
+  app.post("/api/feedbacks", isAdmin, async (req, res) => {
+    try {
+      const result = insertFeedbackSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid feedback data" });
+      }
+
+      const feedback = await storage.createFeedback(result.data);
+      res.status(201).json(feedback);
+    } catch (error) {
+      console.error("Error creating feedback:", error);
+      res.status(500).json({ message: "Failed to create feedback" });
+    }
+  });
+
+  // Spare Parts routes
+  app.get("/api/spare-parts", async (req, res) => {
+    try {
+      const spareParts = await storage.getSpareParts();
+      res.json(spareParts);
+    } catch (error) {
+      console.error("Error fetching spare parts:", error);
+      res.status(500).json({ message: "Failed to fetch spare parts" });
+    }
+  });
+
+  app.post("/api/spare-parts", isAdmin, async (req, res) => {
+    try {
+      const result = insertSparePartSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid spare part data" });
+      }
+
+      const sparePart = await storage.createSparePart(result.data);
+      res.status(201).json(sparePart);
+    } catch (error) {
+      console.error("Error creating spare part:", error);
+      res.status(500).json({ message: "Failed to create spare part" });
+    }
+  });
+
+  // Inventory routes
+  app.get("/api/inventory", async (req, res) => {
+    try {
+      const inventory = await storage.getInventory();
+      res.json(inventory);
+    } catch (error) {
+      console.error("Error fetching inventory:", error);
+      res.status(500).json({ message: "Failed to fetch inventory" });
+    }
+  });
+
+  app.post("/api/inventory", isAdmin, async (req, res) => {
+    try {
+      const result = insertInventorySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid inventory data" });
+      }
+
+      const item = await storage.createInventoryItem(result.data);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating inventory item:", error);
+      res.status(500).json({ message: "Failed to create inventory item" });
+    }
+  });
+
+  // Offer routes
+  app.get("/api/offers", async (req, res) => {
+    try {
+      const offers = await storage.getOffers();
+      res.json(offers);
+    } catch (error) {
+      console.error("Error fetching offers:", error);
+      res.status(500).json({ message: "Failed to fetch offers" });
+    }
+  });
+
+  app.post("/api/offers", isAdmin, async (req, res) => {
+    try {
+      const result = insertOfferSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid offer data" });
+      }
+
+      const offer = await storage.createOffer(result.data);
+      res.status(201).json(offer);
+    } catch (error) {
+      console.error("Error creating offer:", error);
+      res.status(500).json({ message: "Failed to create offer" });
+    }
+  });
+
+  // Pricing Plan routes
+  app.get("/api/pricing-plans", async (req, res) => {
+    try {
+      const plans = await storage.getPricingPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching pricing plans:", error);
+      res.status(500).json({ message: "Failed to fetch pricing plans" });
+    }
+  });
+
+  app.post("/api/pricing-plans", isAdmin, async (req, res) => {
+    try {
+      const result = insertPricingPlanSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid pricing plan data" });
+      }
+
+      const plan = await storage.createPricingPlan(result.data);
+      res.status(201).json(plan);
+    } catch (error) {
+      console.error("Error creating pricing plan:", error);
+      res.status(500).json({ message: "Failed to create pricing plan" });
     }
   });
 
