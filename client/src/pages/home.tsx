@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { categories } from "@/lib/mock-data";
 import type { Vehicle } from "@shared/schema";
 import HeroSection from "@/components/hero-section";
+import LiveAuctionSection from "@/components/live-auction-section";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -17,6 +18,7 @@ export default function Home() {
   return (
     <div>
       <HeroSection />
+      <LiveAuctionSection />
 
       <div className="container mx-auto px-4 py-16">
         <header className="mb-8">
