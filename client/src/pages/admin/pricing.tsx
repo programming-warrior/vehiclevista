@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { PricingForm } from "@/components/admin/forms/pricing-form";
 
 interface PricingPlan {
   id: string;
@@ -137,7 +138,7 @@ export default function PricingManagement() {
           <DialogHeader>
             <DialogTitle>Add New Pricing Plan</DialogTitle>
           </DialogHeader>
-          {/* Add Pricing Plan Form will go here */}
+          <PricingForm onSuccess={() => setIsAddDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </AdminLayout>

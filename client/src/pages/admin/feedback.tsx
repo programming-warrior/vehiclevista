@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { FeedbackForm } from "@/components/admin/forms/feedback-form";
 
 interface Feedback {
   id: string;
@@ -134,7 +135,7 @@ export default function FeedbackManagement() {
           <DialogHeader>
             <DialogTitle>Add New Feedback</DialogTitle>
           </DialogHeader>
-          {/* Add Feedback Form will go here */}
+          <FeedbackForm onSuccess={() => setIsAddDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </AdminLayout>

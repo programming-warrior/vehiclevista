@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { InventoryForm } from "@/components/admin/forms/inventory-form";
 
 interface InventoryItem {
   id: string;
@@ -136,7 +137,7 @@ export default function InventoryManagement() {
           <DialogHeader>
             <DialogTitle>Add New Inventory Item</DialogTitle>
           </DialogHeader>
-          {/* Add Inventory Form will go here */}
+          <InventoryForm onSuccess={() => setIsAddDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </AdminLayout>

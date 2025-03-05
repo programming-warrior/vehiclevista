@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { SparePartForm } from "@/components/admin/forms/spare-part-form";
 
 interface SparePart {
   id: string;
@@ -139,7 +140,7 @@ export default function SparePartManagement() {
           <DialogHeader>
             <DialogTitle>Add New Spare Part</DialogTitle>
           </DialogHeader>
-          {/* Add Spare Part Form will go here */}
+          <SparePartForm onSuccess={() => setIsAddDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </AdminLayout>
