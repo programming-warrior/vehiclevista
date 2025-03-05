@@ -12,7 +12,7 @@ import Login from "@/pages/login";
 import SignIn from "@/pages/signin";
 import Navbar from "@/components/navbar";
 import NotFound from "@/pages/not-found";
-import AdminDashboard from "@/pages/admin";
+import AdminDashboard from "@/pages/admin/index";
 import AdminVehicles from "@/pages/admin/vehicles";
 import AdminSettings from "@/pages/admin/settings";
 import AdminUsers from "@/pages/admin/users";
@@ -122,24 +122,6 @@ export default function App() {
               <Route path="/admin/pricing">
                 <ProtectedRoute 
                   component={AdminPricing}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/vehicles">
-                <ProtectedRoute 
-                  component={AdminVehicles}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/users">
-                <ProtectedRoute 
-                  component={AdminUsers}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/settings">
-                <ProtectedRoute 
-                  component={AdminSettings}
                   adminOnly
                 />
               </Route>
