@@ -10,7 +10,6 @@ import LiveAuctionSection from "@/components/live-auction-section";
 import ExploreCategories from "@/components/explore-categories";
 import SuperAdSection from "@/components/super-ad-section";
 import SearchMakes from "@/components/search-makes";
-import SelectedPartsSection from "@/components/selected-parts-section";
 import QualityBikesSection from "@/components/quality-bikes-section";
 import BikesCollection from "@/components/bikes-collection";
 import VansCollection from "@/components/vans-collection";
@@ -89,9 +88,6 @@ export default function Home() {
 
       {/* Search Makes Section */}
       <SearchMakes />
-
-      {/* Selected Parts Section */}
-      <SelectedPartsSection />
 
       {/* Quality Bikes Section */}
       <QualityBikesSection />
