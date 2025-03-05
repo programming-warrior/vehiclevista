@@ -1,5 +1,6 @@
-import { SiAudi, SiBmw, SiFord, SiMercedes, SiFerrari, SiVolkswagen } from "react-icons/si";
+import { Card } from "@/components/ui/card";
 import { Link } from "wouter";
+import { SiAudi, SiBmw, SiFord, SiMercedes, SiFerrari, SiVolkswagen } from "react-icons/si";
 
 const carBrands = [
   { id: 'audi', name: 'Audi', Icon: SiAudi },
@@ -12,7 +13,7 @@ const carBrands = [
 
 export default function SearchMakes() {
   return (
-    <section className="py-12">
+    <section className="py-12 bg-pink-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">Search Makes</h2>
