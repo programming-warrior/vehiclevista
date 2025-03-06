@@ -456,16 +456,41 @@ export async function registerRoutes(app: Express) {
 
   app.post("/api/auctions", isAdmin, async (req, res) => {
     try {
+      console.log("Auction creation request payload:", req.body);
+
       const result = insertAuctionSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ message: "Invalid auction data" });
+        console.error("Auction validation errors:", result.error.errors);
+        return res.status(400).json({ 
+          message: "Invalid auction data",
+          errors: result.error.errors 
+        });
       }
 
-      const auction = await storage.createAuction(result.data);
-      res.status(201).json(auction);
+      try {
+        // Format and validate the auction data
+        const auctionData = {
+          ...result.data,
+          // Ensure dates are in proper format
+          startDate: new Date(result.data.startDate).toISOString(),
+          endDate: new Date(result.data.endDate).toISOString(),
+          // Set default values
+          currentBid: result.data.startingPrice,
+          totalBids: 0,
+          status: result.data.status || "upcoming"
+        };
+
+        console.log("Creating auction with data:", auctionData);
+
+        const auction = await storage.createAuction(auctionData);
+        res.status(201).json(auction);
+      } catch (error) {
+        console.error("Error creating auction:", error);
+        res.status(500).json({ message: "Failed to create auction in database" });
+      }
     } catch (error) {
-      console.error("Error creating auction:", error);
-      res.status(500).json({ message: "Failed to create auction" });
+      console.error("Unexpected error in auction creation:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
