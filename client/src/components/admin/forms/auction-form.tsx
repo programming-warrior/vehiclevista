@@ -55,12 +55,17 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
     mutationFn: async (values: AuctionFormValues) => {
       console.log("Submitting auction form data:", values);
 
+      // Format dates to ensure they are valid ISO strings
+      const startDate = new Date(values.startDate);
+      const endDate = new Date(values.endDate);
+
       const formattedValues = {
         ...values,
         startingPrice: Number(values.startingPrice),
-        startDate: new Date(values.startDate).toISOString(),
-        endDate: new Date(values.endDate).toISOString(),
         vehicleId: Number(values.vehicleId),
+        // Ensure dates are properly formatted ISO strings
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
       };
 
       console.log("Formatted auction data:", formattedValues);
@@ -210,11 +215,12 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
           name="vehicleId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Vehicle</FormLabel>
+              <FormLabel>Vehicle ID</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
                   min="1"
+                  placeholder="1"
                   {...field}
                   onChange={(e) => field.onChange(Number(e.target.value))}
                 />
