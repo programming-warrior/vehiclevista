@@ -243,6 +243,13 @@ export const insertAuctionSchema = createInsertSchema(auctions, {
   currentBid: true,
   totalBids: true,
   createdAt: true,
+}).extend({
+  // Add explicit validation for required fields
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  startingPrice: z.number().min(0, "Starting price must be non-negative"),
+  vehicleId: z.number().min(1, "Vehicle selection is required"),
+  status: z.enum(["upcoming", "active", "ended"]).default("upcoming")
 });
 
 // Update the event schema with more specific validation

@@ -212,14 +212,17 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
             <FormItem>
               <FormLabel>Vehicle</FormLabel>
               <FormControl>
-                {/*  Replace this with actual vehicle selection component */}
-                <Input type="number" {...field} />
+                <Input 
+                  type="number" 
+                  min="1"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
 
         <Button type="submit" className="w-full" disabled={isPending}>
           {isPending ? "Creating..." : "Create Auction"}
