@@ -22,12 +22,16 @@ import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { insertFeedbackSchema } from "@shared/schema";
 
-const feedbackFormSchema = z.object({
-  subject: z.string().min(1, "Subject is required"),
-  message: z.string().min(1, "Message is required"),
-  priority: z.enum(["low", "medium", "high"]),
-  status: z.enum(["new", "in-progress", "resolved"]),
+// Client-side form schema matching the server schema
+const feedbackFormSchema = insertFeedbackSchema.extend({
+  category: z.enum(["general", "bug", "feature", "support"], {
+    required_error: "Category is required",
+  }),
+  priority: z.enum(["low", "medium", "high"], {
+    required_error: "Priority is required",
+  }),
 });
 
 type FeedbackFormValues = z.infer<typeof feedbackFormSchema>;
@@ -36,35 +40,47 @@ interface FeedbackFormProps {
   onSuccess?: () => void;
 }
 
+const FORM_ID = 'feedback-form';
+
 export function FeedbackForm({ onSuccess }: FeedbackFormProps) {
   const queryClient = useQueryClient();
-  
+
   const form = useForm<FeedbackFormValues>({
     resolver: zodResolver(feedbackFormSchema),
     defaultValues: {
-      status: "new",
+      category: "general",
       priority: "medium",
+      status: "new",
     },
   });
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (values: FeedbackFormValues) => {
+      console.log("Submitting feedback form data:", values);
+
       const res = await apiRequest("POST", "/api/feedbacks", values);
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create feedback");
+      }
+
       return res.json();
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Feedback created successfully",
+        description: "Feedback submitted successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/feedbacks"] });
       form.reset();
       onSuccess?.();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error("Feedback submission error:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to submit feedback",
         variant: "destructive",
       });
     },
@@ -107,6 +123,30 @@ export function FeedbackForm({ onSuccess }: FeedbackFormProps) {
 
         <FormField
           control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Category</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="general">General</SelectItem>
+                  <SelectItem value="bug">Bug</SelectItem>
+                  <SelectItem value="feature">Feature Request</SelectItem>
+                  <SelectItem value="support">Support</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="priority"
           render={({ field }) => (
             <FormItem>
@@ -128,31 +168,8 @@ export function FeedbackForm({ onSuccess }: FeedbackFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="new">New</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <Button type="submit" className="w-full" disabled={isPending}>
-          {isPending ? "Creating..." : "Create Feedback"}
+          {isPending ? "Submitting..." : "Submit Feedback"}
         </Button>
       </form>
     </Form>
