@@ -38,16 +38,52 @@ export default function App() {
           <Navbar />
           <main className="flex-1">
             <Switch>
+              {/* Public Routes */}
               <Route path="/" component={Home} />
               <Route path="/login" component={Login} />
               <Route path="/signin" component={SignIn} />
               <Route path="/classified" component={Classified} />
-
-              {/* Makes Routes */}
+              <Route path="/vehicle/:id" component={Vehicle} />
+              <Route path="/search" component={Search} />
               <Route path="/makes" component={MakesPage} />
               <Route path="/makes/:brand" component={BrandPage} />
 
-              {/* Trader/Garage Routes */}
+              {/* Admin Routes */}
+              <Route path="/admin">
+                <ProtectedRoute component={AdminDashboard} adminOnly />
+              </Route>
+              <Route path="/admin/vehicles">
+                <ProtectedRoute component={AdminVehicles} adminOnly />
+              </Route>
+              <Route path="/admin/users">
+                <ProtectedRoute component={AdminUsers} adminOnly />
+              </Route>
+              <Route path="/admin/settings">
+                <ProtectedRoute component={AdminSettings} adminOnly />
+              </Route>
+              <Route path="/admin/auctions">
+                <ProtectedRoute component={AdminAuctions} adminOnly />
+              </Route>
+              <Route path="/admin/events">
+                <ProtectedRoute component={AdminEvents} adminOnly />
+              </Route>
+              <Route path="/admin/feedback">
+                <ProtectedRoute component={AdminFeedback} adminOnly />
+              </Route>
+              <Route path="/admin/spare-parts">
+                <ProtectedRoute component={AdminSpareParts} adminOnly />
+              </Route>
+              <Route path="/admin/inventory">
+                <ProtectedRoute component={AdminInventory} adminOnly />
+              </Route>
+              <Route path="/admin/offers">
+                <ProtectedRoute component={AdminOffers} adminOnly />
+              </Route>
+              <Route path="/admin/pricing">
+                <ProtectedRoute component={AdminPricing} adminOnly />
+              </Route>
+
+              {/* Trader Routes */}
               <Route path="/trader/dashboard">
                 <ProtectedRoute 
                   component={TraderDashboard}
@@ -67,75 +103,7 @@ export default function App() {
                 />
               </Route>
 
-              {/* Admin Routes */}
-              <Route path="/admin">
-                <ProtectedRoute 
-                  component={AdminDashboard}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/vehicles">
-                <ProtectedRoute 
-                  component={AdminVehicles}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/users">
-                <ProtectedRoute 
-                  component={AdminUsers}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/settings">
-                <ProtectedRoute 
-                  component={AdminSettings}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/auctions">
-                <ProtectedRoute 
-                  component={AdminAuctions}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/events">
-                <ProtectedRoute 
-                  component={AdminEvents}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/feedback">
-                <ProtectedRoute 
-                  component={AdminFeedback}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/spare-parts">
-                <ProtectedRoute 
-                  component={AdminSpareParts}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/inventory">
-                <ProtectedRoute 
-                  component={AdminInventory}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/offers">
-                <ProtectedRoute 
-                  component={AdminOffers}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/admin/pricing">
-                <ProtectedRoute 
-                  component={AdminPricing}
-                  adminOnly
-                />
-              </Route>
-              <Route path="/vehicle/:id" component={Vehicle} />
-              <Route path="/search" component={Search} />
+              {/* 404 Route */}
               <Route component={NotFound} />
             </Switch>
           </main>

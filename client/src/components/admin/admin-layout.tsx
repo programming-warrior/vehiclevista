@@ -13,6 +13,8 @@ import {
   Tag,
   PiggyBank
 } from "lucide-react";
+import { useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -20,6 +22,14 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
+  const { user } = useAuth();
+
+  // Redirect if not admin
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      window.location.href = '/';
+    }
+  }, [user]);
 
   const navItems = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -44,15 +54,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
+            const isActive = location === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md text-sm",
-                  location === item.href
+                  "flex items-center gap-2 px-4 py-2 rounded-md text-sm transition-colors",
+                  isActive
                     ? "bg-primary text-primary-foreground"
-                    : "hover:bg-accent"
+                    : "hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -62,7 +73,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           })}
         </nav>
       </aside>
-      <main className="p-8">
+      <main className="p-8 bg-background">
         {children}
       </main>
     </div>
