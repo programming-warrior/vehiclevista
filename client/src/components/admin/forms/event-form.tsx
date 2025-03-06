@@ -54,11 +54,14 @@ export function EventForm({ onSuccess }: EventFormProps) {
   const { mutate, isPending } = useMutation({
     mutationFn: async (values: EventFormValues) => {
       try {
-        // Format the date to ISO string
+        // Format and validate the event data
         const formattedValues = {
           ...values,
+          // Ensure date is in proper format
           date: new Date(values.date).toISOString(),
         };
+
+        console.log("Submitting form data:", formattedValues);
 
         const res = await apiRequest("POST", "/api/events", formattedValues);
 

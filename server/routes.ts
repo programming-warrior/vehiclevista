@@ -482,6 +482,8 @@ export async function registerRoutes(app: Express) {
 
   app.post("/api/events", isAdmin, async (req, res) => {
     try {
+      console.log("Event creation request payload:", req.body);
+
       const result = insertEventSchema.safeParse(req.body);
       if (!result.success) {
         console.error("Event validation errors:", result.error.errors);
@@ -492,7 +494,17 @@ export async function registerRoutes(app: Express) {
       }
 
       try {
-        const event = await storage.createEvent(result.data);
+        // Format and validate the event data
+        const eventData = {
+          ...result.data,
+          // Ensure date is in proper format
+          date: new Date(result.data.date).toISOString(),
+          // Set default values
+          registeredCount: 0,
+          status: result.data.status || "upcoming"
+        };
+
+        const event = await storage.createEvent(eventData);
         res.status(201).json(event);
       } catch (error) {
         console.error("Error creating event:", error);
