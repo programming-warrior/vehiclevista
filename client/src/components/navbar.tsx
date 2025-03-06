@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Car, ChevronDown, Search, Menu, X } from "lucide-react";
+import { Car, ChevronDown, Search, Menu, X, Settings } from "lucide-react";
 import SearchBar from "./search-bar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
@@ -14,6 +14,8 @@ export default function Navbar() {
     await logout();
     setLocation("/");
   };
+
+  const isAdmin = user?.role === "admin";
 
   return (
     <div className="border-b relative">
@@ -38,6 +40,14 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-4">
+          {isAdmin && (
+            <Button variant="ghost" asChild>
+              <Link href="/admin" className="flex items-center gap-1">
+                <Settings className="h-4 w-4" />
+                Admin Panel
+              </Link>
+            </Button>
+          )}
           <Button variant="ghost" size="sm" className="flex items-center gap-1">
             UK <ChevronDown className="h-4 w-4" />
           </Button>
@@ -45,7 +55,9 @@ export default function Navbar() {
           {user ? (
             <Button onClick={handleLogout} variant="secondary">Logout</Button>
           ) : (
-            <Button variant="outline">Sign In/Join</Button>
+            <Button variant="outline" asChild>
+              <Link href="/login">Sign In/Join</Link>
+            </Button>
           )}
         </div>
 
@@ -90,19 +102,6 @@ export default function Navbar() {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-background md:hidden">
           <div className="container mx-auto px-4 py-6">
-            {/* Close Button */}
-            <div className="flex justify-end mb-6">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setMobileMenuOpen(false)}
-                className="rounded-full hover:bg-gray-100"
-              >
-                <X className="h-6 w-6" />
-                <span className="sr-only">Close menu</span>
-              </Button>
-            </div>
-
             {/* Mobile Search */}
             <div className="relative mb-6">
               <input
@@ -115,6 +114,9 @@ export default function Navbar() {
 
             {/* Mobile Navigation Links */}
             <nav className="flex flex-col space-y-4 mb-6">
+              {isAdmin && (
+                <Link href="/admin" className="text-lg font-medium hover:text-primary">Admin Panel</Link>
+              )}
               <Link href="/" className="text-lg font-medium hover:text-primary">Home</Link>
               <Link href="/classified" className="text-lg font-medium hover:text-primary">Classified</Link>
               <Link href="/auction" className="text-lg font-medium hover:text-primary">Auction</Link>
@@ -136,8 +138,8 @@ export default function Navbar() {
                   Logout
                 </Button>
               ) : (
-                <Button variant="outline" className="w-full">
-                  Sign In/Join
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/login">Sign In/Join</Link>
                 </Button>
               )}
             </div>
