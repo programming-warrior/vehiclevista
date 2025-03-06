@@ -13,7 +13,7 @@ import {
   type SparePart, type InsertSparePart,
   type InventoryItem, type InsertInventoryItem,
   type Offer, type InsertOffer,
-  type PricingPlan, type InsertPricingPlan
+  type PricingPlan
 } from "@shared/schema";
 import type { Package, InsertPackage, UserPackage, InsertUserPackage } from "@shared/schema"; 
 import { packages, userPackages } from "@shared/schema"; 
@@ -342,17 +342,21 @@ export class DatabaseStorage implements IStorage {
     try {
       // Format and validate the event data
       const eventData = {
-        ...event,
-        // Ensure date is in proper format
+        title: event.title,
+        description: event.description,
+        eventType: event.eventType,
         date: new Date(event.date).toISOString(),
-        // Set default values
+        location: event.location,
+        capacity: event.capacity,
         registeredCount: 0,
         status: event.status || "upcoming"
       };
 
+      console.log("Creating event with data:", eventData);
+
       const [newEvent] = await db
         .insert(events)
-        .values(eventData)
+        .values([eventData])
         .returning();
 
       return newEvent;
