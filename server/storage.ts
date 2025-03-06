@@ -76,168 +76,253 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getVehicles(category?: string): Promise<Vehicle[]> {
-    if (category && category !== "all") {
-      return await db
-        .select()
-        .from(vehicles)
-        .where(eq(vehicles.category, category));
+    try {
+      if (category && category !== "all") {
+        return await db
+          .select()
+          .from(vehicles)
+          .where(eq(vehicles.category, category));
+      }
+      return await db.select().from(vehicles);
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+      throw new Error('Failed to fetch vehicles');
     }
-    return await db.select().from(vehicles);
   }
 
   async getVehicle(id: number): Promise<Vehicle | undefined> {
-    const [vehicle] = await db
-      .select()
-      .from(vehicles)
-      .where(eq(vehicles.id, id));
-    return vehicle;
+    try {
+      const [vehicle] = await db
+        .select()
+        .from(vehicles)
+        .where(eq(vehicles.id, id));
+      return vehicle;
+    } catch (error) {
+      console.error(`Error fetching vehicle ${id}:`, error);
+      throw new Error('Failed to fetch vehicle');
+    }
   }
 
   async searchVehicles(params: SearchParams): Promise<Vehicle[]> {
-    const conditions = [];
+    try {
+      const conditions = [];
 
-    if (params.query) {
-      conditions.push(
-        or(
-          ilike(vehicles.title, `%${params.query}%`),
-          ilike(vehicles.make, `%${params.query}%`),
-          ilike(vehicles.model, `%${params.query}%`)
-        )
-      );
+      if (params.query) {
+        conditions.push(
+          or(
+            ilike(vehicles.title, `%${params.query}%`),
+            ilike(vehicles.make, `%${params.query}%`),
+            ilike(vehicles.model, `%${params.query}%`)
+          )
+        );
+      }
+
+      if (params.category) {
+        conditions.push(eq(vehicles.category, params.category));
+      }
+
+      if (params.make) {
+        conditions.push(eq(vehicles.make, params.make));
+      }
+
+      if (params.bodyType) {
+        conditions.push(eq(vehicles.bodyType, params.bodyType));
+      }
+
+      if (params.minPrice !== undefined && params.maxPrice !== undefined) {
+        conditions.push(
+          between(vehicles.price, params.minPrice, params.maxPrice)
+        );
+      }
+
+      return await db
+        .select()
+        .from(vehicles)
+        .where(and(...conditions));
+    } catch (error) {
+      console.error('Error searching vehicles:', error);
+      throw new Error('Failed to search vehicles');
     }
-
-    if (params.category) {
-      conditions.push(eq(vehicles.category, params.category));
-    }
-
-    if (params.make) {
-      conditions.push(eq(vehicles.make, params.make));
-    }
-
-    if (params.bodyType) {
-      conditions.push(eq(vehicles.bodyType, params.bodyType));
-    }
-
-    if (params.minPrice !== undefined && params.maxPrice !== undefined) {
-      conditions.push(
-        between(vehicles.price, params.minPrice, params.maxPrice)
-      );
-    }
-
-    return await db
-      .select()
-      .from(vehicles)
-      .where(and(...conditions));
   }
 
   async createVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
-    const [newVehicle] = await db
-      .insert(vehicles)
-      .values(vehicle)
-      .returning();
-    return newVehicle;
+    try {
+      const [newVehicle] = await db
+        .insert(vehicles)
+        .values(vehicle)
+        .returning();
+      return newVehicle;
+    } catch (error) {
+      console.error('Error creating vehicle:', error);
+      throw new Error('Failed to create vehicle');
+    }
   }
 
   async updateVehicle(id: number, vehicle: InsertVehicle): Promise<Vehicle | undefined> {
-    const [updatedVehicle] = await db
-      .update(vehicles)
-      .set(vehicle)
-      .where(eq(vehicles.id, id))
-      .returning();
-    return updatedVehicle;
+    try {
+      const [updatedVehicle] = await db
+        .update(vehicles)
+        .set(vehicle)
+        .where(eq(vehicles.id, id))
+        .returning();
+      return updatedVehicle;
+    } catch (error) {
+      console.error(`Error updating vehicle ${id}:`, error);
+      throw new Error('Failed to update vehicle');
+    }
   }
 
   async deleteVehicle(id: number): Promise<boolean> {
-    const [deleted] = await db
-      .delete(vehicles)
-      .where(eq(vehicles.id, id))
-      .returning();
-    return !!deleted;
+    try {
+      const [deleted] = await db
+        .delete(vehicles)
+        .where(eq(vehicles.id, id))
+        .returning();
+      return !!deleted;
+    } catch (error) {
+      console.error(`Error deleting vehicle ${id}:`, error);
+      throw new Error('Failed to delete vehicle');
+    }
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, id));
-    return user;
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error(`Error fetching user ${id}:`, error);
+      throw new Error('Failed to fetch user');
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, username));
-    return user;
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username));
+      return user;
+    } catch (error) {
+      console.error(`Error fetching user by username ${username}:`, error);
+      throw new Error('Failed to fetch user');
+    }
   }
 
   async createUser(user: InsertUser & { role?: string }): Promise<User> {
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        ...user,
-        role: user.role || "user",
-      })
-      .returning();
-    return newUser;
+    try {
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          ...user,
+          role: user.role || "user",
+        })
+        .returning();
+      return newUser;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw new Error('Failed to create user');
+    }
   }
 
   async getApiKeys(): Promise<ApiKey[]> {
-    return await db.select().from(apiKeys);
+    try {
+      return await db.select().from(apiKeys);
+    } catch (error) {
+      console.error('Error fetching API keys:', error);
+      throw new Error('Failed to fetch API keys');
+    }
   }
 
   async updateApiKey(name: string, key: string): Promise<ApiKey> {
-    const [updatedKey] = await db
-      .update(apiKeys)
-      .set({
-        key,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(apiKeys.name, name))
-      .returning();
+    try {
+      const [updatedKey] = await db
+        .update(apiKeys)
+        .set({
+          key,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(apiKeys.name, name))
+        .returning();
 
-    return updatedKey;
+      return updatedKey;
+    } catch (error) {
+      console.error(`Error updating API key ${name}:`, error);
+      throw new Error('Failed to update API key');
+    }
   }
 
   async getUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    try {
+      return await db.select().from(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw new Error('Failed to fetch users');
+    }
   }
 
   async getUsersByRole(role: string): Promise<User[]> {
-    return await db
-      .select()
-      .from(users)
-      .where(eq(users.role, role));
+    try {
+      return await db
+        .select()
+        .from(users)
+        .where(eq(users.role, role));
+    } catch (error) {
+      console.error(`Error fetching users by role ${role}:`, error);
+      throw new Error('Failed to fetch users');
+    }
   }
 
   async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
-    const [updatedUser] = await db
-      .update(users)
-      .set(userData)
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set(userData)
+        .where(eq(users.id, id))
+        .returning();
+      return updatedUser;
+    } catch (error) {
+      console.error(`Error updating user ${id}:`, error);
+      throw new Error('Failed to update user');
+    }
   }
 
   async deleteUser(id: number): Promise<boolean> {
-    const [deleted] = await db
-      .delete(users)
-      .where(eq(users.id, id))
-      .returning();
-    return !!deleted;
+    try {
+      const [deleted] = await db
+        .delete(users)
+        .where(eq(users.id, id))
+        .returning();
+      return !!deleted;
+    } catch (error) {
+      console.error(`Error deleting user ${id}:`, error);
+      throw new Error('Failed to delete user');
+    }
   }
 
   async getRolePermissions(): Promise<RolePermission[]> {
-    return await db.select().from(rolePermissions);
+    try {
+      return await db.select().from(rolePermissions);
+    } catch (error) {
+      console.error('Error fetching role permissions:', error);
+      throw new Error('Failed to fetch role permissions');
+    }
   }
 
   async updateRolePermission(id: number, permission: Partial<RolePermission>): Promise<RolePermission> {
-    const [updated] = await db
-      .update(rolePermissions)
-      .set(permission)
-      .where(eq(rolePermissions.id, id))
-      .returning();
-    return updated;
+    try {
+      const [updated] = await db
+        .update(rolePermissions)
+        .set(permission)
+        .where(eq(rolePermissions.id, id))
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error(`Error updating role permission ${id}:`, error);
+      throw new Error('Failed to update role permission');
+    }
   }
 
   async checkPermission(
@@ -245,97 +330,156 @@ export class DatabaseStorage implements IStorage {
     resource: string,
     action: "create" | "read" | "update" | "delete"
   ): Promise<boolean> {
-    if (role === "admin") return true;
+    try {
+      if (role === "admin") return true;
 
-    const [permission] = await db
-      .select()
-      .from(rolePermissions)
-      .where(
-        and(
-          eq(rolePermissions.role, role),
-          eq(rolePermissions.resource, resource)
-        )
-      );
+      const [permission] = await db
+        .select()
+        .from(rolePermissions)
+        .where(
+          and(
+            eq(rolePermissions.role, role),
+            eq(rolePermissions.resource, resource)
+          )
+        );
 
-    if (!permission) return false;
+      if (!permission) return false;
 
-    switch (action) {
-      case "create": return permission.canCreate;
-      case "read": return permission.canRead;
-      case "update": return permission.canUpdate;
-      case "delete": return permission.canDelete;
+      switch (action) {
+        case "create": return permission.canCreate;
+        case "read": return permission.canRead;
+        case "update": return permission.canUpdate;
+        case "delete": return permission.canDelete;
+      }
+    } catch (error) {
+      console.error(`Error checking permission for role ${role}, resource ${resource}, action ${action}:`, error);
+      throw new Error('Failed to check permission');
     }
   }
   async createBulkUpload(upload: InsertBulkUpload): Promise<BulkUpload> {
-    const [newUpload] = await db
-      .insert(bulkUploads)
-      .values({
-        ...upload,
-        status: "pending",
-      })
-      .returning();
-    return newUpload;
+    try {
+      const [newUpload] = await db
+        .insert(bulkUploads)
+        .values({
+          ...upload,
+          status: "pending",
+        })
+        .returning();
+      return newUpload;
+    } catch (error) {
+      console.error('Error creating bulk upload:', error);
+      throw new Error('Failed to create bulk upload');
+    }
   }
 
   async getBulkUploads(userId: number): Promise<BulkUpload[]> {
-    return await db
-      .select()
-      .from(bulkUploads)
-      .where(eq(bulkUploads.userId, userId))
-      .orderBy(desc(bulkUploads.createdAt));
+    try {
+      return await db
+        .select()
+        .from(bulkUploads)
+        .where(eq(bulkUploads.userId, userId))
+        .orderBy(desc(bulkUploads.createdAt));
+    } catch (error) {
+      console.error(`Error fetching bulk uploads for user ${userId}:`, error);
+      throw new Error('Failed to fetch bulk uploads');
+    }
   }
 
   async updateBulkUpload(id: number, data: Partial<BulkUpload>): Promise<BulkUpload> {
-    const [updated] = await db
-      .update(bulkUploads)
-      .set(data)
-      .where(eq(bulkUploads.id, id))
-      .returning();
-    return updated;
+    try {
+      const [updated] = await db
+        .update(bulkUploads)
+        .set(data)
+        .where(eq(bulkUploads.id, id))
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error(`Error updating bulk upload ${id}:`, error);
+      throw new Error('Failed to update bulk upload');
+    }
   }
   async getPackages(): Promise<Package[]> {
-    return await db.select().from(packages);
+    try {
+      return await db.select().from(packages);
+    } catch (error) {
+      console.error('Error fetching packages:', error);
+      throw new Error('Failed to fetch packages');
+    }
   }
 
   async createPackage(data: InsertPackage): Promise<Package> {
-    const [newPackage] = await db
-      .insert(packages)
-      .values(data)
-      .returning();
-    return newPackage;
+    try {
+      const [newPackage] = await db
+        .insert(packages)
+        .values(data)
+        .returning();
+      return newPackage;
+    } catch (error) {
+      console.error('Error creating package:', error);
+      throw new Error('Failed to create package');
+    }
   }
 
   async getUserPackages(userId: number): Promise<UserPackage[]> {
-    return await db
-      .select()
-      .from(userPackages)
-      .where(eq(userPackages.userId, userId));
+    try {
+      return await db
+        .select()
+        .from(userPackages)
+        .where(eq(userPackages.userId, userId));
+    } catch (error) {
+      console.error(`Error fetching user packages for user ${userId}:`, error);
+      throw new Error('Failed to fetch user packages');
+    }
   }
 
   async createUserPackage(data: InsertUserPackage): Promise<UserPackage> {
-    const [newUserPackage] = await db
-      .insert(userPackages)
-      .values(data)
-      .returning();
-    return newUserPackage;
+    try {
+      const [newUserPackage] = await db
+        .insert(userPackages)
+        .values(data)
+        .returning();
+      return newUserPackage;
+    } catch (error) {
+      console.error('Error creating user package:', error);
+      throw new Error('Failed to create user package');
+    }
   }
 
   // Implement auction methods
   async getAuctions(): Promise<Auction[]> {
-    return await db.select().from(auctions);
+    try {
+      return await db.select().from(auctions);
+    } catch (error) {
+      console.error('Error fetching auctions:', error);
+      throw new Error('Failed to fetch auctions');
+    }
   }
 
   async createAuction(auction: InsertAuction): Promise<Auction> {
-    const [newAuction] = await db
-      .insert(auctions)
-      .values(auction)
-      .returning();
-    return newAuction;
+    try {
+      const [newAuction] = await db
+        .insert(auctions)
+        .values({
+          ...auction,
+          currentBid: auction.startingPrice,
+          totalBids: 0
+        })
+        .returning();
+      return newAuction;
+    } catch (error) {
+      console.error('Error creating auction:', error);
+      throw new Error('Failed to create auction');
+    }
   }
 
   // Implement event methods
   async getEvents(): Promise<Event[]> {
-    return await db.select().from(events);
+    try {
+      return await db.select().from(events);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      throw new Error('Failed to fetch events');
+    }
   }
 
   async createEvent(event: InsertEvent): Promise<Event> {
@@ -368,67 +512,117 @@ export class DatabaseStorage implements IStorage {
 
   // Implement feedback methods
   async getFeedbacks(): Promise<Feedback[]> {
-    return await db.select().from(feedbacks);
+    try {
+      return await db.select().from(feedbacks);
+    } catch (error) {
+      console.error('Error fetching feedbacks:', error);
+      throw new Error('Failed to fetch feedbacks');
+    }
   }
 
   async createFeedback(feedback: InsertFeedback): Promise<Feedback> {
-    const [newFeedback] = await db
-      .insert(feedbacks)
-      .values(feedback)
-      .returning();
-    return newFeedback;
+    try {
+      const [newFeedback] = await db
+        .insert(feedbacks)
+        .values(feedback)
+        .returning();
+      return newFeedback;
+    } catch (error) {
+      console.error('Error creating feedback:', error);
+      throw new Error('Failed to create feedback');
+    }
   }
 
   // Implement spare parts methods
   async getSpareParts(): Promise<SparePart[]> {
-    return await db.select().from(spareParts);
+    try {
+      return await db.select().from(spareParts);
+    } catch (error) {
+      console.error('Error fetching spare parts:', error);
+      throw new Error('Failed to fetch spare parts');
+    }
   }
 
   async createSparePart(sparePart: InsertSparePart): Promise<SparePart> {
-    const [newSparePart] = await db
-      .insert(spareParts)
-      .values(sparePart)
-      .returning();
-    return newSparePart;
+    try {
+      const [newSparePart] = await db
+        .insert(spareParts)
+        .values(sparePart)
+        .returning();
+      return newSparePart;
+    } catch (error) {
+      console.error('Error creating spare part:', error);
+      throw new Error('Failed to create spare part');
+    }
   }
 
   // Implement inventory methods
   async getInventory(): Promise<InventoryItem[]> {
-    return await db.select().from(inventory);
+    try {
+      return await db.select().from(inventory);
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+      throw new Error('Failed to fetch inventory');
+    }
   }
 
   async createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem> {
-    const [newItem] = await db
-      .insert(inventory)
-      .values(item)
-      .returning();
-    return newItem;
+    try {
+      const [newItem] = await db
+        .insert(inventory)
+        .values(item)
+        .returning();
+      return newItem;
+    } catch (error) {
+      console.error('Error creating inventory item:', error);
+      throw new Error('Failed to create inventory item');
+    }
   }
 
   // Implement offer methods
   async getOffers(): Promise<Offer[]> {
-    return await db.select().from(offers);
+    try {
+      return await db.select().from(offers);
+    } catch (error) {
+      console.error('Error fetching offers:', error);
+      throw new Error('Failed to fetch offers');
+    }
   }
 
   async createOffer(offer: InsertOffer): Promise<Offer> {
-    const [newOffer] = await db
-      .insert(offers)
-      .values(offer)
-      .returning();
-    return newOffer;
+    try {
+      const [newOffer] = await db
+        .insert(offers)
+        .values(offer)
+        .returning();
+      return newOffer;
+    } catch (error) {
+      console.error('Error creating offer:', error);
+      throw new Error('Failed to create offer');
+    }
   }
 
   // Implement pricing plan methods
   async getPricingPlans(): Promise<PricingPlan[]> {
-    return await db.select().from(pricingPlans);
+    try {
+      return await db.select().from(pricingPlans);
+    } catch (error) {
+      console.error('Error fetching pricing plans:', error);
+      throw new Error('Failed to fetch pricing plans');
+    }
   }
 
   async createPricingPlan(plan: InsertPricingPlan): Promise<PricingPlan> {
-    const [newPlan] = await db
-      .insert(pricingPlans)
-      .values(plan)
-      .returning();
-    return newPlan;
+    try {
+      const [newPlan] = await db
+        .insert(pricingPlans)
+        .values(plan)
+        .returning();
+      return newPlan;
+    } catch (error) {
+      console.error('Error creating pricing plan:', error);
+      throw new Error('Failed to create pricing plan');
+    }
   }
 }
 
