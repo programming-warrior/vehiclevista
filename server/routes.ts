@@ -13,19 +13,6 @@ import {
   insertPricingPlanSchema 
 } from "@shared/schema";
 import { setupAuth } from "./auth";
-import fetch from 'node-fetch';
-import multer from 'multer';
-import * as csv from 'csv-parse';
-import * as XLSX from 'xlsx';
-import { Readable } from 'stream';
-
-// Configure multer for file uploads
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-});
 
 // Middleware to check if user is admin
 const isAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
@@ -443,7 +430,7 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Auction routes
+  // Auctions routes
   app.get("/api/auctions", async (req, res) => {
     try {
       const auctions = await storage.getAuctions();
@@ -456,41 +443,42 @@ export async function registerRoutes(app: Express) {
 
   app.post("/api/auctions", isAdmin, async (req, res) => {
     try {
-      console.log("Auction creation request payload:", req.body);
-
       const result = insertAuctionSchema.safeParse(req.body);
       if (!result.success) {
-        console.error("Auction validation errors:", result.error.errors);
-        return res.status(400).json({ 
-          message: "Invalid auction data",
-          errors: result.error.errors 
-        });
+        return res.status(400).json({ message: "Invalid auction data" });
       }
 
-      try {
-        // Format and validate the auction data
-        const auctionData = {
-          ...result.data,
-          // Ensure dates are in proper format
-          startDate: new Date(result.data.startDate).toISOString(),
-          endDate: new Date(result.data.endDate).toISOString(),
-          // Set default values
-          currentBid: result.data.startingPrice,
-          totalBids: 0,
-          status: result.data.status || "upcoming"
-        };
-
-        console.log("Creating auction with data:", auctionData);
-
-        const auction = await storage.createAuction(auctionData);
-        res.status(201).json(auction);
-      } catch (error) {
-        console.error("Error creating auction:", error);
-        res.status(500).json({ message: "Failed to create auction in database" });
-      }
+      const auction = await storage.createAuction(result.data);
+      res.status(201).json(auction);
     } catch (error) {
-      console.error("Unexpected error in auction creation:", error);
-      res.status(500).json({ message: "Internal server error" });
+      console.error("Error creating auction:", error);
+      res.status(500).json({ message: "Failed to create auction" });
+    }
+  });
+
+  // Feedback routes
+  app.get("/api/feedbacks", async (req, res) => {
+    try {
+      const feedbacks = await storage.getFeedbacks();
+      res.json(feedbacks);
+    } catch (error) {
+      console.error("Error fetching feedbacks:", error);
+      res.status(500).json({ message: "Failed to fetch feedbacks" });
+    }
+  });
+
+  app.post("/api/feedbacks", async (req, res) => {
+    try {
+      const result = insertFeedbackSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid feedback data" });
+      }
+
+      const feedback = await storage.createFeedback(result.data);
+      res.status(201).json(feedback);
+    } catch (error) {
+      console.error("Error creating feedback:", error);
+      res.status(500).json({ message: "Failed to create feedback" });
     }
   });
 
@@ -541,31 +529,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Feedback routes
-  app.get("/api/feedbacks", async (req, res) => {
-    try {
-      const feedbacks = await storage.getFeedbacks();
-      res.json(feedbacks);
-    } catch (error) {
-      console.error("Error fetching feedbacks:", error);
-      res.status(500).json({ message: "Failed to fetch feedbacks" });
-    }
-  });
-
-  app.post("/api/feedbacks", isAdmin, async (req, res) => {
-    try {
-      const result = insertFeedbackSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ message: "Invalid feedback data" });
-      }
-
-      const feedback = await storage.createFeedback(result.data);
-      res.status(201).json(feedback);
-    } catch (error) {
-      console.error("Error creating feedback:", error);
-      res.status(500).json({ message: "Failed to create feedback" });
-    }
-  });
 
   // Spare Parts routes
   app.get("/api/spare-parts", async (req, res) => {
@@ -761,3 +724,16 @@ async function hashPassword(password: string): Promise<string> {
   //Implement your password hashing logic here.  For example, using bcrypt.
   return password; //REPLACE THIS WITH ACTUAL HASHING
 }
+import multer from 'multer';
+import * as csv from 'csv-parse';
+import * as XLSX from 'xlsx';
+import { Readable } from 'stream';
+import fetch from 'node-fetch';
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+});

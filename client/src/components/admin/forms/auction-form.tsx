@@ -21,14 +21,16 @@ import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { insertAuctionSchema } from "@shared/schema";
 
-// Client-side form schema matching the server schema
-const auctionFormSchema = insertAuctionSchema.extend({
+// Define the form schema
+const auctionFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
   startingPrice: z.number().min(0, "Starting price must be non-negative"),
   vehicleId: z.number().min(1, "Vehicle selection is required"),
+  status: z.enum(["upcoming", "active", "ended"]),
 });
 
 type AuctionFormValues = z.infer<typeof auctionFormSchema>;
@@ -36,8 +38,6 @@ type AuctionFormValues = z.infer<typeof auctionFormSchema>;
 interface AuctionFormProps {
   onSuccess?: () => void;
 }
-
-const FORM_ID = 'auction-form';
 
 export function AuctionForm({ onSuccess }: AuctionFormProps) {
   const queryClient = useQueryClient();
@@ -47,7 +47,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
     defaultValues: {
       status: "upcoming",
       startingPrice: 0,
-      vehicleId: 1, // Temporary default, should be selected by user
+      vehicleId: 1,
     },
   });
 
@@ -55,29 +55,20 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
     mutationFn: async (values: AuctionFormValues) => {
       console.log("Submitting auction form data:", values);
 
-      // Format dates to ensure they are valid ISO strings
-      const startDate = new Date(values.startDate);
-      const endDate = new Date(values.endDate);
-
+      // Format the data
       const formattedValues = {
         ...values,
         startingPrice: Number(values.startingPrice),
         vehicleId: Number(values.vehicleId),
-        // Ensure dates are properly formatted ISO strings
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+        startDate: new Date(values.startDate).toISOString(),
+        endDate: new Date(values.endDate).toISOString(),
       };
 
-      console.log("Formatted auction data:", formattedValues);
-
       const res = await apiRequest("POST", "/api/auctions", formattedValues);
-
       if (!res.ok) {
         const error = await res.json();
-        console.error("Server validation error:", error);
         throw new Error(error.message || "Failed to create auction");
       }
-
       return res.json();
     },
     onSuccess: () => {
@@ -90,7 +81,6 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
       onSuccess?.();
     },
     onError: (error: Error) => {
-      console.error("Auction creation error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to create auction",
@@ -116,6 +106,20 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter auction description" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -124,10 +128,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
               <FormItem>
                 <FormLabel>Start Date</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="datetime-local" 
-                    {...field}
-                  />
+                  <Input type="datetime-local" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -141,10 +142,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
               <FormItem>
                 <FormLabel>End Date</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="datetime-local" 
-                    {...field}
-                  />
+                  <Input type="datetime-local" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -175,12 +173,18 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
 
         <FormField
           control={form.control}
-          name="description"
+          name="vehicleId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>Vehicle ID</FormLabel>
               <FormControl>
-                <Input placeholder="Enter auction description" {...field} />
+                <Input 
+                  type="number"
+                  min="1"
+                  placeholder="1"
+                  {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -205,26 +209,6 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
                   <SelectItem value="ended">Ended</SelectItem>
                 </SelectContent>
               </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="vehicleId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Vehicle ID</FormLabel>
-              <FormControl>
-                <Input 
-                  type="number" 
-                  min="1"
-                  placeholder="1"
-                  {...field}
-                  onChange={(e) => field.onChange(Number(e.target.value))}
-                />
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}
