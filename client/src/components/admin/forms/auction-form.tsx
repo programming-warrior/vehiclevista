@@ -30,7 +30,14 @@ const auctionFormSchema = z.object({
   endDate: z.string().min(1, "End date is required"),
   startingPrice: z.number().min(0, "Starting price must be non-negative"),
   vehicleId: z.number().min(1, "Vehicle selection is required"),
-  status: z.enum(["upcoming", "active", "ended"]),
+  status: z.enum(["upcoming", "active", "ended"]).default("upcoming"),
+}).refine((data) => {
+  const start = new Date(data.startDate);
+  const end = new Date(data.endDate);
+  return end > start;
+}, {
+  message: "End date must be after start date",
+  path: ["endDate"],
 });
 
 type AuctionFormValues = z.infer<typeof auctionFormSchema>;
