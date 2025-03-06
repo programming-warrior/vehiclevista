@@ -62,14 +62,25 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
     mutationFn: async (values: AuctionFormValues) => {
       console.log("Submitting auction form data:", values);
 
-      // Format the data
+      // Ensure proper date formatting
+      const startDate = new Date(values.startDate);
+      const endDate = new Date(values.endDate);
+
+      // Validate dates
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        throw new Error("Invalid date format");
+      }
+
       const formattedValues = {
         ...values,
         startingPrice: Number(values.startingPrice),
         vehicleId: Number(values.vehicleId),
-        startDate: new Date(values.startDate).toISOString(),
-        endDate: new Date(values.endDate).toISOString(),
+        // Format dates as ISO strings
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
       };
+
+      console.log("Formatted auction data:", formattedValues);
 
       const res = await apiRequest("POST", "/api/auctions", formattedValues);
       if (!res.ok) {
