@@ -23,6 +23,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertEventSchema } from "@shared/schema";
+import { useEffect } from "react";
+import { handleFormSubmission, getSavedFormData } from "@/lib/form-error-recovery";
 
 // Extended form schema with client-side validations
 const eventFormSchema = insertEventSchema.extend({
@@ -34,6 +36,8 @@ type EventFormValues = z.infer<typeof eventFormSchema>;
 interface EventFormProps {
   onSuccess?: () => void;
 }
+
+const FORM_ID = 'event-form';
 
 export function EventForm({ onSuccess }: EventFormProps) {
   const queryClient = useQueryClient();
@@ -51,30 +55,42 @@ export function EventForm({ onSuccess }: EventFormProps) {
     },
   });
 
+  // Load saved form data if it exists
+  useEffect(() => {
+    const savedData = getSavedFormData(FORM_ID);
+    if (savedData) {
+      form.reset(savedData);
+      toast({
+        title: "Recovered form data",
+        description: "Your previously entered data has been restored.",
+      });
+    }
+  }, [form]);
+
   const { mutate, isPending } = useMutation({
     mutationFn: async (values: EventFormValues) => {
-      try {
-        // Format and validate the event data
-        const formattedValues = {
-          ...values,
-          // Ensure date is in proper format
-          date: new Date(values.date).toISOString(),
-        };
+      return handleFormSubmission(
+        FORM_ID,
+        values,
+        async () => {
+          const formattedValues = {
+            ...values,
+            date: new Date(values.date).toISOString(),
+          };
 
-        console.log("Submitting form data:", formattedValues);
+          console.log("Submitting form data:", formattedValues);
 
-        const res = await apiRequest("POST", "/api/events", formattedValues);
+          const res = await apiRequest("POST", "/api/events", formattedValues);
 
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || 'Failed to create event');
-        }
+          if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.message || 'Failed to create event');
+          }
 
-        return await res.json();
-      } catch (error) {
-        console.error("Form submission error:", error);
-        throw error;
-      }
+          return await res.json();
+        },
+        { maxRetries: 3 }
+      );
     },
     onSuccess: () => {
       toast({
