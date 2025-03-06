@@ -38,23 +38,14 @@ export default function App() {
           <Navbar />
           <main className="flex-1">
             <Switch>
-              <Route path="/login">
-                <Login />
-              </Route>
-              <Route path="/signin">
-                <SignIn />
-              </Route>
-              <Route path="/classified">
-                <Classified />
-              </Route>
+              <Route path="/" component={Home} />
+              <Route path="/login" component={Login} />
+              <Route path="/signin" component={SignIn} />
+              <Route path="/classified" component={Classified} />
 
               {/* Makes Routes */}
-              <Route path="/makes">
-                <MakesPage />
-              </Route>
-              <Route path="/makes/:brand">
-                <BrandPage />
-              </Route>
+              <Route path="/makes" component={MakesPage} />
+              <Route path="/makes/:brand" component={BrandPage} />
 
               {/* Trader/Garage Routes */}
               <Route path="/trader/dashboard">
@@ -143,18 +134,9 @@ export default function App() {
                   adminOnly
                 />
               </Route>
-              <Route path="/vehicle/:id">
-                <Vehicle />
-              </Route>
-              <Route path="/search">
-                <Search />
-              </Route>
-              <Route path="/">
-                <Home />
-              </Route>
-              <Route>
-                <NotFound />
-              </Route>
+              <Route path="/vehicle/:id" component={Vehicle} />
+              <Route path="/search" component={Search} />
+              <Route component={NotFound} />
             </Switch>
           </main>
           <Footer />
