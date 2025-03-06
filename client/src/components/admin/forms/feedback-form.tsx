@@ -23,6 +23,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertFeedbackSchema } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 // Client-side form schema matching the server schema
 const feedbackFormSchema = insertFeedbackSchema.extend({
@@ -44,6 +45,7 @@ const FORM_ID = 'feedback-form';
 
 export function FeedbackForm({ onSuccess }: FeedbackFormProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const form = useForm<FeedbackFormValues>({
     resolver: zodResolver(feedbackFormSchema),
@@ -51,6 +53,7 @@ export function FeedbackForm({ onSuccess }: FeedbackFormProps) {
       category: "general",
       priority: "medium",
       status: "new",
+      submittedBy: user?.username || '',
     },
   });
 
@@ -58,11 +61,20 @@ export function FeedbackForm({ onSuccess }: FeedbackFormProps) {
     mutationFn: async (values: FeedbackFormValues) => {
       console.log("Submitting feedback form data:", values);
 
-      const res = await apiRequest("POST", "/api/feedbacks", values);
+      // Ensure submittedBy is set from the authenticated user
+      const formattedValues = {
+        ...values,
+        submittedBy: user?.username || 'anonymous',
+      };
+
+      console.log("Formatted feedback data:", formattedValues);
+
+      const res = await apiRequest("POST", "/api/feedbacks", formattedValues);
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Failed to create feedback");
+        console.error("Server validation error:", error);
+        throw new Error(error.message || "Failed to submit feedback");
       }
 
       return res.json();

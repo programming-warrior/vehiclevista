@@ -28,6 +28,7 @@ const auctionFormSchema = insertAuctionSchema.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
   startingPrice: z.number().min(0, "Starting price must be non-negative"),
+  vehicleId: z.number().min(1, "Vehicle selection is required"),
 });
 
 type AuctionFormValues = z.infer<typeof auctionFormSchema>;
@@ -46,6 +47,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
     defaultValues: {
       status: "upcoming",
       startingPrice: 0,
+      vehicleId: 1, // Temporary default, should be selected by user
     },
   });
 
@@ -58,12 +60,16 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
         startingPrice: Number(values.startingPrice),
         startDate: new Date(values.startDate).toISOString(),
         endDate: new Date(values.endDate).toISOString(),
+        vehicleId: Number(values.vehicleId),
       };
+
+      console.log("Formatted auction data:", formattedValues);
 
       const res = await apiRequest("POST", "/api/auctions", formattedValues);
 
       if (!res.ok) {
         const error = await res.json();
+        console.error("Server validation error:", error);
         throw new Error(error.message || "Failed to create auction");
       }
 
@@ -164,6 +170,20 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
 
         <FormField
           control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter auction description" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="status"
           render={({ field }) => (
             <FormItem>
@@ -184,6 +204,22 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="vehicleId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Vehicle</FormLabel>
+              <FormControl>
+                {/*  Replace this with actual vehicle selection component */}
+                <Input type="number" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
 
         <Button type="submit" className="w-full" disabled={isPending}>
           {isPending ? "Creating..." : "Create Auction"}
