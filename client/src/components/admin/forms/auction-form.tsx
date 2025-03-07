@@ -15,7 +15,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,8 +28,6 @@ import { insertAuctionSchema } from "@shared/schema";
 const auctionFormSchema = insertAuctionSchema.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
-  startingPrice: z.number().min(0.01, "Starting price must be greater than 0"),
-  vehicleId: z.number().min(1, "Vehicle ID is required"),
 }).refine((data) => {
   const start = new Date(data.startDate);
   const end = new Date(data.endDate);
@@ -53,7 +51,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
       title: "",
       description: "",
       startingPrice: 0,
-      vehicleId: undefined,
+      vehicleId: 1,
       status: "upcoming",
       startDate: "",
       endDate: "",
@@ -87,13 +85,10 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
 
         if (!res.ok) {
           const error = await res.json();
-          console.error("Server error response:", error);
           throw new Error(error.message || "Failed to create auction");
         }
 
-        const data = await res.json();
-        console.log("Server success response:", data);
-        return data;
+        return await res.json();
       } catch (error) {
         console.error("Auction submission error:", error);
         throw error;
@@ -109,7 +104,6 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
       onSuccess?.();
     },
     onError: (error: Error) => {
-      console.error("Auction creation error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to create auction",
@@ -162,7 +156,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
                 <FormLabel>Start Date</FormLabel>
                 <FormControl>
                   <Input 
-                    type="datetime-local" 
+                    type="datetime-local"
                     {...field}
                   />
                 </FormControl>
@@ -179,7 +173,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
                 <FormLabel>End Date</FormLabel>
                 <FormControl>
                   <Input 
-                    type="datetime-local" 
+                    type="datetime-local"
                     {...field}
                   />
                 </FormControl>
@@ -197,7 +191,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
               <FormLabel>Starting Price ($)</FormLabel>
               <FormControl>
                 <Input 
-                  type="number" 
+                  type="number"
                   min="0.01"
                   step="0.01"
                   placeholder="1000.00"
@@ -218,7 +212,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
               <FormLabel>Vehicle ID</FormLabel>
               <FormControl>
                 <Input 
-                  type="number" 
+                  type="number"
                   min="1"
                   placeholder="1"
                   {...field}

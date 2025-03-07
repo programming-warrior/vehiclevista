@@ -457,18 +457,24 @@ export class DatabaseStorage implements IStorage {
 
   async createAuction(auction: InsertAuction): Promise<Auction> {
     try {
-      // Format the auction data correctly
+      // Format the auction data with proper date handling
+      const startDate = new Date(auction.startDate);
+      const endDate = new Date(auction.endDate);
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        throw new Error("Invalid date format provided");
+      }
+
       const auctionData = {
         title: auction.title,
         description: auction.description,
         startingPrice: auction.startingPrice,
         vehicleId: auction.vehicleId,
-        startDate: auction.startDate,
-        endDate: auction.endDate,
+        startDate: startDate,  // Pass Date object directly
+        endDate: endDate,     // Pass Date object directly
         status: auction.status || "upcoming",
         currentBid: auction.startingPrice,
-        totalBids: 0,
-        createdAt: new Date().toISOString()
+        totalBids: 0
       };
 
       console.log("Creating auction with data:", auctionData);
@@ -481,7 +487,10 @@ export class DatabaseStorage implements IStorage {
       return newAuction;
     } catch (error) {
       console.error('Error creating auction:', error);
-      throw new Error(`Failed to create auction in database: ${error.message}`);
+      if (error instanceof Error) {
+        throw new Error(`Failed to create auction: ${error.message}`);
+      }
+      throw new Error('Failed to create auction: Unknown error');
     }
   }
 
