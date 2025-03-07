@@ -457,21 +457,19 @@ export class DatabaseStorage implements IStorage {
 
   async createAuction(auction: InsertAuction): Promise<Auction> {
     try {
-      // Convert dates to ISO strings and format data for insertion
-      const auctionData = [
-        {
-          title: auction.title,
-          description: auction.description,
-          startingPrice: auction.startingPrice,
-          vehicleId: auction.vehicleId,
-          startDate: auction.startDate,
-          endDate: auction.endDate,
-          status: auction.status || "upcoming",
-          currentBid: auction.startingPrice,
-          totalBids: 0,
-          createdAt: new Date().toISOString()
-        }
-      ];
+      // Format the auction data correctly
+      const auctionData = {
+        title: auction.title,
+        description: auction.description,
+        startingPrice: auction.startingPrice,
+        vehicleId: auction.vehicleId,
+        startDate: auction.startDate,
+        endDate: auction.endDate,
+        status: auction.status || "upcoming",
+        currentBid: auction.startingPrice,
+        totalBids: 0,
+        createdAt: new Date().toISOString()
+      };
 
       console.log("Creating auction with data:", auctionData);
 
@@ -483,7 +481,7 @@ export class DatabaseStorage implements IStorage {
       return newAuction;
     } catch (error) {
       console.error('Error creating auction:', error);
-      throw new Error('Failed to create auction in database');
+      throw new Error(`Failed to create auction in database: ${error.message}`);
     }
   }
 
