@@ -21,23 +21,12 @@ import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { insertAuctionSchema } from "@shared/schema";
 
-// Define the form schema
-const auctionFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
+// Client-side form schema matching the server schema
+const auctionFormSchema = insertAuctionSchema.extend({
   startDate: z.string().min(1, "Start date is required"),
-  endDate: z.string().min(1, "End date is required"),
-  startingPrice: z.number().min(0, "Starting price must be non-negative"),
-  vehicleId: z.number().min(1, "Vehicle selection is required"),
-  status: z.enum(["upcoming", "active", "ended"]).default("upcoming"),
-}).refine((data) => {
-  const start = new Date(data.startDate);
-  const end = new Date(data.endDate);
-  return end > start;
-}, {
-  message: "End date must be after start date",
-  path: ["endDate"],
+  endDate: z.string().min(1, "End date is required")
 });
 
 type AuctionFormValues = z.infer<typeof auctionFormSchema>;
@@ -45,6 +34,8 @@ type AuctionFormValues = z.infer<typeof auctionFormSchema>;
 interface AuctionFormProps {
   onSuccess?: () => void;
 }
+
+const FORM_ID = 'auction-form';
 
 export function AuctionForm({ onSuccess }: AuctionFormProps) {
   const queryClient = useQueryClient();
@@ -54,7 +45,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
     defaultValues: {
       status: "upcoming",
       startingPrice: 0,
-      vehicleId: 1,
+      vehicleId: 1, // Temporary default, should be selected by user
     },
   });
 
@@ -62,7 +53,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
     mutationFn: async (values: AuctionFormValues) => {
       console.log("Submitting auction form data:", values);
 
-      // Ensure proper date formatting
+      // Format dates to ensure they are valid ISO strings
       const startDate = new Date(values.startDate);
       const endDate = new Date(values.endDate);
 
@@ -75,7 +66,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
         ...values,
         startingPrice: Number(values.startingPrice),
         vehicleId: Number(values.vehicleId),
-        // Format dates as ISO strings
+        // Ensure dates are properly formatted ISO strings
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
       };
@@ -83,10 +74,13 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
       console.log("Formatted auction data:", formattedValues);
 
       const res = await apiRequest("POST", "/api/auctions", formattedValues);
+
       if (!res.ok) {
         const error = await res.json();
+        console.error("Server validation error:", error);
         throw new Error(error.message || "Failed to create auction");
       }
+
       return res.json();
     },
     onSuccess: () => {
@@ -99,6 +93,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
       onSuccess?.();
     },
     onError: (error: Error) => {
+      console.error("Auction creation error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to create auction",
@@ -146,7 +141,10 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
               <FormItem>
                 <FormLabel>Start Date</FormLabel>
                 <FormControl>
-                  <Input type="datetime-local" {...field} />
+                  <Input 
+                    type="datetime-local" 
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -160,7 +158,10 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
               <FormItem>
                 <FormLabel>End Date</FormLabel>
                 <FormControl>
-                  <Input type="datetime-local" {...field} />
+                  <Input 
+                    type="datetime-local" 
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -176,7 +177,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
               <FormLabel>Starting Price ($)</FormLabel>
               <FormControl>
                 <Input 
-                  type="number"
+                  type="number" 
                   min="0"
                   step="0.01"
                   placeholder="1000"
@@ -197,7 +198,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
               <FormLabel>Vehicle ID</FormLabel>
               <FormControl>
                 <Input 
-                  type="number"
+                  type="number" 
                   min="1"
                   placeholder="1"
                   {...field}
