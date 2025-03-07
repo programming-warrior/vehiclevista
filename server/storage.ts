@@ -457,18 +457,32 @@ export class DatabaseStorage implements IStorage {
 
   async createAuction(auction: InsertAuction): Promise<Auction> {
     try {
+      // Ensure all required fields are present and properly formatted
+      const auctionData = {
+        title: auction.title,
+        description: auction.description,
+        startingPrice: auction.startingPrice,
+        vehicleId: auction.vehicleId,
+        startDate: new Date(auction.startDate),
+        endDate: new Date(auction.endDate),
+        status: auction.status || "upcoming",
+        // Optional fields with defaults
+        currentBid: auction.startingPrice,
+        totalBids: 0,
+        createdAt: new Date().toISOString()
+      };
+
+      console.log("Inserting auction with data:", auctionData);
+
       const [newAuction] = await db
         .insert(auctions)
-        .values({
-          ...auction,
-          currentBid: auction.startingPrice,
-          totalBids: 0
-        })
+        .values(auctionData)
         .returning();
+
       return newAuction;
     } catch (error) {
       console.error('Error creating auction:', error);
-      throw new Error('Failed to create auction');
+      throw new Error('Failed to create auction in database');
     }
   }
 
