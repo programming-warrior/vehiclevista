@@ -36,7 +36,6 @@ const auctionFormSchema = insertAuctionSchema.extend({
   return !isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start;
 }, {
   message: "End date must be after start date",
-  path: ["endDate"],
 });
 
 type AuctionFormValues = z.infer<typeof auctionFormSchema>;
@@ -64,7 +63,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
   const { mutate, isPending } = useMutation({
     mutationFn: async (values: AuctionFormValues) => {
       try {
-        // Format dates and validate
+        // Format dates to ensure they are valid ISO strings
         const startDate = new Date(values.startDate);
         const endDate = new Date(values.endDate);
 
