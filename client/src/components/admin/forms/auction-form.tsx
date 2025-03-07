@@ -9,6 +9,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -23,14 +24,16 @@ import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertAuctionSchema } from "@shared/schema";
 
-// Client-side form schema
+// Enhanced client-side form schema with additional validations
 const auctionFormSchema = insertAuctionSchema.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
+  startingPrice: z.number().min(0.01, "Starting price must be greater than 0"),
+  vehicleId: z.number().min(1, "Vehicle ID is required"),
 }).refine((data) => {
   const start = new Date(data.startDate);
   const end = new Date(data.endDate);
-  return end > start;
+  return !isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start;
 }, {
   message: "End date must be after start date",
   path: ["endDate"],
@@ -51,7 +54,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
       title: "",
       description: "",
       startingPrice: 0,
-      vehicleId: 1,
+      vehicleId: undefined,
       status: "upcoming",
       startDate: "",
       endDate: "",
@@ -70,9 +73,11 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
         }
 
         const formattedValues = {
-          ...values,
+          title: values.title.trim(),
+          description: values.description.trim(),
           startingPrice: Number(values.startingPrice),
           vehicleId: Number(values.vehicleId),
+          status: values.status as "upcoming" | "active" | "ended",
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
         };
@@ -83,10 +88,13 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
 
         if (!res.ok) {
           const error = await res.json();
+          console.error("Server error response:", error);
           throw new Error(error.message || "Failed to create auction");
         }
 
-        return res.json();
+        const data = await res.json();
+        console.log("Server success response:", data);
+        return data;
       } catch (error) {
         console.error("Auction submission error:", error);
         throw error;
@@ -135,7 +143,11 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Input placeholder="Enter auction description" {...field} />
+                <Textarea 
+                  placeholder="Enter auction description"
+                  className="min-h-[100px]"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -187,7 +199,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
               <FormControl>
                 <Input 
                   type="number" 
-                  min="0"
+                  min="0.01"
                   step="0.01"
                   placeholder="1000.00"
                   {...field}
