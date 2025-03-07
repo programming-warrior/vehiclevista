@@ -29,6 +29,7 @@ import TraderBulkUpload from "@/pages/trader/bulk-upload";
 import TraderPackages from "@/pages/trader/packages";
 import MakesPage from "@/pages/makes";
 import BrandPage from "@/pages/makes/[brand]";
+import AuctionPage from "@/pages/auction";
 
 export default function App() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
               <Route path="/search" component={Search} />
               <Route path="/makes" component={MakesPage} />
               <Route path="/makes/:brand" component={BrandPage} />
+              <Route path="/auction" component={AuctionPage} />
 
               {/* Admin Routes */}
               <Route path="/admin">
