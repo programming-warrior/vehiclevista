@@ -23,10 +23,17 @@ import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertAuctionSchema } from "@shared/schema";
 
-// Client-side form schema matching the server schema
+// Client-side form schema
 const auctionFormSchema = insertAuctionSchema.extend({
   startDate: z.string().min(1, "Start date is required"),
-  endDate: z.string().min(1, "End date is required")
+  endDate: z.string().min(1, "End date is required"),
+}).refine((data) => {
+  const start = new Date(data.startDate);
+  const end = new Date(data.endDate);
+  return end > start;
+}, {
+  message: "End date must be after start date",
+  path: ["endDate"],
 });
 
 type AuctionFormValues = z.infer<typeof auctionFormSchema>;
@@ -35,53 +42,55 @@ interface AuctionFormProps {
   onSuccess?: () => void;
 }
 
-const FORM_ID = 'auction-form';
-
 export function AuctionForm({ onSuccess }: AuctionFormProps) {
   const queryClient = useQueryClient();
 
   const form = useForm<AuctionFormValues>({
     resolver: zodResolver(auctionFormSchema),
     defaultValues: {
-      status: "upcoming",
+      title: "",
+      description: "",
       startingPrice: 0,
-      vehicleId: 1, // Temporary default, should be selected by user
+      vehicleId: 1,
+      status: "upcoming",
+      startDate: "",
+      endDate: "",
     },
   });
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (values: AuctionFormValues) => {
-      console.log("Submitting auction form data:", values);
+      try {
+        // Format dates and validate
+        const startDate = new Date(values.startDate);
+        const endDate = new Date(values.endDate);
 
-      // Format dates to ensure they are valid ISO strings
-      const startDate = new Date(values.startDate);
-      const endDate = new Date(values.endDate);
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new Error("Invalid date format");
+        }
 
-      // Validate dates
-      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        throw new Error("Invalid date format");
+        const formattedValues = {
+          ...values,
+          startingPrice: Number(values.startingPrice),
+          vehicleId: Number(values.vehicleId),
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        };
+
+        console.log("Submitting auction data:", formattedValues);
+
+        const res = await apiRequest("POST", "/api/auctions", formattedValues);
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || "Failed to create auction");
+        }
+
+        return res.json();
+      } catch (error) {
+        console.error("Auction submission error:", error);
+        throw error;
       }
-
-      const formattedValues = {
-        ...values,
-        startingPrice: Number(values.startingPrice),
-        vehicleId: Number(values.vehicleId),
-        // Ensure dates are properly formatted ISO strings
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-      };
-
-      console.log("Formatted auction data:", formattedValues);
-
-      const res = await apiRequest("POST", "/api/auctions", formattedValues);
-
-      if (!res.ok) {
-        const error = await res.json();
-        console.error("Server validation error:", error);
-        throw new Error(error.message || "Failed to create auction");
-      }
-
-      return res.json();
     },
     onSuccess: () => {
       toast({
@@ -112,7 +121,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
             <FormItem>
               <FormLabel>Title</FormLabel>
               <FormControl>
-                <Input placeholder="Summer Car Auction" {...field} />
+                <Input placeholder="Enter auction title" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -180,7 +189,7 @@ export function AuctionForm({ onSuccess }: AuctionFormProps) {
                   type="number" 
                   min="0"
                   step="0.01"
-                  placeholder="1000"
+                  placeholder="1000.00"
                   {...field}
                   onChange={(e) => field.onChange(Number(e.target.value))}
                 />
