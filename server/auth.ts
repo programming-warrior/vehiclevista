@@ -1,4 +1,4 @@
-import passport from "passport";
+import passport from "passport"
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";

@@ -6,10 +6,18 @@ import cors from "cors";
 dotenv.config()
 
 const app = express();
-app.use(cors())
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true,
+}))
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// app.post('/api/login',(req:any,res:any)=>{
+//   console.log("hey");
+//   return res.status(200).end();
+// })
 
 // Add CORS configuration for development
 // app.use((req, res, next) => {
@@ -68,18 +76,16 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+  // if (app.get("env") === "development") {
+  //   await setupVite(app, server);
+  // } else {
+  //   serveStatic(app);
+  // }
 
   // ALWAYS serve the app on port 5000 and bind to all interfaces
   const port = 5000;
   server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
+    port
   }, () => {
     log(`Server running at http://0.0.0.0:${port}`);
   });
