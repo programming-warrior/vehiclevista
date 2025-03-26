@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, NextFunction } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import { 
@@ -15,7 +15,7 @@ import {
 import { setupAuth } from "./auth";
 
 // Middleware to check if user is admin
-const isAdmin = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+const isAdmin = (req: any, res: any, next: any) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Not authenticated" });
   }
@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express) {
         throw new Error("Failed to fetch vehicle details");
       }
 
-      const data = await response.json();
+      const data:any = await response.json();
 
       res.json({
         registrationNumber: data.registrationNumber,
@@ -305,7 +305,7 @@ export async function registerRoutes(app: Express) {
   });
 
   // Update the middleware to check permissions
-  const checkPermission = async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+  const checkPermission = async (req: any, res: any, next: NextFunction) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
@@ -716,7 +716,7 @@ async function processUploadedFile(file: Express.Multer.File, uploadId: number, 
         await storage.updateBulkUpload(uploadId, {
           processedVehicles: processedCount,
         });
-      } catch (error) {
+      } catch (error:any) {
         errors.push({
           row: processedCount + 1,
           error: error.message,
@@ -729,7 +729,7 @@ async function processUploadedFile(file: Express.Multer.File, uploadId: number, 
       status: errors.length > 0 ? "completed_with_errors" : "completed",
       errors: errors.length > 0 ? errors : undefined,
     });
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error processing bulk upload:", error);
     await storage.updateBulkUpload(uploadId, {
       status: "failed",

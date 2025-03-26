@@ -1,4 +1,4 @@
-import { pgTable, text, serial, boolean, real, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, real, integer, timestamp, jsonb, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -70,8 +70,8 @@ export const packages = pgTable("packages", {
 // Add user packages table
 export const userPackages = pgTable("user_packages", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  packageId: integer("package_id").notNull(),
+  userId: integer("user_id").notNull().references(()=>users.id),
+  packageId: integer("package_id").notNull().references(()=>packages.id),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   vehicleValue: integer("vehicle_value").notNull(),

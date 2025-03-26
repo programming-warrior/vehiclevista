@@ -17,6 +17,7 @@ import {
 } from "@shared/schema";
 import type { Package, InsertPackage, UserPackage, InsertUserPackage } from "@shared/schema"; 
 import { packages, userPackages } from "@shared/schema"; 
+import { InsertPricingPlan } from "@shared/schema";
 
 export interface IStorage {
   getVehicles(category?: string): Promise<Vehicle[]>;
@@ -211,7 +212,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createUser(user: InsertUser & { role?: string }): Promise<User> {
+  async createUser(user: InsertUser): Promise<User> {
     try {
       const [newUser] = await db
         .insert(users)

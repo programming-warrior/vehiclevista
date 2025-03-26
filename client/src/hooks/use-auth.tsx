@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { User, InsertUser } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { BACKEND_URL } from "@/lib/constants";
 
 type AuthContextType = {
   user: User | null;
@@ -16,13 +17,14 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  console.log(BACKEND_URL);
   const { toast } = useToast();
 
   const { data: user, error, isLoading } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/user", { credentials: "include" });
+        const res = await fetch(BACKEND_URL + "/api/user", { credentials: "include" });
         if (!res.ok) {
           if (res.status === 401) return null;
           throw new Error(await res.text());
@@ -37,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { username: string; password: string }) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
+      const res = await apiRequest("POST", BACKEND_URL + "/api/login", credentials);
       const data = await res.json();
       return data as User;
     },

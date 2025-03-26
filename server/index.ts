@@ -1,23 +1,28 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import dotenv from "dotenv"
+import cors from "cors";
+dotenv.config()
 
 const app = express();
+app.use(cors())
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Add CORS configuration for development
-app.use((req, res, next) => {
-  // Allow requests from all subdomains of replit.dev in development
-  const origin = req.headers.origin;
-  if (origin && (origin.endsWith('.replit.dev') || origin === 'http://localhost:5000')) {
-    res.header("Access-Control-Allow-Origin", origin);
-  }
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-  next();
-});
+// app.use((req, res, next) => {
+//   // Allow requests from all subdomains of replit.dev in development
+//   const origin = req.headers.origin;
+//   if (origin && (origin.endsWith('.replit.dev') || origin === 'http://localhost:5000')) {
+//     res.header("Access-Control-Allow-Origin", origin);
+//   }
+//   res.header("Access-Control-Allow-Credentials", "true");
+//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+//   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+//   next();
+// });
 
 // Add diagnostic endpoint
 app.get("/ping", (req, res) => {

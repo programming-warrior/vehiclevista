@@ -39,7 +39,7 @@ export async function setupAuth(app: Express) {
       pool,
       createTableIfMissing: true,
     }),
-    secret: "your-secret-key",
+    secret: process.env.AUTH_SECRET || "",
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -80,11 +80,11 @@ export async function setupAuth(app: Express) {
     }),
   );
 
-  passport.serializeUser((user, done) => {
+  passport.serializeUser((user:any, done:any) => {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: number, done:any) => {
     try {
       const user = await storage.getUser(id);
       done(null, user);
@@ -93,26 +93,25 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Register route
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { username, password, email } = req.body;
-
+      const { username, password, email, role } = req.body;
+  
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
-
+  
       // Hash password and create user
       const hashedPassword = await hashPassword(password);
       const user = await storage.createUser({
         username,
         password: hashedPassword,
         email,
-        role: "user"
+        role: role,
       });
-
+  
       // Log the user in after registration
       req.login(user, (err) => {
         if (err) return next(err);
@@ -123,16 +122,18 @@ export async function setupAuth(app: Express) {
       return res.status(500).json({ message: "Failed to register user" });
     }
   });
-
+  
   // Login route
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         console.error("Authentication error:", err);
         return next(err);
       }
       if (!user) {
-        return res.status(401).json({ message: info?.message || "Authentication failed" });
+        return res
+          .status(401)
+          .json({ message: info?.message || "Authentication failed" });
       }
       req.logIn(user, (err) => {
         if (err) return next(err);
@@ -140,13 +141,13 @@ export async function setupAuth(app: Express) {
       });
     })(req, res, next);
   });
-
+  
   app.post("/api/logout", (req, res) => {
     req.logout(() => {
       res.sendStatus(200);
     });
   });
-
+  
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
@@ -156,6 +157,7 @@ export async function setupAuth(app: Express) {
 
   // Create initial admin user
   try {
+    //TODO: It's only for testing. Remove it later!
     console.log("Checking for existing admin user...");
     const existingAdmin = await storage.getUserByUsername("admin");
 
