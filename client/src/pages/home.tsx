@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VehicleCard from "@/components/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,13 +14,20 @@ import QualityBikesSection from "@/components/quality-bikes-section";
 import BikesCollection from "@/components/bikes-collection";
 import VansCollection from "@/components/vans-collection";
 import LatestBlogPost from "@/components/latest-blog-post";
+import { fetchFeaturedVehicles } from "@/lib/api";
+
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
 
-  const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles", activeCategory],
+  const queryClient= useQueryClient();
+
+  const { data: vehicles, isLoading } = useQuery({
+    queryKey: ["fetchFeaturedVehicle", activeCategory],
+    queryFn: fetchFeaturedVehicles,
   });
+
+  console.log(vehicles);
 
   return (
     <div>

@@ -30,6 +30,7 @@ import TraderPackages from "@/pages/trader/packages";
 import MakesPage from "@/pages/makes";
 import BrandPage from "@/pages/makes/[brand]";
 import AuctionPage from "@/pages/auction";
+import Register from "@/pages/register";
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
               {/* Public Routes */}
               <Route path="/" component={Home} />
               <Route path="/login" component={Login} />
+              <Route path="/register" component={Register} />
               <Route path="/signin" component={SignIn} />
               <Route path="/classified" component={Classified} />
               <Route path="/vehicle/:id" component={Vehicle} />
