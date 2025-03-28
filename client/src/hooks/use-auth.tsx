@@ -11,13 +11,12 @@ type AuthContextType = {
   error: Error | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (data: InsertUser) => Promise<void>;
+  signup: (data: InsertUser) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  console.log(BACKEND_URL);
   const { toast } = useToast();
 
   const { data: user, error, isLoading } = useQuery<User | null>({
@@ -60,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (data: InsertUser) => {
+    mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/register", data);
       const userData = await res.json();
       return userData as User;
@@ -110,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login: async (username, password) => {
           await loginMutation.mutateAsync({ username, password });
         },
-        register: async (data) => {
+        signup: async (data) => {
           await registerMutation.mutateAsync(data);
         },
         logout: () => logoutMutation.mutateAsync(),

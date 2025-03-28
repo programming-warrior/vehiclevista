@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/hooks/use-auth";
 
 // Updated Zod Schema for Validation
 const registerSchema = z
@@ -80,6 +81,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 export default function Register() {
   const [, setLocation] = useLocation();
   const [isBusinessFieldsVisible, setIsBusinessFieldsVisible] = useState(false);
+  const { signup, user, isLoading } = useAuth();
 
   const {
     register,
@@ -127,11 +129,9 @@ export default function Register() {
 
       console.log("Submitted Data:", finalSubmitData);
 
-      // TODO: Implement actual registration logic
-      // const response = await registerUser(finalSubmitData);
-
-      // Uncomment to redirect
-      // setLocation("/login");
+      await signup(finalSubmitData)
+      setLocation("/");
+      
     } catch (error: any) {
       console.error("Registration error:", error);
       setError("root", {
@@ -139,6 +139,16 @@ export default function Register() {
       });
     }
   };
+
+if (isLoading) {
+    return (
+    <div className="flex items-center justify-center min-h-[80vh]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+    </div>
+    );
+}
+
+  if(user) setLocation("/");
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center mt-5">
