@@ -1,36 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+// import { setupVite, serveStatic, log } from "./vite";
 import dotenv from "dotenv"
 import cors from "cors";
 dotenv.config()
 
 const app = express();
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin:'http://localhost:5173',
   credentials: true,
 }))
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// app.post('/api/login',(req:any,res:any)=>{
-//   console.log("hey");
-//   return res.status(200).end();
-// })
-
-// Add CORS configuration for development
-// app.use((req, res, next) => {
-//   // Allow requests from all subdomains of replit.dev in development
-//   const origin = req.headers.origin;
-//   if (origin && (origin.endsWith('.replit.dev') || origin === 'http://localhost:5000')) {
-//     res.header("Access-Control-Allow-Origin", origin);
-//   }
-//   res.header("Access-Control-Allow-Credentials", "true");
-//   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-//   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-//   next();
-// });
 
 // Add diagnostic endpoint
 app.get("/ping", (req, res) => {
@@ -56,7 +39,7 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-      log(logLine);
+      console.log(logLine);
     }
   });
 
@@ -69,24 +52,15 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    log(`Error: ${status} - ${message}`);
+    console.log(`Error: ${status} - ${message}`);
     res.status(status).json({ message });
   });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  // if (app.get("env") === "development") {
-  //   await setupVite(app, server);
-  // } else {
-  //   serveStatic(app);
-  // }
 
   // ALWAYS serve the app on port 5000 and bind to all interfaces
   const port = 5000;
   server.listen({
     port
   }, () => {
-    log(`Server running at http://0.0.0.0:${port}`);
+    console.log(`Server running at ${port}`);
   });
 })();
