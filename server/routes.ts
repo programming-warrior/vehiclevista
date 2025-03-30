@@ -1,5 +1,8 @@
 import type { Express, NextFunction } from "express";
-import { createServer } from "http";
+import { createServer as createHttpServer } from "http";
+import { createServer as createHttpsServer } from "https";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { storage } from "./storage";
 import {
   searchSchema,
@@ -15,6 +18,7 @@ import {
 import { setupAuth } from "./auth";
 import axios from "axios";
 
+
 // Middleware to check if user is admin
 const isAdmin = (req: any, res: any, next: any) => {
   if (!req.isAuthenticated()) {
@@ -29,7 +33,23 @@ const isAdmin = (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express) {
-  const httpServer = createServer(app);
+  // Create server based on environment
+  let httpServer;
+
+  if (process.env.NODE_ENV === "production") {
+    // Use HTTPS in production
+    // Note: You'll need to provide proper SSL certificate and key files
+    const options = {
+      key: readFileSync(join(process.cwd(), "ssl", "key.pem")),
+      cert: readFileSync(join(process.cwd(), "ssl", "cert.pem")),
+    };
+    httpServer = createHttpsServer(options, app);
+    console.log("HTTPS server created for production");
+  } else {
+    // Use HTTP in development
+    httpServer = createHttpServer(app);
+    console.log("HTTP server created for development");
+  }
 
   // Set up authentication routes and middleware
   await setupAuth(app);
@@ -367,11 +387,9 @@ export async function registerRoutes(app: Express) {
 
       const user = req.user as User;
       if (!["trader", "garage"].includes(user.role)) {
-        return res
-          .status(403)
-          .json({
-            message: "Only traders and garages can perform bulk uploads",
-          });
+        return res.status(403).json({
+          message: "Only traders and garages can perform bulk uploads",
+        });
       }
 
       if (!req.file) {
