@@ -7,7 +7,7 @@ dotenv.config()
 
 const app = express();
 app.use(cors({
-  origin:'http://localhost:5173',
+  origin:['http://localhost:5173','https://vehiclevista-5v2w.vercel.app'],
   credentials: true,
 }))
 
