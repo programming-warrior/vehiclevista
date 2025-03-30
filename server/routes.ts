@@ -11,7 +11,7 @@ import {
   insertInventorySchema,
   insertOfferSchema,
   insertPricingPlanSchema 
-} from "@shared/schema";
+} from "../shared/schema";
 import { setupAuth } from "./auth";
 
 // Middleware to check if user is admin
@@ -754,6 +754,7 @@ import * as csv from 'csv-parse';
 import * as XLSX from 'xlsx';
 import { Readable } from 'stream';
 import fetch from 'node-fetch';
+
 
 // Configure multer for file uploads
 const upload = multer({

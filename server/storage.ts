@@ -4,17 +4,17 @@ import type {
   SearchParams,
   User,
   InsertUser,
-} from "@shared/schema";
-import { vehicles, users } from "@shared/schema";
+} from "../shared/schema";
+import { vehicles, users } from "../shared/schema";
 import { db } from "./db";
 import { eq, ilike, and, or, between, desc } from "drizzle-orm";
-import { apiKeys, type ApiKey, type InsertApiKey } from "@shared/schema";
-import { rolePermissions, type RolePermission } from "@shared/schema";
+import { apiKeys, type ApiKey, type InsertApiKey } from "../shared/schema";
+import { rolePermissions, type RolePermission } from "../shared/schema";
 import {
   bulkUploads,
   type BulkUpload,
   type InsertBulkUpload,
-} from "@shared/schema";
+} from "../shared/schema";
 import {
   auctions,
   events,
@@ -36,15 +36,15 @@ import {
   type Offer,
   type InsertOffer,
   type PricingPlan,
-} from "@shared/schema";
+} from "../shared/schema";
 import type {
   Package,
   InsertPackage,
   UserPackage,
   InsertUserPackage,
-} from "@shared/schema";
-import { packages, userPackages } from "@shared/schema";
-import { InsertPricingPlan } from "@shared/schema";
+} from "../shared/schema";
+import { packages, userPackages } from "../shared/schema";
+import { InsertPricingPlan } from "../shared/schema";
 
 export interface IStorage {
   getVehicles(category?: string): Promise<Vehicle[]>;

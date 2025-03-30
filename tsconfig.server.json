@@ -6,10 +6,11 @@
     "outDir": "./dist",
     "noEmit": false,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo.server",
-    "module": "ESNext",
+    "module": "CommonJS",
     "lib": ["esnext"],
     "types": ["node"],
     "jsx": "preserve",
-    "allowImportingTsExtensions": false
+    "allowImportingTsExtensions": false,
+    "moduleResolution": "node"
   }
 }

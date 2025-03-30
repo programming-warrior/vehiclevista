@@ -1,13 +1,14 @@
 {
   "name": "rest-express",
   "version": "1.0.0",
-  "type": "module",
+  "type": "commonjs",
   "license": "MIT",
   "scripts": {
-    "server": "tsx server/index.ts",
-    "client": "vite",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "start": "NODE_ENV=production node dist/index.js",
+    "server-dev": "tsx server/index.ts",
+    "client-dev": "vite",
+    "build": "vite build && npx tsc -p tsconfig.server.json",
+    "server-prod": "cross-env NODE_ENV=production node dist/server/index.js",
+    "client-prod": "serve dist/client -l 5173",
     "check": "tsc",
     "db:push": "drizzle-kit push"
   },
@@ -103,6 +104,7 @@
     "@types/ws": "^8.5.13",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^7.0.3",
     "drizzle-kit": "^0.30.4",
     "esbuild": "^0.25.0",
     "postcss": "^8.4.47",
