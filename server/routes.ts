@@ -1,8 +1,8 @@
 import type { Express, NextFunction } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { 
-  searchSchema, 
+import {
+  searchSchema,
   insertVehicleSchema,
   insertAuctionSchema,
   insertEventSchema,
@@ -10,9 +10,10 @@ import {
   insertSparePartSchema,
   insertInventorySchema,
   insertOfferSchema,
-  insertPricingPlanSchema 
+  insertPricingPlanSchema,
 } from "../shared/schema";
 import { setupAuth } from "./auth";
+import axios from "axios";
 
 // Middleware to check if user is admin
 const isAdmin = (req: any, res: any, next: any) => {
@@ -20,7 +21,9 @@ const isAdmin = (req: any, res: any, next: any) => {
     return res.status(401).json({ message: "Not authenticated" });
   }
   if (req.user.role !== "admin") {
-    return res.status(403).json({ message: "Access denied. Admin privileges required." });
+    return res
+      .status(403)
+      .json({ message: "Access denied. Admin privileges required." });
   }
   next();
 };
@@ -104,8 +107,12 @@ export async function registerRoutes(app: Express) {
     const result = searchSchema.safeParse({
       query: req.query.q,
       category: req.query.category,
-      minPrice: req.query.minPrice ? parseInt(req.query.minPrice as string) : undefined,
-      maxPrice: req.query.maxPrice ? parseInt(req.query.maxPrice as string) : undefined,
+      minPrice: req.query.minPrice
+        ? parseInt(req.query.minPrice as string)
+        : undefined,
+      maxPrice: req.query.maxPrice
+        ? parseInt(req.query.maxPrice as string)
+        : undefined,
       make: req.query.make,
       bodyType: req.query.bodyType,
     });
@@ -118,7 +125,7 @@ export async function registerRoutes(app: Express) {
     res.json(vehicles);
   });
 
-  // Add vehicle lookup endpoint (admin only)
+  // Update vehicle lookup endpoint to use axios
   app.post("/api/vehicles/lookup", isAdmin, async (req, res) => {
     try {
       const { registrationNumber } = req.body;
@@ -127,20 +134,18 @@ export async function registerRoutes(app: Express) {
         return res.status(500).json({ message: "DVSA API key not configured" });
       }
 
-      const response = await fetch("https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles", {
-        method: "POST",
-        headers: {
-          "x-api-key": process.env.DVSA_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ registrationNumber }),
-      });
+      const response = await axios.post(
+        "https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles",
+        { registrationNumber },
+        {
+          headers: {
+            "x-api-key": process.env.DVSA_API_KEY,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch vehicle details");
-      }
-
-      const data:any = await response.json();
+      const data: any = response.data;
 
       res.json({
         registrationNumber: data.registrationNumber,
@@ -184,7 +189,7 @@ export async function registerRoutes(app: Express) {
         username,
         password: hashedPassword,
         email,
-        role
+        role,
       });
 
       res.status(201).json(user);
@@ -205,7 +210,7 @@ export async function registerRoutes(app: Express) {
       const updatedUser = await storage.updateUser(id, {
         username,
         email,
-        role
+        role,
       });
 
       if (!updatedUser) {
@@ -231,7 +236,9 @@ export async function registerRoutes(app: Express) {
       if (user?.role === "admin") {
         const admins = await storage.getUsersByRole("admin");
         if (admins.length <= 1) {
-          return res.status(400).json({ message: "Cannot delete the last admin user" });
+          return res
+            .status(400)
+            .json({ message: "Cannot delete the last admin user" });
         }
       }
 
@@ -277,7 +284,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-
   // Role Permissions routes (admin only)
   app.get("/api/permissions", isAdmin, async (req, res) => {
     try {
@@ -320,15 +326,28 @@ export async function registerRoutes(app: Express) {
 
     let action: "create" | "read" | "update" | "delete";
     switch (method) {
-      case "post": action = "create"; break;
-      case "get": action = "read"; break;
+      case "post":
+        action = "create";
+        break;
+      case "get":
+        action = "read";
+        break;
       case "patch":
-      case "put": action = "update"; break;
-      case "delete": action = "delete"; break;
-      default: return res.status(405).json({ message: "Method not allowed" });
+      case "put":
+        action = "update";
+        break;
+      case "delete":
+        action = "delete";
+        break;
+      default:
+        return res.status(405).json({ message: "Method not allowed" });
     }
 
-    const hasPermission = await storage.checkPermission(user.role, path, action);
+    const hasPermission = await storage.checkPermission(
+      user.role,
+      path,
+      action
+    );
     if (!hasPermission) {
       return res.status(403).json({ message: "Access denied" });
     }
@@ -340,15 +359,19 @@ export async function registerRoutes(app: Express) {
   app.use("/api/:resource", checkPermission);
 
   // Bulk upload routes (trader/garage only)
-  app.post("/api/bulk-uploads", upload.single('file'), async (req, res) => {
+  app.post("/api/bulk-uploads", upload.single("file"), async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
       const user = req.user as User;
-      if (!['trader', 'garage'].includes(user.role)) {
-        return res.status(403).json({ message: "Only traders and garages can perform bulk uploads" });
+      if (!["trader", "garage"].includes(user.role)) {
+        return res
+          .status(403)
+          .json({
+            message: "Only traders and garages can perform bulk uploads",
+          });
       }
 
       if (!req.file) {
@@ -362,7 +385,9 @@ export async function registerRoutes(app: Express) {
       });
 
       // Process the file asynchronously
-      processUploadedFile(req.file, bulkUpload.id, user.id).catch(console.error);
+      processUploadedFile(req.file, bulkUpload.id, user.id).catch(
+        console.error
+      );
 
       res.status(201).json(bulkUpload);
     } catch (error) {
@@ -407,7 +432,9 @@ export async function registerRoutes(app: Express) {
         ...req.body,
         userId: req.user.id,
         startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + req.body.duration * 24 * 60 * 60 * 1000).toISOString(),
+        endDate: new Date(
+          Date.now() + req.body.duration * 24 * 60 * 60 * 1000
+        ).toISOString(),
       });
       res.status(201).json(userPackage);
     } catch (error) {
@@ -448,9 +475,9 @@ export async function registerRoutes(app: Express) {
       const result = insertAuctionSchema.safeParse(req.body);
       if (!result.success) {
         console.error("Auction validation errors:", result.error.errors);
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Invalid auction data",
-          errors: result.error.errors 
+          errors: result.error.errors,
         });
       }
 
@@ -464,7 +491,7 @@ export async function registerRoutes(app: Express) {
           // Set default values
           currentBid: result.data.startingPrice,
           totalBids: 0,
-          status: result.data.status || "upcoming"
+          status: result.data.status || "upcoming",
         };
 
         console.log("Creating auction with data:", auctionData);
@@ -473,7 +500,9 @@ export async function registerRoutes(app: Express) {
         res.status(201).json(auction);
       } catch (error) {
         console.error("Error creating auction:", error);
-        res.status(500).json({ message: "Failed to create auction in database" });
+        res
+          .status(500)
+          .json({ message: "Failed to create auction in database" });
       }
     } catch (error) {
       console.error("Unexpected error in auction creation:", error);
@@ -525,9 +554,9 @@ export async function registerRoutes(app: Express) {
       const result = insertEventSchema.safeParse(req.body);
       if (!result.success) {
         console.error("Event validation errors:", result.error.errors);
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Invalid event data",
-          errors: result.error.errors 
+          errors: result.error.errors,
         });
       }
 
@@ -539,7 +568,7 @@ export async function registerRoutes(app: Express) {
           date: new Date(result.data.date).toISOString(),
           // Set default values
           registeredCount: 0,
-          status: result.data.status || "upcoming"
+          status: result.data.status || "upcoming",
         };
 
         const event = await storage.createEvent(eventData);
@@ -553,7 +582,6 @@ export async function registerRoutes(app: Express) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
-
 
   // Spare Parts routes
   app.get("/api/spare-parts", async (req, res) => {
@@ -662,20 +690,24 @@ export async function registerRoutes(app: Express) {
   return httpServer;
 }
 
-async function processUploadedFile(file: Express.Multer.File, uploadId: number, userId: number) {
+async function processUploadedFile(
+  file: Express.Multer.File,
+  uploadId: number,
+  userId: number
+) {
   try {
     let vehicles: any[] = [];
 
-    if (file.mimetype === 'text/csv') {
+    if (file.mimetype === "text/csv") {
       // Process CSV file
       const parser = csv.parse({ columns: true, skip_empty_lines: true });
       vehicles = await new Promise((resolve, reject) => {
         const records: any[] = [];
         Readable.from(file.buffer)
           .pipe(parser)
-          .on('data', (record) => records.push(record))
-          .on('end', () => resolve(records))
-          .on('error', reject);
+          .on("data", (record) => records.push(record))
+          .on("end", () => resolve(records))
+          .on("error", reject);
       });
     } else {
       // Process Excel file
@@ -716,7 +748,7 @@ async function processUploadedFile(file: Express.Multer.File, uploadId: number, 
         await storage.updateBulkUpload(uploadId, {
           processedVehicles: processedCount,
         });
-      } catch (error:any) {
+      } catch (error: any) {
         errors.push({
           row: processedCount + 1,
           error: error.message,
@@ -729,7 +761,7 @@ async function processUploadedFile(file: Express.Multer.File, uploadId: number, 
       status: errors.length > 0 ? "completed_with_errors" : "completed",
       errors: errors.length > 0 ? errors : undefined,
     });
-  } catch (error:any) {
+  } catch (error: any) {
     console.error("Error processing bulk upload:", error);
     await storage.updateBulkUpload(uploadId, {
       status: "failed",
@@ -749,12 +781,10 @@ async function hashPassword(password: string): Promise<string> {
   //Implement your password hashing logic here.  For example, using bcrypt.
   return password; //REPLACE THIS WITH ACTUAL HASHING
 }
-import multer from 'multer';
-import * as csv from 'csv-parse';
-import * as XLSX from 'xlsx';
-import { Readable } from 'stream';
-import fetch from 'node-fetch';
-
+import multer from "multer";
+import * as csv from "csv-parse";
+import * as XLSX from "xlsx";
+import { Readable } from "stream";
 
 // Configure multer for file uploads
 const upload = multer({
