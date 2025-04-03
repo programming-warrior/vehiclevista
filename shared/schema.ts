@@ -1,6 +1,10 @@
-import { pgTable, text, serial, boolean, real, integer, timestamp, jsonb, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, real, integer, timestamp, jsonb, foreignKey, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+
+export  const userRoles =  ["buyer", "seller", "admin", "trader", "garage"] as const
+export const userRolesEnum = pgEnum("user_roles", userRoles)
 
 // Update vehicles table with classified listing fields
 export const vehicles = pgTable("vehicles", {
@@ -39,7 +43,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull(),
-  role: text("role").notNull().default("buyer"), // "admin", "buyer", "seller", "trader", "garage"
+  role: userRolesEnum().notNull().default("buyer"), // "admin", "buyer", "seller", "trader", "garage"
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   // New fields for trader/garage accounts
   businessName: text("business_name"),

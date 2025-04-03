@@ -9,7 +9,7 @@ import { vehicles, users } from "../shared/schema";
 import { db } from "./db";
 import { eq, ilike, and, or, between, desc } from "drizzle-orm";
 import { apiKeys, type ApiKey, type InsertApiKey } from "../shared/schema";
-import { rolePermissions, type RolePermission } from "../shared/schema";
+import { rolePermissions, type RolePermission, userRolesEnum } from "../shared/schema";
 import {
   bulkUploads,
   type BulkUpload,
@@ -255,7 +255,7 @@ export class DatabaseStorage implements IStorage {
         .insert(users)
         .values({
           ...user,
-          role: user.role || "user",
+          role: user.role || "buyer",
         })
         .returning();
       return newUser;
@@ -301,7 +301,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getUsersByRole(role: string): Promise<User[]> {
+  async getUsersByRole(role: any ): Promise<User[]> {
     try {
       return await db.select().from(users).where(eq(users.role, role));
     } catch (error) {

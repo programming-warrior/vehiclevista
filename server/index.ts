@@ -1,10 +1,11 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import https from "https";
-// import { setupVite, serveStatic, log } from "./vite";
 import dotenv from "dotenv"
 import cors from "cors";
+import RedisClientSingleton from "./utils/redis";
 dotenv.config()
+
+import authRouter from "./serverRoutes/authRouter";
 
 const app = express();
 app.use(cors({
@@ -15,6 +16,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+app.use("/api/auth",authRouter);
 
 // Add diagnostic endpoint
 app.get("/ping", (req, res) => {
@@ -56,7 +58,7 @@ app.use((req, res, next) => {
     console.log(`Error: ${status} - ${message}`);
     res.status(status).json({ message });
   });
-
+  const redisClient= await RedisClientSingleton.getRedisClient();
   // ALWAYS serve the app on port 5000 and bind to all interfaces
   const port = 5000;
   server.listen({
