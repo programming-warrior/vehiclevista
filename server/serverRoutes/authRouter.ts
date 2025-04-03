@@ -4,13 +4,30 @@ import { db } from "../db";
 import { users } from "../../shared/schema";
 import { eq } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
+import { userRegisterSchema } from "../../shared/zodSchema/userSchema";
 
 const authRouter = Router();
 
 // Registration route
-authRouter.post("/register", (req, res) => {
-  // Handle user registration logic here
-  res.send("User registration endpoint");
+authRouter.post("/register", async(req, res) => {
+  const zodParseResult= userRegisterSchema.safeParse(req.body);
+  if(!zodParseResult.success) return res.status(401).json({error: "invalid input"});
+  const user = zodParseResult.data;
+  let [savedUser] = await db.insert(users).values(user).returning()
+  //CREATE USER SESSIONS
+  const sessionId = await createUserSession(savedUser);
+
+  console.log(sessionId);
+  res.setHeader(
+    "Set-Cookie",
+    `sessionId=${sessionId}; Path=/; Max-Age=${SESSION_EXPIRY_SECONDS}; ${
+      process.env.NODE_ENV === "production"
+        ? "HttpOnly; Secure; SameSite=lax"
+        : ""
+    }`
+  );
+
+  return res.status(201).json({ message: "registration successful successfull" });
 });
 
 // Login route
