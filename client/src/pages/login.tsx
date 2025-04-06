@@ -3,9 +3,19 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { Link } from "wouter";
+import { useUser } from "@/hooks/use-store";
+import { loginUser } from "@/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface LoginForm {
   username: string;
@@ -13,39 +23,52 @@ interface LoginForm {
 }
 
 export default function LoginPage() {
-  const { login, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const { userId, role, setUser } = useUser();
+  const { toast } = useToast();
 
-  const { register, handleSubmit, formState: { isSubmitting, errors }, setError } = useForm<LoginForm>({
+  const {
+    register,
+    handleSubmit,
+    formState: { isSubmitting, errors },
+    setError,
+  } = useForm<LoginForm>({
     defaultValues: {
       username: "",
-      password: ""
-    }
+      password: "",
+    },
   });
 
-  // Show loading state while checking authentication
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[80vh]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   // Redirect if already logged in
-  if (user) {
-    setLocation("/admin");
+  if (userId && role) {
+    setLocation("/");
     return null;
   }
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      await login(data.username, data.password);
-      setLocation("/admin");
+      const res = await loginUser(data.username, data.password);
+      console.log(res);
+      console.log("setting user");
+      setUser({
+        userId: res.userId,
+        role: res.role,
+      });
+      toast({
+        title: "Success!",
+        description: "Login Successful",
+      });
+      setLocation("/");
     } catch (error: any) {
       console.error("Login error:", error);
-      setError("root", { 
-        message: error?.message || "Failed to login. Please check your credentials."
+      setError("root", {
+        message:
+          error?.message || "Failed to login. Please check your credentials.",
+      });
+      toast({
+        variant: "destructive",
+        title: "Failed!",
+        description: "Something went wrong!",
       });
     }
   };
@@ -67,7 +90,9 @@ export default function LoginPage() {
                 placeholder="Enter your username"
               />
               {errors.username && (
-                <p className="text-sm text-destructive">{errors.username.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.username.message}
+                </p>
               )}
             </div>
             <div className="space-y-2">
@@ -79,17 +104,17 @@ export default function LoginPage() {
                 placeholder="Enter your password"
               />
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.password.message}
+                </p>
               )}
             </div>
             {errors.root && (
-              <p className="text-sm text-destructive text-center">{errors.root.message}</p>
+              <p className="text-sm text-destructive text-center">
+                {errors.root.message}
+              </p>
             )}
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting}
-            >
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -101,6 +126,14 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
+        <CardFooter>
+          <p className="text-base text-gray-500">
+            Don't have an account.{" "}
+            <Link href="/register" className="underline text-gray-600">
+              Sign Up
+            </Link>
+          </p>
+        </CardFooter>
       </Card>
     </div>
   );

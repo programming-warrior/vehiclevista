@@ -8,7 +8,6 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -26,8 +25,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-import { useAuth } from "@/hooks/use-auth";
 import { userRegisterSchema } from "@shared/zodSchema/userSchema";
+import { useUser } from "@/hooks/use-store";
+import { registerUser } from "@/api";
+import { useToast } from "@/hooks/use-toast"
+
 
 // Type inference from Zod schema
 type RegisterForm = z.infer<typeof userRegisterSchema>;
@@ -35,7 +37,8 @@ type RegisterForm = z.infer<typeof userRegisterSchema>;
 export default function Register() {
   const [, setLocation] = useLocation();
   const [isBusinessFieldsVisible, setIsBusinessFieldsVisible] = useState(false);
-  const { signup, user, isLoading } = useAuth();
+  const {userId, role, setUser} = useUser();
+  const { toast } = useToast()
 
   // Initialize form with shadcn Form
   const form = useForm<RegisterForm>({
@@ -46,6 +49,8 @@ export default function Register() {
       confirmPassword: "",
       email: "",
       role: "buyer",
+      businessAddress: "",
+      businessName: "",
     },
   });
 
@@ -61,7 +66,7 @@ export default function Register() {
   const onSubmit = async (data: RegisterForm) => {
     try {
       // Remove confirmPassword before sending to backend
-      const { confirmPassword, ...submitData } = data;
+      const {  ...submitData } = data;
 
       // Conditional business fields based on role
       const finalSubmitData = {
@@ -76,26 +81,32 @@ export default function Register() {
 
       console.log("Submitted Data:", finalSubmitData);
 
-      await signup(finalSubmitData);
+      const res=await registerUser(finalSubmitData)
+      console.log('setting user')
+      setUser({
+        role: res.role,
+        userId: res.userId 
+      })
+      toast({
+        title: "Success!",
+        description: "Registration Successful!",
+      })
       setLocation("/");
-      
     } catch (error: any) {
       console.error("Registration error:", error);
       form.setError("root", {
         message: error?.message || "Failed to register. Please try again.",
       });
+      toast({
+        variant: "destructive",
+        title: "Failed!",
+        description: "Something went wrong!",
+      })
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[80vh]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
 
-  if (user) setLocation("/");
+  if (userId && role) setLocation("/");
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center mt-5">

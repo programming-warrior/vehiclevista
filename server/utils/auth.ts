@@ -2,7 +2,7 @@
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 
 
-export async function hashPassword(password: string) {
+export async function hashPassword(password: string):Promise<string>{
     const salt = randomBytes(16).toString("hex").normalize();
     return new Promise((resolve, reject)=>{
         scrypt(password, salt, 64, (err, hash)=>{
