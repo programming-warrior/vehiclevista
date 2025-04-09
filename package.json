@@ -53,6 +53,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "connect-pg-simple": "^10.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parse": "^5.6.0",
     "date-fns": "^3.6.0",
@@ -92,10 +93,12 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.6.0",
     "@replit/vite-plugin-cartographer": "^0.0.4",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/typography": "^0.5.15",
     "@types/connect-pg-simple": "^7.0.3",
+    "@types/cookie-parser": "^1.4.8",
     "@types/cors": "^2.8.17",
     "@types/express": "4.17.21",
     "@types/express-session": "^1.18.0",

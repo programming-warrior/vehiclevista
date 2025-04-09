@@ -3,6 +3,7 @@ import { Route, useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { useUser } from "@/hooks/use-store";
 import { useToast } from "@/hooks/use-toast";
+import { useValidateSession } from "@/hooks/use-validatesession";
 
 export function ProtectedRoute({
   component: Component,
@@ -16,7 +17,16 @@ export function ProtectedRoute({
   const [, setLocation] = useLocation();
   const {userId, role} =useUser();
   const {toast} = useToast()
-
+  const { isValidating } = useValidateSession();
+  console.log("protected route");
+  if (isValidating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
   if (!userId || !role) {
     console.log("No user found, redirecting to login");
     setLocation("/login");

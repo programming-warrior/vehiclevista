@@ -1,7 +1,13 @@
-import { registerUser,loginUser } from "./user";
+import { registerUser,loginUser, validateSession, logoutUser } from "./user-api";
+import { getVehicles } from "./vehicle-api";
 
 
 export {
+
+    getVehicles,
+
     registerUser,
-    loginUser
+    loginUser,
+    validateSession,
+    logoutUser
 }

@@ -8,7 +8,7 @@ export const userSessionSchema = z.object({
   role: z.enum(userRoles),
 });
 
-export const SESSION_EXPIRY_SECONDS = 60 ; // 2 days
+export const SESSION_EXPIRY_SECONDS = 60 * 60 * 24; // 2 days
 export const COOKIE_SESSION_KEY = "user-auth-session-cookieId";
 
 type Cookies = {
@@ -37,6 +37,7 @@ export async function createUserSession(user: User, cookies?: Cookies) {
     // setCookie(sessionId, cookies)
     return sessionId;
   } catch (e) {
+    console.log("createUserSession error")
     throw e;
   }
 }

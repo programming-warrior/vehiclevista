@@ -12,7 +12,7 @@ class RedisClientSingleton {
     }
    
     RedisClientSingleton.redisClient = createClient({
-      url: `redis://${process.env.REDIS_HOSTNAME}:6379`,
+      url: `redis://default:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOSTNAME}:6379`,
       socket: {
         // tls: true,
         // rejectUnauthorized: false,

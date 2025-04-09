@@ -3,9 +3,11 @@ import { registerRoutes } from "./routes";
 import dotenv from "dotenv"
 import cors from "cors";
 import RedisClientSingleton from "./utils/redis";
+import cookieParser from "cookie-parser"
 dotenv.config()
 
 import authRouter from "./serverRoutes/authRouter";
+import vehicleRouter from "./serverRoutes/vehicleRouter";
 
 const app = express();
 app.use(cors({
@@ -13,10 +15,13 @@ app.use(cors({
   credentials: true,
 }))
 
+app.use(cookieParser())
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/api/auth",authRouter);
+app.use("/api/vehicles", vehicleRouter);
 
 // Add diagnostic endpoint
 app.get("/ping", (req, res) => {

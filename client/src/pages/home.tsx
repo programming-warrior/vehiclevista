@@ -15,20 +15,23 @@ import BikesCollection from "@/components/bikes-collection";
 import VansCollection from "@/components/vans-collection";
 import LatestBlogPost from "@/components/latest-blog-post";
 import { fetchFeaturedVehicles } from "@/lib/api";
+import { useUser } from "@/hooks/use-store";
 
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
 
   const queryClient= useQueryClient();
+  const {userId, role} = useUser();
 
-  const { data: vehicles, isLoading } = useQuery({
-    queryKey: ["fetchFeaturedVehicle", activeCategory],
-    queryFn: fetchFeaturedVehicles,
-  });
+  // const { data: vehicles, isLoading } = useQuery({
+  //   queryKey: ["fetchFeaturedVehicle", activeCategory],
+  //   queryFn: fetchFeaturedVehicles,
+  // });
 
-  console.log(vehicles);
-
+  // console.log(vehicles);
+  console.log(userId);
+  console.log(role);
   return (
     <div>
       <HeroSection />
@@ -60,7 +63,7 @@ export default function Home() {
           </TabsList>
         </Tabs>
 
-        {isLoading ? (
+        {false ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
               <div
@@ -72,9 +75,9 @@ export default function Home() {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {vehicles?.map((vehicle) => (
+              {/* {vehicles?.map((vehicle) => (
                 <VehicleCard key={vehicle.id} vehicle={vehicle} />
-              ))}
+              ))} */}
             </div>
 
             <div className="mt-8 text-center">
