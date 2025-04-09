@@ -227,8 +227,8 @@ export default function VehiclesList() {
           <Loader />
         </div>
       ) : (
-        <div className="flex-1 p-6 min-h-full">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-full">
+        <div className="flex-1 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {vehicles.length == 0 ? (
               <div className="col-span-full flex items-center justify-center h-full w-full">
                 <p>No Vehicles found</p>
@@ -237,7 +237,7 @@ export default function VehiclesList() {
               vehicles.map((vehicle: any) => <VehicleCard vehicle={vehicle} />)
             )}
           </div>
-          <div className="flex justify-center mt-6 gap-4">
+          <div className="flex justify-center mt-6 gap-4 ">
             <Button
               variant="outline"
               disabled={page === 1}
@@ -252,6 +252,7 @@ export default function VehiclesList() {
               return (
                 <Button
                   key={pageNumber}
+              
                   variant={page === pageNumber ? "default" : "outline"}
                   onClick={() => setPage(pageNumber)}
                 >
@@ -263,6 +264,7 @@ export default function VehiclesList() {
 
             <Button
               variant="outline"
+              className=""
               disabled={!hasNextPage}
               onClick={() => setPage(page + 1)}
             >
