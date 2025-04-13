@@ -31,8 +31,22 @@ import MakesPage from "@/pages/makes";
 import BrandPage from "@/pages/makes/[brand]";
 import AuctionPage from "@/pages/auction";
 import Register from "@/pages/register";
+import SellerDashboard from "@/pages/seller";
+import { useUser } from "./hooks/use-store";
+import { useValidateSession } from "./hooks/use-validatesession";
+import Loader from "./components/loader";
+import VehiclesList from "./pages/vehicles";
 
 export default function App() {
+  // const { userId, role } = useUser();
+  // const { isValidating } = useValidateSession();
+
+  // // Now use the values in conditionals
+  // if (!userId || !role) {
+  //   if (isValidating) return <Loader />;
+  // }
+  
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -51,6 +65,8 @@ export default function App() {
               <Route path="/makes" component={MakesPage} />
               <Route path="/makes/:brand" component={BrandPage} />
               <Route path="/auction" component={AuctionPage} />
+              <Route path="/vehicles" component={VehiclesList} />
+
 
               {/* Admin Routes */}
               <Route path="/admin">
@@ -87,21 +103,29 @@ export default function App() {
                 <ProtectedRoute component={AdminPricing} adminOnly />
               </Route>
 
+              {/* Seller Routes */}
+              <Route path="/seller" component={SellerDashboard}>
+                {/* <ProtectedRoute
+                  component={SellerDashboard}
+                  requiredRoles={["seller"]}
+                /> */}
+              </Route>
+
               {/* Trader Routes */}
               <Route path="/trader/dashboard">
-                <ProtectedRoute 
+                <ProtectedRoute
                   component={TraderDashboard}
                   requiredRoles={["trader", "garage"]}
                 />
               </Route>
               <Route path="/trader/bulk-upload">
-                <ProtectedRoute 
+                <ProtectedRoute
                   component={TraderBulkUpload}
                   requiredRoles={["trader", "garage"]}
                 />
               </Route>
               <Route path="/trader/packages">
-                <ProtectedRoute 
+                <ProtectedRoute
                   component={TraderPackages}
                   requiredRoles={["trader", "garage"]}
                 />

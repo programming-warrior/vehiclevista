@@ -18,7 +18,6 @@ import {
 import { setupAuth } from "./auth";
 import axios from "axios";
 
-
 // Middleware to check if user is admin
 const isAdmin = (req: any, res: any, next: any) => {
   if (!req.isAuthenticated()) {
@@ -36,45 +35,34 @@ export async function registerRoutes(app: Express) {
   // Create server based on environment
   let httpServer;
 
-  if (process.env.NODE_ENV === "production") {
-    // Use HTTPS in production
-    // Note: You'll need to provide proper SSL certificate and key files
-    const options = {
-      key: readFileSync(join(process.cwd(), "ssl", "key.pem")),
-      cert: readFileSync(join(process.cwd(), "ssl", "cert.pem")),
-    };
-    httpServer = createHttpsServer(options, app);
-    console.log("HTTPS server created for production");
-  } else {
-    // Use HTTP in development
-    httpServer = createHttpServer(app);
-    console.log("HTTP server created for development");
-  }
+  // Use HTTP in development
+  httpServer = createHttpServer(app);
+  console.log("HTTP server created for development");
 
   // Set up authentication routes and middleware
   await setupAuth(app);
 
   // Get all vehicles with optional category filter
-  app.get("/api/vehicles", async (req, res) => {
-    const category = req.query.category as string | undefined;
-    const vehicles = await storage.getVehicles(category);
-    res.json(vehicles);
-  });
+  // app.get("/api/vehicles", async (req, res) => {
+  //   const category = req.query.category as string | undefined;
+  //   const vehicles = await storage.getVehicles(category);
+  //   res.json(vehicles);
+  // });
 
   // Get single vehicle by ID
-  app.get("/api/vehicles/:id", async (req, res) => {
-    const id = Number(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid vehicle ID" });
-    }
+  // app.get("/api/vehicles/:id", async (req, res) => {
+  //   const id = Number(req.params.id);
+  //   if (isNaN(id)) {
+  //     return res.status(400).json({ message: "Invalid vehicle ID" });
+  //   }
 
-    const vehicle = await storage.getVehicle(id);
-    if (!vehicle) {
-      return res.status(404).json({ message: "Vehicle not found" });
-    }
+  //   const vehicle = await storage.getVehicle(id);
+  //   if (!vehicle) {
+  //     return res.status(404).json({ message: "Vehicle not found" });
+  //   }
 
-    res.json(vehicle);
-  });
+  //   res.json(vehicle);
+  // });
 
   // Create new vehicle (admin only)
   app.post("/api/vehicles", isAdmin, async (req, res) => {

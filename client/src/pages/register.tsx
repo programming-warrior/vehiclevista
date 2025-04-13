@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useLocation } from "wouter";
+import { Link } from "wouter";
+import { Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useLocation } from "wouter";
+import { useForm } from "react-hook-form";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
-import {Link} from "wouter"
 import {
   Select,
   SelectContent,
@@ -16,105 +16,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@/hooks/use-auth";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
-// Updated Zod Schema for Validation
-const registerSchema = z
-  .object({
-    username: z
-      .string()
-      .min(3, { message: "Username must be at least 3 characters" })
-      .max(50, { message: "Username must be less than 50 characters" })
-      .regex(/^[a-zA-Z0-9_]+$/, {
-        message: "Username can only contain letters, numbers, and underscores",
-      }),
+import { userRegisterSchema } from "@shared/zodSchema/userSchema";
+import { useUser } from "@/hooks/use-store";
+import { registerUser } from "@/api";
+import { useToast } from "@/hooks/use-toast"
 
-    email: z.string().email({ message: "Invalid email address" }),
-
-    password: z
-      .string()
-      .min(8, { message: "Password must be at least 8 characters" })
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-        {
-          message:
-            "Password must include uppercase, lowercase, number, and special character",
-        }
-      ),
-
-    confirmPassword: z.string(),
-
-    role: z.enum(["buyer", "seller", "trader", "garage"], {
-      required_error: "Please select an account type",
-    }),
-
-    businessName: z.string().optional(),
-    businessAddress: z.string().optional(),
-
-    packageType: z.enum(["standard", "premium", "enterprise"])
-      .refine((val) => val !== undefined, { 
-        message: "Please select a package type",
-        path: ["packageType"]
-      })
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  })
-  .refine(
-    (data) => {
-      // Conditional validation for business fields
-      if (["trader", "garage"].includes(data.role)) {
-        return !!(data.businessName && data.businessAddress);
-      }
-      return true;
-    },
-    {
-      message: "Business name and address are required for traders and garages",
-      path: ["businessName"],
-    }
-  );
 
 // Type inference from Zod schema
-type RegisterForm = z.infer<typeof registerSchema>;
+type RegisterForm = z.infer<typeof userRegisterSchema>;
 
 export default function Register() {
   const [, setLocation] = useLocation();
   const [isBusinessFieldsVisible, setIsBusinessFieldsVisible] = useState(false);
-  const { signup, user, isLoading } = useAuth();
+  const {userId, role, setUser} = useUser();
+  const { toast } = useToast()
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { isSubmitting, errors },
-    setValue,
-    setError,
-  } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
+  // Initialize form with shadcn Form
+  const form = useForm<RegisterForm>({
+    resolver: zodResolver(userRegisterSchema),
     defaultValues: {
       username: "",
       password: "",
       confirmPassword: "",
       email: "",
       role: "buyer",
-      packageType:"standard",
+      businessAddress: "",
+      businessName: "",
     },
   });
 
-  const roleValue = watch("role");
+  // Watch for role changes to show/hide business fields
+  const roleValue = form.watch("role");
 
   useEffect(() => {
     // Show/hide business fields based on role
     const isBusinessRole = ["trader", "garage"].includes(roleValue);
     setIsBusinessFieldsVisible(isBusinessRole);
-    
   }, [roleValue]);
 
   const onSubmit = async (data: RegisterForm) => {
     try {
       // Remove confirmPassword before sending to backend
-      const { confirmPassword, ...submitData } = data;
+      const {  ...submitData } = data;
 
       // Conditional business fields based on role
       const finalSubmitData = {
@@ -129,206 +81,180 @@ export default function Register() {
 
       console.log("Submitted Data:", finalSubmitData);
 
-      await signup(finalSubmitData)
+      const res=await registerUser(finalSubmitData)
+      console.log('setting user')
+      setUser({
+        role: res.role,
+        userId: res.userId 
+      })
+      toast({
+        title: "Success!",
+        description: "Registration Successful!",
+      })
       setLocation("/");
-      
     } catch (error: any) {
       console.error("Registration error:", error);
-      setError("root", {
+      form.setError("root", {
         message: error?.message || "Failed to register. Please try again.",
       });
+      toast({
+        variant: "destructive",
+        title: "Failed!",
+        description: "Something went wrong!",
+      })
     }
   };
 
-if (isLoading) {
-    return (
-    <div className="flex items-center justify-center min-h-[80vh]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-    </div>
-    );
-}
 
-  if(user) setLocation("/");
+  if (userId && role) setLocation("/");
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center mt-5">
-      <Card className="w-full max-w-md mx-4">
+      <Card className="w-full max-w-[800px] mx-4">
         <CardHeader>
           <CardTitle className="text-2xl text-center">
             Create an Account
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                {...register("username")}
-                type="text"
-                placeholder="Choose a username"
-              />
-              {errors.username && (
-                <p className="text-sm text-destructive">
-                  {errors.username.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                {...register("email")}
-                type="email"
-                placeholder="Enter your email"
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                {...register("password")}
-                type="password"
-                placeholder="Choose a strong password"
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                {...register("confirmPassword")}
-                type="password"
-                placeholder="Repeat your password"
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">
-                  {errors.confirmPassword.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role">Account Type</Label>
-              <Select
-                value={watch("role")}
-                defaultValue="buyer"
-                onValueChange={(value) => {
-                  // @ts-ignore
-                  setValue("role", value)
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select account type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="buyer">Buyer</SelectItem>
-                  <SelectItem value="seller">Seller</SelectItem>
-                  <SelectItem value="trader">Trader</SelectItem>
-                  <SelectItem value="garage">Garage</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.role && (
-                <p className="text-sm text-destructive">
-                  {errors.role.message}
-                </p>
-              )}
-            </div>
-              <div className="space-y-2">
-                <Label htmlFor="packageType">Package Type</Label>
-                <Select
-                  {...register("packageType")}
-                  defaultValue="standard"
-                  onValueChange={(value) => {
-                    // @ts-ignore
-                    register("packageType").onChange({ target: { value } });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select package type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="premium">Premium</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.packageType && (
-                  <p className="text-sm text-destructive">
-                    {errors.packageType.message}
-                  </p>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Choose a username" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </div>
+              />
 
-            {isBusinessFieldsVisible && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="businessName">Business Name</Label>
-                  <Input
-                    id="businessName"
-                    {...register("businessName")}
-                    type="text"
-                    placeholder="Enter your business name"
-                  />
-                  {errors.businessName && (
-                    <p className="text-sm text-destructive">
-                      {errors.businessName.message}
-                    </p>
-                  )}
-                </div>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Enter your email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <div className="space-y-2">
-                  <Label htmlFor="businessAddress">Business Address</Label>
-                  <Input
-                    id="businessAddress"
-                    {...register("businessAddress")}
-                    type="text"
-                    placeholder="Enter your business address"
-                  />
-                  {errors.businessAddress && (
-                    <p className="text-sm text-destructive">
-                      {errors.businessAddress.message}
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Choose a strong password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {errors.root && (
-              <p className="text-sm text-destructive text-center">
-                {errors.root.message}
-              </p>
-            )}
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Repeat your password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select account type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="buyer">Buyer</SelectItem>
+                        <SelectItem value="seller">Seller</SelectItem>
+                        <SelectItem value="trader">Trader</SelectItem>
+                        <SelectItem value="garage">Garage</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+
+              {isBusinessFieldsVisible && (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Account...
+                  <FormField
+                    control={form.control}
+                    name="businessName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter your business name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="businessAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter your business address" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </>
-              ) : (
-                "Register"
               )}
-            </Button>
-          </form>
+
+              {form.formState.errors.root && (
+                <p className="text-sm text-destructive text-center">
+                  {form.formState.errors.root.message}
+                </p>
+              )}
+
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  "Register"
+                )}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
         <CardFooter>
-            <p className="text-base text-gray-500">Already have an account. <Link href="/login" className="underline text-gray-600">Login</Link> </p>
+          <p className="text-base text-gray-500">Already have an account. <Link href="/login" className="underline text-gray-600">Login</Link></p>
         </CardFooter>
       </Card>
-
     </div>
   );
 }

@@ -1,21 +1,82 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Car, ChevronDown, Search, Menu, X, Settings } from "lucide-react";
+import { Car, ChevronDown, Search, Menu, X, Settings, User } from "lucide-react";
 import SearchBar from "./search-bar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useUser, useHeroSectionSearch} from "@/hooks/use-store";
+import { logoutUser, advanceVehicleSearch } from "@/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { userId, role, setUser } = useUser();
+  const userMenuRef = useRef<HTMLDivElement|null>(null);
+  const searchRef = useRef<HTMLInputElement|null>(null);
+  const {setSearch} = useHeroSectionSearch();
+  const {toast} = useToast();
 
   const handleLogout = async () => {
-    await logout();
-    setLocation("/");
+    try{
+      await logoutUser()
+      setLocation("/");
+      setUser({
+        userId:"",
+        role:""
+      })
+    }
+    catch(e){
+      console.log('logout failed');
+    }
+    finally{
+      setUserMenuOpen(false);
+    }
   };
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = role === "admin";
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event:any) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  async function handleSearchSubmit(events:any) {
+    events.preventDefault();
+    const searchParam= searchRef.current?.value;
+    if(searchParam){
+      try{
+        const res = await advanceVehicleSearch(searchParam);
+        const filteredSchema = res.filterSchema;
+        setSearch({
+          brand: filteredSchema.brand ?? "",
+          model: filteredSchema.model ?? "",
+          variant: filteredSchema.variant ?? "",
+          minBudget: filteredSchema.minBudget ?? 0,
+          maxBudget: filteredSchema.maxBudget ?? 0
+        }) 
+        setLocation('/vehicles');
+      }
+      catch(e:any){
+        toast({
+          variant: 'destructive',
+          title: 'Search Failed',
+          description: e.message
+        })
+        console.log('search failed');
+      }
+    }
+  }
 
   return (
     <div className="border-b relative">
@@ -29,11 +90,18 @@ export default function Navbar() {
         {/* Desktop Search Bar */}
         <div className="hidden md:block flex-1 max-w-2xl mx-8">
           <div className="relative">
-            <input
-              type="text"
-              placeholder="Your Next Car, Just a Smart Search Away"
-              className="w-full h-10 pl-4 pr-10 rounded-full border border-input bg-background"
-            />
+            <form onSubmit={handleSearchSubmit}>
+              <input
+                ref={searchRef}
+                type="text"
+                name="search"
+                placeholder="Your Next Car, Just a Smart Search Away"
+                className="w-full h-10 pl-4 pr-10 rounded-full border border-input bg-background"
+              />
+              <button type="submit" className="hidden">
+                Search
+              </button>
+            </form>
             <Search className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
           </div>
         </div>
@@ -48,12 +116,45 @@ export default function Navbar() {
               </Link>
             </Button>
           )}
-          <Button variant="ghost" size="sm" className="flex items-center gap-1">
-            UK <ChevronDown className="h-4 w-4" />
-          </Button>
           <Button variant="ghost" size="sm">Need Help?</Button>
-          {user ? (
-            <Button onClick={handleLogout} variant="secondary">Logout</Button>
+          
+          {userId && role ? (
+            <div className="relative" ref={userMenuRef}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+              >
+                <User className="h-5 w-5" />
+              </Button>
+              
+              {/* User Menu Dropdown */}
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border">
+                    <p 
+
+                    className="uppercase font-semibold block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    {role}
+                  </p>
+                  <Link 
+                    href="/profile" 
+                    className="block underline px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    Profile
+                  </Link>
+                  <button 
+                    onClick={handleLogout} 
+                    className="underline block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <Button variant="outline" asChild>
               <Link href="/login">Sign In/Join</Link>
@@ -92,7 +193,10 @@ export default function Navbar() {
               <Link href="/support" className="text-sm font-medium hover:text-white">Support</Link>
             </nav>
           </div>
-          <Button variant="secondary" className="bg-pink-500 hover:bg-pink-600 text-white">
+          <Button variant="secondary" 
+            className="bg-pink-500 hover:bg-pink-600 text-white"
+            onClick={()=>searchRef.current?.focus()}
+          >
             Advance search
           </Button>
         </div>
@@ -125,6 +229,21 @@ export default function Navbar() {
               <Link href="/support" className="text-lg font-medium hover:text-primary">Support</Link>
             </nav>
 
+            {/* Mobile User Options */}
+            {userId && role ? (
+              <div className="space-y-4 mb-6">
+                <Link href="/profile" className="text-lg font-medium hover:text-primary block">
+                  Profile
+                </Link>
+                <button 
+                  onClick={handleLogout} 
+                  className="text-lg font-medium hover:text-primary block w-full text-left"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : null}
+
             {/* Mobile Action Buttons */}
             <div className="space-y-4">
               <Button className="w-full bg-red-500 hover:bg-red-600 text-white">
@@ -133,11 +252,7 @@ export default function Navbar() {
               <Button className="w-full bg-pink-500 hover:bg-pink-600 text-white">
                 Advance search
               </Button>
-              {user ? (
-                <Button onClick={handleLogout} variant="secondary" className="w-full">
-                  Logout
-                </Button>
-              ) : (
+              {!userId && (
                 <Button variant="outline" className="w-full" asChild>
                   <Link href="/login">Sign In/Join</Link>
                 </Button>
