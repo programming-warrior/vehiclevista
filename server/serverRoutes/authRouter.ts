@@ -51,8 +51,7 @@ authRouter.post("/register", async (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "none",
-    path: "/",
-    domain: "localhost"
+
   });
 
   return res.status(201).json({ userId: savedUser.id, role: savedUser.role });
@@ -88,8 +87,8 @@ authRouter.post("/login", async (req, res) => {
     res.cookie("sessionId", sessionId, {
       maxAge: SESSION_EXPIRY_SECONDS * 1000,
       httpOnly: true,
-      secure: true,
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
     });
 
     return res.status(200).json({ role: user.role, userId: user.id });
