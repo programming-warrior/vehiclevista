@@ -39,6 +39,8 @@ export default function LoginPage() {
     },
   });
 
+  console.log('login page');
+  console.log(userId, role);
   // Redirect if already logged in
   if (userId && role) {
     setLocation("/");

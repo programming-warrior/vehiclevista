@@ -18,7 +18,6 @@ import {
 import { setupAuth } from "./auth";
 import axios from "axios";
 
-
 // Middleware to check if user is admin
 const isAdmin = (req: any, res: any, next: any) => {
   if (!req.isAuthenticated()) {
@@ -36,20 +35,9 @@ export async function registerRoutes(app: Express) {
   // Create server based on environment
   let httpServer;
 
-  if (process.env.NODE_ENV === "production") {
-    // Use HTTPS in production
-    // Note: You'll need to provide proper SSL certificate and key files
-    const options = {
-      key: readFileSync(join(process.cwd(), "ssl", "localhost-key.pem")),
-      cert: readFileSync(join(process.cwd(), "ssl", "localhost.pem")),
-    };
-    httpServer = createHttpsServer(options, app);
-    console.log("HTTPS server created for production");
-  } else {
-    // Use HTTP in development
-    httpServer = createHttpServer(app);
-    console.log("HTTP server created for development");
-  }
+  // Use HTTP in development
+  httpServer = createHttpServer(app);
+  console.log("HTTP server created for development");
 
   // Set up authentication routes and middleware
   await setupAuth(app);

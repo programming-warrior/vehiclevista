@@ -4,15 +4,19 @@ import { Car, ChevronDown, Search, Menu, X, Settings, User } from "lucide-react"
 import SearchBar from "./search-bar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useRef } from "react";
-import { useUser } from "@/hooks/use-store";
-import { logoutUser } from "@/api";
+import { useUser, useHeroSectionSearch} from "@/hooks/use-store";
+import { logoutUser, advanceVehicleSearch } from "@/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Navbar() {
   const [, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { userId, role, setUser } = useUser();
-  const userMenuRef = useRef(null);
+  const userMenuRef = useRef<HTMLDivElement|null>(null);
+  const searchRef = useRef<HTMLInputElement|null>(null);
+  const {setSearch} = useHeroSectionSearch();
+  const {toast} = useToast();
 
   const handleLogout = async () => {
     try{
@@ -47,6 +51,33 @@ export default function Navbar() {
     };
   }, []);
 
+  async function handleSearchSubmit(events:any) {
+    events.preventDefault();
+    const searchParam= searchRef.current?.value;
+    if(searchParam){
+      try{
+        const res = await advanceVehicleSearch(searchParam);
+        const filteredSchema = res.filterSchema;
+        setSearch({
+          brand: filteredSchema.brand ?? "",
+          model: filteredSchema.model ?? "",
+          variant: filteredSchema.variant ?? "",
+          minBudget: filteredSchema.minBudget ?? 0,
+          maxBudget: filteredSchema.maxBudget ?? 0
+        }) 
+        setLocation('/vehicles');
+      }
+      catch(e:any){
+        toast({
+          variant: 'destructive',
+          title: 'Search Failed',
+          description: e.message
+        })
+        console.log('search failed');
+      }
+    }
+  }
+
   return (
     <div className="border-b relative">
       {/* Top Navigation */}
@@ -59,11 +90,18 @@ export default function Navbar() {
         {/* Desktop Search Bar */}
         <div className="hidden md:block flex-1 max-w-2xl mx-8">
           <div className="relative">
-            <input
-              type="text"
-              placeholder="Your Next Car, Just a Smart Search Away"
-              className="w-full h-10 pl-4 pr-10 rounded-full border border-input bg-background"
-            />
+            <form onSubmit={handleSearchSubmit}>
+              <input
+                ref={searchRef}
+                type="text"
+                name="search"
+                placeholder="Your Next Car, Just a Smart Search Away"
+                className="w-full h-10 pl-4 pr-10 rounded-full border border-input bg-background"
+              />
+              <button type="submit" className="hidden">
+                Search
+              </button>
+            </form>
             <Search className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
           </div>
         </div>
@@ -155,7 +193,10 @@ export default function Navbar() {
               <Link href="/support" className="text-sm font-medium hover:text-white">Support</Link>
             </nav>
           </div>
-          <Button variant="secondary" className="bg-pink-500 hover:bg-pink-600 text-white">
+          <Button variant="secondary" 
+            className="bg-pink-500 hover:bg-pink-600 text-white"
+            onClick={()=>searchRef.current?.focus()}
+          >
             Advance search
           </Button>
         </div>

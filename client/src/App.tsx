@@ -38,13 +38,13 @@ import Loader from "./components/loader";
 import VehiclesList from "./pages/vehicles";
 
 export default function App() {
-  const { userId, role } = useUser();
-  const { isValidating } = useValidateSession();
+  // const { userId, role } = useUser();
+  // const { isValidating } = useValidateSession();
 
-  // Now use the values in conditionals
-  if (!userId || !role) {
-    if (isValidating) return <Loader />;
-  }
+  // // Now use the values in conditionals
+  // if (!userId || !role) {
+  //   if (isValidating) return <Loader />;
+  // }
   
 
   return (
@@ -104,11 +104,11 @@ export default function App() {
               </Route>
 
               {/* Seller Routes */}
-              <Route path="/seller">
-                <ProtectedRoute
+              <Route path="/seller" component={SellerDashboard}>
+                {/* <ProtectedRoute
                   component={SellerDashboard}
                   requiredRoles={["seller"]}
-                />
+                /> */}
               </Route>
 
               {/* Trader Routes */}

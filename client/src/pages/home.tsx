@@ -16,6 +16,7 @@ import VansCollection from "@/components/vans-collection";
 import LatestBlogPost from "@/components/latest-blog-post";
 import { fetchFeaturedVehicles } from "@/lib/api";
 import { useUser } from "@/hooks/use-store";
+import Navbar from "@/components/navbar";
 
 
 export default function Home() {
@@ -34,6 +35,8 @@ export default function Home() {
   console.log(role);
   return (
     <div>
+      {/* <Navbar /> */}
+      
       <HeroSection />
 
       {/* Featured Vehicles Section */}

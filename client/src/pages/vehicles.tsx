@@ -170,6 +170,7 @@ export default function VehiclesList() {
               <SelectContent>
                 <SelectContent>
                   <SelectItem value="All">All-Models</SelectItem>
+                  <SelectItem value="A6">A6</SelectItem>
                   <SelectItem value="A-Class">A-Class</SelectItem>
                   <SelectItem value="C-Class">C-Class</SelectItem>
                   <SelectItem value="E-Class">E-Class</SelectItem>
