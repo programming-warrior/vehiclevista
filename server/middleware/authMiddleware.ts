@@ -7,7 +7,7 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
   console.log(req.cookies.sessionId);
   console.log(req.headers.authorization);
   const sessionId =
-    req.cookies.sessionId || req.headers.authorization?.split("")[0];
+    req.cookies.sessionId || req.headers.authorization?.split(" ")[1];
     console.log(sessionId);
 
 
