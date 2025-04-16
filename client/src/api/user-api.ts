@@ -31,7 +31,13 @@ export async function loginUser(username: string, password: string) {
 
 export async function logoutUser() {
   try {
-    const response = await axios.delete(`${BACKEND_URL}/api/auth/logout`);
+    const sessionId= localStorage.getItem('sessionId');
+    const response = await axios.delete(`${BACKEND_URL}/api/auth/logout`, {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      }
+    });
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || "Logout failed");
@@ -41,8 +47,12 @@ export async function logoutUser() {
 
 export async function validateSession() {
   try {
+    const sessionId = localStorage.getItem("sessionId");
     const response = await axios.get(`${BACKEND_URL}/api/auth/authenticate`, {
       withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
     });
     return response.data;
   } catch (error: any) {

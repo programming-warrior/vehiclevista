@@ -1,10 +1,14 @@
+CREATE TYPE "public"."user_roles" AS ENUM('buyer', 'seller', 'admin', 'trader', 'garage');--> statement-breakpoint
+CREATE TYPE "public"."vehicle_conditions" AS ENUM('clean', 'catS', 'catN');--> statement-breakpoint
+CREATE TYPE "public"."vehicle_listing_status" AS ENUM('ACTIVE', 'SOLD', 'EXPIRED');--> statement-breakpoint
+CREATE TYPE "public"."vehicle_types" AS ENUM('car', 'bike', 'truck', 'van');--> statement-breakpoint
 CREATE TABLE "api_keys" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"key" text NOT NULL,
 	"description" text NOT NULL,
-	"created_at" text DEFAULT '2025-03-26T07:52:46.507Z' NOT NULL,
-	"updated_at" text DEFAULT '2025-03-26T07:52:46.507Z' NOT NULL,
+	"created_at" text DEFAULT '2025-04-14T08:07:30.659Z' NOT NULL,
+	"updated_at" text DEFAULT '2025-04-14T08:07:30.659Z' NOT NULL,
 	CONSTRAINT "api_keys_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
@@ -167,8 +171,8 @@ CREATE TABLE "users" (
 	"username" text NOT NULL,
 	"password" text NOT NULL,
 	"email" text NOT NULL,
-	"role" text DEFAULT 'buyer' NOT NULL,
-	"created_at" text DEFAULT '2025-03-26T07:52:46.503Z' NOT NULL,
+	"role" "user_roles" DEFAULT 'buyer' NOT NULL,
+	"created_at" text DEFAULT '2025-04-14T08:07:30.652Z' NOT NULL,
 	"business_name" text,
 	"business_address" text,
 	"package_type" text,
@@ -181,6 +185,8 @@ CREATE TABLE "users" (
 --> statement-breakpoint
 CREATE TABLE "vehicles" (
 	"id" serial PRIMARY KEY NOT NULL,
+	"type" "vehicle_types" DEFAULT 'car' NOT NULL,
+	"registration_num" text NOT NULL,
 	"title" text NOT NULL,
 	"price" integer NOT NULL,
 	"year" integer NOT NULL,
@@ -197,15 +203,19 @@ CREATE TABLE "vehicles" (
 	"longitude" real NOT NULL,
 	"images" text[] NOT NULL,
 	"category" text NOT NULL,
-	"condition" text DEFAULT 'clean',
+	"condition" "vehicle_conditions" DEFAULT 'clean' NOT NULL,
 	"open_to_px" boolean DEFAULT false,
 	"seller_id" integer NOT NULL,
-	"seller_type" text NOT NULL,
+	"seller_type" text,
 	"contact_preference" text,
-	"listing_status" text DEFAULT 'active',
+	"listingStatus" "vehicle_listing_status" DEFAULT 'ACTIVE' NOT NULL,
 	"negotiable" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now(),
 	"views" integer DEFAULT 0,
 	"clicks" integer DEFAULT 0,
-	"leads" integer DEFAULT 0
+	"leads" integer DEFAULT 0,
+	CONSTRAINT "vehicles_registration_num_unique" UNIQUE("registration_num")
 );
+--> statement-breakpoint
+ALTER TABLE "user_packages" ADD CONSTRAINT "user_packages_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_packages" ADD CONSTRAINT "user_packages_package_id_packages_id_fk" FOREIGN KEY ("package_id") REFERENCES "public"."packages"("id") ON DELETE no action ON UPDATE no action;

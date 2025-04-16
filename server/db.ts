@@ -60,10 +60,10 @@ async function testConnection() {
 }
 
 // Initialize connection test with proper error handling
-testConnection().catch(err => {
-  console.error('Failed to connect to database:', err);
-  process.exit(1);
-});
+// testConnection().catch(err => {
+//   console.error('Failed to connect to database:', err);
+//   process.exit(1);
+// });
 
 export const db = drizzle(pool, { schema });
 

@@ -56,6 +56,7 @@ export default function LoginPage() {
         userId: res.userId,
         role: res.role,
       });
+      localStorage.setItem('sessionId', res.sessionId)
       toast({
         title: "Success!",
         description: "Login Successful",

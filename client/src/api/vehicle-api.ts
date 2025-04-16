@@ -1,6 +1,7 @@
 import axios from "axios";
 import { BACKEND_URL } from "@/lib/constants";
 import z from "zod";
+import { vehicleUploadSchema } from "@shared/zodSchema/vehicleSchema";
 
 export async function getVehicles(searchParams:string){
   try {
@@ -19,6 +20,25 @@ export async function advanceVehicleSearch(searchParam:string){
       `${BACKEND_URL}/api/vehicles/advance-search`,
       {
         searchParam
+      }  
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message);
+  }
+}
+
+
+export async function uploadSingleVehicle(data:z.infer<typeof vehicleUploadSchema>){
+  try {
+    const response = await axios.post(
+      `${BACKEND_URL}/api/vehicles/upload-single`,
+      {
+        data,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("sessionId")}`,
+        },
       }  
     );
     return response.data;

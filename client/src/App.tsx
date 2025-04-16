@@ -33,25 +33,25 @@ import BrandPage from "@/pages/makes/[brand]";
 import AuctionPage from "@/pages/auction";
 import Register from "@/pages/register";
 import SellerDashboard from "@/pages/seller";
+import SellerVehicleUpload from "./pages/seller/upload";
 import { useUser } from "./hooks/use-store";
 import { useValidateSession } from "./hooks/use-validatesession";
 import Loader from "./components/loader";
 import VehiclesList from "./pages/vehicles";
 
 export default function App() {
-  // const { userId, role } = useUser();
-  // const { isValidating } = useValidateSession();
+  const { userId, role } = useUser();
+  const { isValidating } = useValidateSession();
 
-  // // Now use the values in conditionals
-  // if (!userId || !role) {
-  //   if (isValidating) return <Loader />;
-  // }
+  // Now use the values in conditionals
+  if (!userId || !role) {
+    if (isValidating) return <Loader />;
+  }
   
-console.log("Bcakend Url", BACKEND_URL);
   return (
 
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      {/* <AuthProvider> */}
         <div className="min-h-screen bg-background flex flex-col">
           <Navbar />
           <main className="flex-1">
@@ -106,11 +106,17 @@ console.log("Bcakend Url", BACKEND_URL);
               </Route>
 
               {/* Seller Routes */}
-              <Route path="/seller" component={SellerDashboard}>
-                {/* <ProtectedRoute
+              <Route path="/seller" >
+                <ProtectedRoute
                   component={SellerDashboard}
                   requiredRoles={["seller"]}
-                /> */}
+                />
+              </Route>
+              <Route path="/seller/upload" >
+                <ProtectedRoute
+                  component={SellerVehicleUpload}
+                  requiredRoles={["seller"]}
+                />
               </Route>
 
               {/* Trader Routes */}
@@ -140,7 +146,6 @@ console.log("Bcakend Url", BACKEND_URL);
           <Footer />
           <Toaster />
         </div>
-      </AuthProvider>
     </QueryClientProvider>
   );
 }

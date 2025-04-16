@@ -2,7 +2,6 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Car, ChevronDown, Search, Menu, X, Settings, User } from "lucide-react";
 import SearchBar from "./search-bar";
-import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useRef } from "react";
 import { useUser, useHeroSectionSearch} from "@/hooks/use-store";
 import { logoutUser, advanceVehicleSearch } from "@/api";
@@ -21,11 +20,17 @@ export default function Navbar() {
   const handleLogout = async () => {
     try{
       await logoutUser()
-      setLocation("/");
       setUser({
         userId:"",
         role:""
       })
+      localStorage.deleteItem('sessionId')
+      toast({
+        variant: 'default',
+        title: 'Logout Successful',
+        description: 'You have been logged out successfully.',
+      });
+      setLocation('/')
     }
     catch(e){
       console.log('logout failed');
@@ -181,7 +186,9 @@ export default function Navbar() {
       <div className="hidden md:block bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 h-12 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="secondary" className="bg-red-500 hover:bg-red-600 text-white">
+            <Button variant="secondary" className="bg-red-500 hover:bg-red-600 text-white" 
+              onClick={() => setLocation('/seller')}
+            >
               Sell Your Car
             </Button>
             <nav className="flex items-center gap-4">

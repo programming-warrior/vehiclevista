@@ -54,7 +54,7 @@ authRouter.post("/register", async (req, res) => {
 
   });
 
-  return res.status(201).json({ userId: savedUser.id, role: savedUser.role });
+  return res.status(201).json({ userId: savedUser.id, role: savedUser.role, sessionId });
 });
 // Login route
 authRouter.post("/login", async (req, res) => {
@@ -91,7 +91,7 @@ authRouter.post("/login", async (req, res) => {
       sameSite: "none",
     });
 
-    return res.status(200).json({ role: user.role, userId: user.id });
+    return res.status(200).json({ role: user.role, userId: user.id, sessionId });
   } catch (e) {
     console.log(e);
     return res.status(500).json({ error: "Internal Server Error" });
@@ -102,11 +102,11 @@ authRouter.post("/login", async (req, res) => {
 
 authRouter.delete('/logout',async (req,res)=>{
   try{
-    const  sessionId = req.cookies.sessionId;
+    const  sessionId = req.cookies.sessionId || req.headers.authorization?.split(" ")[1];
     if(!sessionId) return res.status(401).json({error:"No session found"});
     const redisClient = await RedisClientSingleton.getRedisClient();
 
-    await redisClient.delete(`session:${sessionId}`);
+    await redisClient.del(`session:${sessionId}`);
 
     res.clearCookie("sessionId");
     return res.status(201).json({});
@@ -121,7 +121,8 @@ authRouter.delete('/logout',async (req,res)=>{
 authRouter.get("/authenticate", async (req, res) => {
   try {
     console.log(req.cookies)
-    const sessionId = req.cookies.sessionId;
+    // const sessionId = req.cookies.sessionId;
+    const sessionId = req.headers.authorization?.split(" ")[1] || req.cookies.sessionId;
     console.log("sessionId" + sessionId);
     if (!sessionId) {
       return res.status(401).json({ error: "No session found" });

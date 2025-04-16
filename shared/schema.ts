@@ -6,9 +6,21 @@ import { z } from "zod";
 export  const userRoles =  ["buyer", "seller", "admin", "trader", "garage"] as const
 export const userRolesEnum = pgEnum("user_roles", userRoles)
 
+export const vehicleTypes = ["car", "bike", "truck", "van"] as const
+export const vehicleTypesEnum = pgEnum("vehicle_types", vehicleTypes)
+
+export const vehicleConditions= ["clean", "catS", "catN"] as const
+export const vehicleConditionsEnum = pgEnum("vehicle_conditions", vehicleConditions)
+
+export const vehicleListingStatus = ["ACTIVE", "SOLD", "EXPIRED"] as const
+export const vehicleListingStatusEnum = pgEnum("vehicle_listing_status", vehicleListingStatus)
+
+
 // Update vehicles table with classified listing fields
 export const vehicles = pgTable("vehicles", {
   id: serial("id").primaryKey(),
+  type: vehicleTypesEnum().notNull().default('car'), 
+  registration_num: text("registration_num").notNull().unique(),
   title: text("title").notNull(),
   price: integer("price").notNull(),
   year: integer("year").notNull(),
@@ -21,16 +33,16 @@ export const vehicles = pgTable("vehicles", {
   color: text("color").notNull(),
   description: text("description").notNull(),
   location: text("location").notNull(),
-  latitude: real("latitude").notNull(),
-  longitude: real("longitude").notNull(),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
   images: text("images").array().notNull(),
   category: text("category").notNull(), // 'dealer', 'classified', 'auction'
-  condition: text("condition").default("clean"), // clean, catS, catN
+  condition: vehicleConditionsEnum().notNull().default('clean'),
   openToPX: boolean("open_to_px").default(false),
   sellerId: integer("seller_id").notNull(),
-  sellerType: text("seller_type").notNull(), // private, trader, garage
+  sellerType: text("seller_type"), // private, trader, garage
   contactPreference: text("contact_preference"), // 'phone', 'email', 'both'
-  listingStatus: text("listing_status").default("active"), // 'active', 'sold', 'expired'
+  listingStatus: vehicleListingStatusEnum().notNull().default("ACTIVE"), // 'ACTIVE', 'SOLD', 'EXPIRED'
   negotiable: boolean("negotiable").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   views: integer("views").default(0),

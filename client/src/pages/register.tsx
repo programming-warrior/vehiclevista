@@ -91,6 +91,7 @@ export default function Register() {
         title: "Success!",
         description: "Registration Successful!",
       })
+      localStorage.setItem('sessionId', res.sessionId)
       setLocation("/");
     } catch (error: any) {
       console.error("Registration error:", error);

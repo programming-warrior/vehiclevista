@@ -1,9 +1,14 @@
 import { Router } from "express";
 import { db } from "../db";
-import { vehicles } from "../../shared/schema";
+import { Vehicle, vehicles } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
 import axios from "axios";
+import { vehicleUploadSchema } from "../../shared/zodSchema/vehicleSchema";
+import { z } from "zod";
+import { verifyToken } from "../middleware/authMiddleware";
+
+// const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 
 const vehicleRouter = Router();
 
@@ -61,6 +66,31 @@ vehicleRouter.get("/get", async (req, res) => {
       .json({ message: "Error fetching vehicle list", error: err.message });
   }
 });
+
+vehicleRouter.post("/upload-single",verifyToken, async (req, res) => {
+  if(!req.userId || req.role !== "seller"){
+    return res.status(403).json({error:"Unauthorized"});
+  }
+  try {
+    const result = vehicleUploadSchema.safeParse(req.body);
+    if(result.error){
+      return res.status(401).json({error:result.error});
+    }
+
+    const data= {
+      ...result.data,
+      category: "classified", 
+      sellerId:  req.userId as number, 
+    };
+    console.log(data);
+    await db.insert(vehicles).values(data);
+    res.status(200).json({ message: "Vehicle uploaded successfully" });
+  }
+  catch(e:any){
+    console.log(e.message)
+    return res.status(500).json()
+  }
+})
 
 vehicleRouter.post("/advance-search", async (req, res) => {
   try {

@@ -6,4 +6,5 @@ vite.config.ts.*
 *.tar.gz
 .env
 server/.env
+
 attached_assets

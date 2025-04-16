@@ -2,14 +2,27 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import dotenv from "dotenv";
 import cors from "cors";
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import RedisClientSingleton from "./utils/redis";
 import cookieParser from "cookie-parser";
 dotenv.config();
 
 import authRouter from "./serverRoutes/authRouter";
 import vehicleRouter from "./serverRoutes/vehicleRouter";
+import { verifyToken } from "./middleware/authMiddleware";
 
 const app = express();
+
+// Extend the Request interface to include userId and role
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: number;
+      role?: string;
+    }
+  }
+}
 app.use(
   cors({
     origin:
@@ -31,6 +44,76 @@ app.use("/api/vehicles", vehicleRouter);
 // Add diagnostic endpoint
 app.get("/ping", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'ap-south-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+  }
+});
+
+const BUCKET_NAME= process.env.BUCKET_NAME;
+
+app.post('/api/presigned-url', verifyToken, async (req: Request, res: Response) => {
+  try {
+    if(!req.userId) return res.status(403).end()
+    const { files } = req.body;
+    // Validate request body
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Files array is required in the request body' 
+      });
+    }
+
+    // Generate presigned URLs for each file
+    const presignedUrlPromises = files.map(async (file: { fileName: string, contentType: string }) => {
+      const { fileName, contentType } = file;
+      
+      // Validate file information
+      if (!fileName || !contentType) {
+        throw new Error('fileName and contentType are required for each file');
+      }
+
+      // Create a unique key for the S3 object
+      const key = `vehicles/${req.userId}/${Date.now()}-${fileName.split(' ').join('_')}`;
+      
+      // Create the command to put an object in S3
+      const command = new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+        ContentType: contentType,
+      });
+
+      // Generate a presigned URL for the command
+      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 600 }); // URL valid for 10 minutes 
+      
+      return {
+        fileName,
+        key,
+        url: presignedUrl,
+        publicUrl: `https://${BUCKET_NAME}.s3.amazonaws.com/${key}` 
+      };
+    });
+
+    // Wait for all presigned URL promises to resolve
+    const presignedUrls = await Promise.all(presignedUrlPromises);
+
+    // Return the URLs
+    return res.status(200).json({
+      success: true,
+      urls: presignedUrls
+    });
+  } catch (error) {
+    console.error('Error generating presigned URLs:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate presigned URLs',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 // Enhanced logging middleware

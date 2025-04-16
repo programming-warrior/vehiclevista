@@ -1,6 +1,6 @@
 {
-  "id": "e260e9e6-952d-4948-beda-e47525f2759d",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "9e5089d5-9f85-41dd-9126-01fcc0b0d45b",
+  "prevId": "e260e9e6-952d-4948-beda-e47525f2759d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -37,14 +37,14 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'2025-04-14T08:07:30.659Z'"
+          "default": "'2025-04-14T08:26:13.289Z'"
         },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'2025-04-14T08:07:30.659Z'"
+          "default": "'2025-04-14T08:26:13.289Z'"
         }
       },
       "indexes": {},
@@ -1034,7 +1034,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'2025-04-14T08:07:30.652Z'"
+          "default": "'2025-04-14T08:26:13.284Z'"
         },
         "business_name": {
           "name": "business_name",
