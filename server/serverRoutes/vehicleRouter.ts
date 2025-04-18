@@ -1,14 +1,18 @@
 import { Router } from "express";
 import { db } from "../db";
 import { Vehicle, vehicles } from "../../shared/schema";
-import { eq, lte, or, gte, and, sql } from "drizzle-orm";
+import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
 import axios from "axios";
 import { vehicleUploadSchema } from "../../shared/zodSchema/vehicleSchema";
 import { z } from "zod";
 import { verifyToken } from "../middleware/authMiddleware";
+import { parseCsvFile, extractVehicles } from "../utils/helper";
+import multer from "multer";
 
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
+
+const upload = multer();
 
 const vehicleRouter = Router();
 
@@ -67,30 +71,158 @@ vehicleRouter.get("/get", async (req, res) => {
   }
 });
 
-vehicleRouter.post("/upload-single",verifyToken, async (req, res) => {
-  if(!req.userId || req.role !== "seller"){
-    return res.status(403).json({error:"Unauthorized"});
+
+vehicleRouter.get("/seller/listings", verifyToken, async (req, res) => {
+  try {
+    if(req.userId === undefined || req.role !== "seller"){
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    console.log(req.query);
+    const {
+      brand,
+      page = "1",
+      limit = "10",
+      sort
+    } = req.query;
+
+    const conditions = [];
+
+    if (brand && !/all/gi.test(brand as string))
+      conditions.push(eq(vehicles.make, String(brand)));
+
+    console.log(conditions);
+    conditions.push(eq(vehicles.sellerId, req.userId as number))
+
+    const pageNum = parseInt(page as string, 10);
+    const pageSize = parseInt(limit as string, 10);
+    const offset = (pageNum - 1) * pageSize;
+
+    const result = await db
+      .select()
+      .from(vehicles)
+      .where(conditions.length ? and(...conditions) : undefined)
+      .limit(pageSize + 1)
+      .offset(offset);
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(vehicles)
+      .where(conditions.length ? and(...conditions) : undefined)
+    
+    res.status(200).json({
+      vehicles: result,
+      totalCount: count,
+      totalPages: Math.ceil(count / pageSize),
+      currentPage: pageNum,
+      hasNextPage: result.length > pageSize,
+    });
+  } catch (err: any) {
+    console.error("Error fetching vehicles:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching vehicle list", error: err.message });
+  }
+});
+
+
+vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "seller") {
+    return res.status(403).json({ error: "Unauthorized" });
   }
   try {
+    console.log(req.body);
     const result = vehicleUploadSchema.safeParse(req.body);
-    if(result.error){
-      return res.status(401).json({error:result.error});
+    if (result.error) {
+      return res.status(401).json({ error: result.error });
     }
 
-    const data= {
+    const data = {
       ...result.data,
-      category: "classified", 
-      sellerId:  req.userId as number, 
+
+      price: parseFloat(result.data.price),
+      year: parseInt(result.data.year),
+      mileage: parseFloat(result.data.mileage),
+      category: "classified",
+      sellerId: req.userId as number,
     };
     console.log(data);
     await db.insert(vehicles).values(data);
     res.status(200).json({ message: "Vehicle uploaded successfully" });
+  } catch (e: any) {
+    console.log(e.message);
+    return res.status(500).json();
   }
-  catch(e:any){
-    console.log(e.message)
-    return res.status(500).json()
+});
+
+vehicleRouter.post(
+  "/upload-bulk",
+  verifyToken,
+  upload.single("csv"),
+  async (req, res) => {
+    if (!req.userId || req.role !== "seller") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    if (!req.file || !req.file.buffer || req.file.mimetype !== "text/csv") {
+      return res.status(400).json({ error: "No CSV file uploaded" });
+    }
+ 
+    try {
+      const parsedData: string[][] = await parseCsvFile(req.file.buffer);
+      console.log(parsedData);
+      if (parsedData.length > 1000) {
+        return res.status(413).json({ error: "CSV exceeds row limit of 1000" });
+      }
+      const uploadedVehicles = extractVehicles(parsedData);
+      console.log(uploadedVehicles);
+      if (uploadedVehicles.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "No valid vehicle data found in CSV" });
+      }
+      const validVehicles = uploadedVehicles.filter(
+        (v) =>{
+          const result = vehicleUploadSchema.safeParse(v)
+          console.log(result.error);
+          return result.success
+        }
+      );
+
+      if (validVehicles.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "No valid vehicles after validation" });
+      }
+      const vehilcesWithOtherAttributes = uploadedVehicles.map((v: any) => ({
+        ...v,
+        sellerId: req.userId,
+        category: "classified",
+      }));
+      const registrationNumbers = validVehicles.map(v => v.registration_num);
+      
+      // Check if any registration numbers already exist in the database
+      const existingVehicles = await db
+        .select({ registration_num: vehicles.registration_num })
+        .from(vehicles)
+        .where(inArray(vehicles.registration_num, registrationNumbers));
+      
+      if (existingVehicles.length > 0) {
+        const duplicates = existingVehicles.map(v => v.registration_num).join(", ");
+        return res.status(409).json({ 
+          error: "Duplicate registration numbers found", 
+          duplicates 
+        });
+      }
+      await db.insert(vehicles).values(vehilcesWithOtherAttributes);
+      return res.status(200).json({ message: "vehicle uploaded successfully" });
+    } catch (e:any) {
+      console.log(e);
+      if(e.message.includes('Missing')){
+        return res.status(400).json({ error: e.message });
+      }
+      return res.status(500).json({ error: "Internal server error" });
+    }
   }
-})
+);
 
 vehicleRouter.post("/advance-search", async (req, res) => {
   try {

@@ -10,11 +10,14 @@ import {
   getVehicles,
   advanceVehicleSearch,
   uploadSingleVehicle,
+  uploadBulkVehicle,
+  getSellerVehicleListings
 } from "./vehicle-api";
 
 
 async function uploadToPresignedUrl(file: File, presignedUrl: string): Promise<string> {
     try {
+      console.log(file.type);
       const response = await fetch(presignedUrl, {
         method: 'PUT',
         body: file,
@@ -63,9 +66,13 @@ async function getPresignedUrls(
 export {
   uploadToPresignedUrl,
   getPresignedUrls,
+
   getVehicles,
   advanceVehicleSearch,
   uploadSingleVehicle,
+  uploadBulkVehicle,
+  getSellerVehicleListings,
+
   registerUser,
   loginUser,
   validateSession,

@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-
-
 import RedisClientSingleton from "../utils/redis";
+import { userSessionSchema } from "server/utils/session";
+import z from "zod"
 
 export async function verifyToken(req: Request, res: Response, next: NextFunction) {
   console.log(req.cookies.sessionId);
@@ -22,8 +22,8 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
     res.clearCookie("sessionId");
     return res.status(403).json({ error: "Invalid session" });
   }
-  const session = JSON.parse(sessionData);
-  req.userId = session.userId;
+  const session: z.infer<typeof userSessionSchema> = JSON.parse(sessionData);
+  req.userId = session.id;
   req.role = session.role;
   next();
 }

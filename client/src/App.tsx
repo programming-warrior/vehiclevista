@@ -38,6 +38,7 @@ import { useUser } from "./hooks/use-store";
 import { useValidateSession } from "./hooks/use-validatesession";
 import Loader from "./components/loader";
 import VehiclesList from "./pages/vehicles";
+import SellerVehilceBulkUpload from "./pages/seller/bulk-upload";
 
 export default function App() {
   const { userId, role } = useUser();
@@ -115,6 +116,12 @@ export default function App() {
               <Route path="/seller/upload" >
                 <ProtectedRoute
                   component={SellerVehicleUpload}
+                  requiredRoles={["seller"]}
+                />
+              </Route>
+              <Route path="/seller/bulk-upload" >
+                <ProtectedRoute
+                  component={SellerVehilceBulkUpload}
                   requiredRoles={["seller"]}
                 />
               </Route>

@@ -1,0 +1,2 @@
+title,type,make,model,price,year,mileage,fuelType,transmission,bodyType,registration_num,color,description,location,images,condition,openToPX,contactPreference,negotiable
+"Awesome Bike","bike","Yamaha","R15",120000,2022,5000,"Petrol","Manual","Sport","KA01AB1234","Blue","Great condition, single owner","Bangalore","https://example.com/img1.jpg;https://example.com/img2.jpg","clean",false,"phone",true

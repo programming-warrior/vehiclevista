@@ -15,6 +15,13 @@
       "when": 1744619173345,
       "tag": "0001_strange_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744812501017,
+      "tag": "0002_wooden_puff_adder",
+      "breakpoints": true
     }
   ]
 }

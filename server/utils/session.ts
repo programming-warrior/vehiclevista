@@ -11,6 +11,7 @@ export const userSessionSchema = z.object({
 export const SESSION_EXPIRY_SECONDS = 60 * 60 * 24; // 2 days
 export const COOKIE_SESSION_KEY = "user-auth-session-cookieId";
 
+
 type Cookies = {
   set: (
     key: string,

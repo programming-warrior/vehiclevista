@@ -35,6 +35,7 @@ import {
 } from "@/api";
 import { X, Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 // import { toast } from "@/hooks/use-toast";
 
 const VehicleUploadForm = () => {
@@ -51,9 +52,9 @@ const VehicleUploadForm = () => {
       type: "bike",
       make: "",
       model: "",
-      price: 0,
-      year: 0,
-      mileage: 0,
+      price: "",
+      year: "",
+      mileage: "",
       fuelType: "",
       transmission: "",
       bodyType: "",
@@ -68,6 +69,7 @@ const VehicleUploadForm = () => {
       negotiable: false,
     },
   });
+  const [,setLocation] = useLocation();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -111,7 +113,7 @@ const VehicleUploadForm = () => {
           fileName: `${Date.now()}-${file.name.split(" ").join("")}`,
           contentType: file.type,
         }));
-
+        console.log(fileKeys)
         const presignedUrlsResponse = await getPresignedUrls(fileKeys);
         const presignedUrls = presignedUrlsResponse.data.urls;
 
@@ -147,6 +149,8 @@ const VehicleUploadForm = () => {
 
       form.reset();
       setSelectedFiles([]);
+      setLocation('/seller');
+      
     } catch (error: any) {
       console.error("Error in form submission:", error);
       toast({

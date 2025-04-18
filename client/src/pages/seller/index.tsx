@@ -12,6 +12,7 @@ import {
   Truck,
   Bike,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,10 +33,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useLocation } from "wouter";
+import VehicleCard from "@/components/vehicle-card";
+import { getSellerVehicleListings } from "@/api";
 
 export default function SellerDashboard() {
+  const [isOpen, setIsOpen] = useState(false);
+   const [, setLocation] = useLocation();
+   const [vehicles, setVehicles]= useState<any[]>([]);
+
+  useEffect(()=>{
+    const fetchData = async () => {
+      try {
+        const response = await getSellerVehicleListings("");
+        console.log(response);
+        setVehicles(response.vehicles);
+      } catch (error) {
+        console.error("Error fetching seller vehicle listings:", error);
+      }
+    };
+    fetchData();
+  },[])
+
   return (
     <div className="flex flex-col min-h-screen">
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choose how you'd like to upload:</DialogTitle>
+            <div className="pt-3 flex items-center justify-around text-xs">
+              <Button className="text-xs" onClick={()=>setLocation('/seller/upload')}>Add Single Vehicle</Button>
+              <Button className="text-xs" onClick={()=>setLocation('/seller/bulk-upload')}>Bulk Upload via CSV</Button>
+            </div>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="border-b bg-white">
         <div className="container flex items-center justify-between py-4">
@@ -119,6 +160,9 @@ export default function SellerDashboard() {
                 <Button
                   size="lg"
                   className="bg-white text-blue-700 hover:bg-gray-100"
+                  onClick={() => {
+                    setIsOpen(true);
+                  }}
                 >
                   <Plus className="mr-2 h-4 w-4" /> List New Vehicle
                 </Button>
@@ -155,7 +199,7 @@ export default function SellerDashboard() {
                     <p className="text-sm font-medium text-gray-500">
                       Active Listings
                     </p>
-                    <h3 className="text-2xl font-bold mt-1">12</h3>
+                    <h3 className="text-2xl font-bold mt-1">{vehicles.length}</h3>
                   </div>
                   <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
                     <Car className="h-6 w-6 text-blue-600" />
@@ -266,137 +310,9 @@ export default function SellerDashboard() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card>
-                  <CardHeader className="p-0">
-                    <div className="relative h-48">
-                      <img
-                        src="/placeholder.svg?height=300&width=500"
-                        alt="BMW 5 Series"
-                        width={500}
-                        height={300}
-                        className="object-cover h-full w-full rounded-t-lg"
-                      />
-                      <Badge className="absolute top-3 left-3 bg-green-500">
-                        Active
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-lg">BMW 5 Series</h3>
-                      <p className="font-bold text-lg">$42,500</p>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-3">
-                      2020 • 25,000 miles • Petrol • Automatic
-                    </p>
-                    <div className="flex justify-between items-center text-sm">
-                      <div className="flex items-center gap-1">
-                        <span className="text-gray-500">Views:</span>
-                        <span className="font-medium">245</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-gray-500">Inquiries:</span>
-                        <span className="font-medium">12</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="p-4 pt-0 flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      Convert to Auction
-                    </Button>
-                  </CardFooter>
-                </Card>
-
-                <Card>
-                  <CardHeader className="p-0">
-                    <div className="relative h-48">
-                      <img
-                        src="/placeholder.svg?height=300&width=500"
-                        alt="Audi Q5"
-                        width={500}
-                        height={300}
-                        className="object-cover h-full w-full rounded-t-lg"
-                      />
-                      <Badge className="absolute top-3 left-3 bg-green-500">
-                        Active
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-lg">Audi Q5</h3>
-                      <p className="font-bold text-lg">$38,900</p>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-3">
-                      2021 • 18,500 miles • Diesel • Automatic
-                    </p>
-                    <div className="flex justify-between items-center text-sm">
-                      <div className="flex items-center gap-1">
-                        <span className="text-gray-500">Views:</span>
-                        <span className="font-medium">189</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-gray-500">Inquiries:</span>
-                        <span className="font-medium">8</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="p-4 pt-0 flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      Convert to Auction
-                    </Button>
-                  </CardFooter>
-                </Card>
-
-                <Card>
-                  <CardHeader className="p-0">
-                    <div className="relative h-48">
-                      <img
-                        src="/placeholder.svg?height=300&width=500"
-                        alt="Honda CBR"
-                        width={500}
-                        height={300}
-                        className="object-cover h-full w-full rounded-t-lg"
-                      />
-                      <Badge className="absolute top-3 left-3 bg-green-500">
-                        Active
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-lg">Honda CBR 650R</h3>
-                      <p className="font-bold text-lg">$8,750</p>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-3">
-                      2022 • 3,200 miles • Petrol • Manual
-                    </p>
-                    <div className="flex justify-between items-center text-sm">
-                      <div className="flex items-center gap-1">
-                        <span className="text-gray-500">Views:</span>
-                        <span className="font-medium">312</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-gray-500">Inquiries:</span>
-                        <span className="font-medium">15</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="p-4 pt-0 flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      Convert to Auction
-                    </Button>
-                  </CardFooter>
-                </Card>
+                {vehicles.map((vehicle) => (
+                  <VehicleCard key={vehicle.id} vehicle={vehicle} />
+                ))}
               </div>
             </TabsContent>
 
@@ -572,36 +488,7 @@ export default function SellerDashboard() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-100 border-t">
-        <div className="container py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-gray-500">
-              © 2023 AutoWorldTrader. All rights reserved.
-            </p>
-            <div className="flex gap-6">
-              <Link
-                href="/terms"
-                className="text-sm text-gray-500 hover:text-gray-900"
-              >
-                Terms
-              </Link>
-              <Link
-                href="/privacy"
-                className="text-sm text-gray-500 hover:text-gray-900"
-              >
-                Privacy
-              </Link>
-              <Link
-                href="/help"
-                className="text-sm text-gray-500 hover:text-gray-900"
-              >
-                Help Center
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+
     </div>
   );
 }

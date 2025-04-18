@@ -11,6 +11,7 @@ dotenv.config();
 import authRouter from "./serverRoutes/authRouter";
 import vehicleRouter from "./serverRoutes/vehicleRouter";
 import { verifyToken } from "./middleware/authMiddleware";
+import { checkDomainOfScale } from "recharts/types/util/ChartUtils";
 
 const app = express();
 
@@ -46,20 +47,24 @@ app.get("/ping", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+
+
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'ap-south-1',
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    accessKeyId: process.env.AWS_ACCESS_KEY || '',
+    secretAccessKey: process.env.AWS_SECRET_KEY || '',
   }
 });
+
 
 const BUCKET_NAME= process.env.BUCKET_NAME;
 
 app.post('/api/presigned-url', verifyToken, async (req: Request, res: Response) => {
   try {
-    if(!req.userId) return res.status(403).end()
+    if(!req.userId) return res.status(403).json({ message: "User ID not found" });
     const { files } = req.body;
+    console.log(files);
     // Validate request body
     if (!files || !Array.isArray(files) || files.length === 0) {
       return res.status(400).json({ 
@@ -88,14 +93,9 @@ app.post('/api/presigned-url', verifyToken, async (req: Request, res: Response) 
       });
 
       // Generate a presigned URL for the command
-      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 600 }); // URL valid for 10 minutes 
-      
-      return {
-        fileName,
-        key,
-        url: presignedUrl,
-        publicUrl: `https://${BUCKET_NAME}.s3.amazonaws.com/${key}` 
-      };
+      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 }); // URL valid for 10 minutes 
+      console.log(presignedUrl)
+      return presignedUrl
     });
 
     // Wait for all presigned URL promises to resolve

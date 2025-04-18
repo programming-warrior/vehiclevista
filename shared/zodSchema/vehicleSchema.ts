@@ -26,20 +26,17 @@ export const vehicleUploadSchema = z.object({
     .min(1, { message: "Registration number is required" }),
   price: z
     .string()
-    .transform((val) => parseInt(val, 10))
-    .refine((val) => !isNaN(val), {
+    .refine((val) => !isNaN(parseFloat(val)), {
       message: "Price must be a valid number",
     }),
   year: z
     .string()
-    .transform((val) => parseInt(val, 10))
-    .refine((val) => !isNaN(val), {
+    .refine((val) => !isNaN(parseInt(val)), {
       message: "Year must be a valid number",
     }),
   mileage: z
     .string()
-    .transform((val) => parseInt(val, 10))
-    .refine((val) => !isNaN(val), {
+    .refine((val) => !isNaN(parseFloat(val)), {
       message: "Mileage must be a valid number",
     }),
   title: z.string().min(1, { message: "Title is required" }),
@@ -62,7 +59,7 @@ export const vehicleUploadSchema = z.object({
   openToPX: z.boolean().optional(),
   contactPreference: z.enum(["phone", "email", "both"], {
     required_error: "Contact preference is required",
-  }),
+  }).optional(),
   // listingStatus: z.enum(["active", "inactive"], { required_error: "Listing status is required" }),
   negotiable: z.boolean().optional(),
 });
