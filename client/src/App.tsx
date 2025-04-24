@@ -1,3 +1,4 @@
+import { useEffect} from "react";
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -39,12 +40,50 @@ import { useValidateSession } from "./hooks/use-validatesession";
 import Loader from "./components/loader";
 import VehiclesList from "./pages/vehicles";
 import SellerVehilceBulkUpload from "./pages/seller/bulk-upload";
+import AuctionForm from "@/pages/seller/auction-create";
+import { useWebSocket } from "./hooks/use-store";
+import AuctionIdPage from "./pages/auction/auction-id";
 
 export default function App() {
   const { userId, role } = useUser();
   const { isValidating } = useValidateSession();
+  const { setSocket, socket, closeSocket } = useWebSocket();
 
-  // Now use the values in conditionals
+  useEffect(() => {
+    const sessionId = localStorage.getItem("sessionId");
+    console.log(sessionId);
+    if (sessionId && !socket) {
+
+      const ws = new WebSocket(`ws://localhost:5001`, ["Authorization", sessionId]);
+
+      ws.onopen = () => {
+        console.log("WebSocket connected ✅");
+      };
+
+      // ws.onmessage = (event) => {
+      //   const data = JSON.parse(event.data);
+      //   console.log("WebSocket message:", data);
+      //   // handle message types here
+      // };
+
+      ws.onerror = (err) => {
+        setSocket(null);
+        console.error("WebSocket error:", err);
+      };
+
+      ws.onclose = () => {
+        setSocket(null);
+        console.log("WebSocket closed ❌");
+      };
+
+      setSocket(ws);
+    }
+
+    return () => {
+      closeSocket();
+    };
+  }, []);
+
   if (!userId || !role) {
     if (isValidating) return <Loader />;
   }
@@ -70,6 +109,7 @@ export default function App() {
               <Route path="/auction" component={AuctionPage} />
               <Route path="/vehicles" component={VehiclesList} />
 
+              <Route path="/auctions/:id" component={AuctionIdPage} />
 
               {/* Admin Routes */}
               <Route path="/admin">
@@ -110,6 +150,12 @@ export default function App() {
               <Route path="/seller" >
                 <ProtectedRoute
                   component={SellerDashboard}
+                  requiredRoles={["seller"]}
+                />
+              </Route>
+              <Route path="/seller/auction/create" >
+                <ProtectedRoute
+                  component={AuctionForm}
                   requiredRoles={["seller"]}
                 />
               </Route>

@@ -12,6 +12,7 @@ import authRouter from "./serverRoutes/authRouter";
 import vehicleRouter from "./serverRoutes/vehicleRouter";
 import { verifyToken } from "./middleware/authMiddleware";
 import { checkDomainOfScale } from "recharts/types/util/ChartUtils";
+import auctionRouter from "./serverRoutes/auctionRouter";
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use("/api/auth", authRouter);
 app.use("/api/vehicles", vehicleRouter);
+app.use("/api/auction", auctionRouter)
 
 // Add diagnostic endpoint
 app.get("/ping", (req, res) => {

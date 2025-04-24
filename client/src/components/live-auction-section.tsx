@@ -1,138 +1,240 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Gauge, Fuel, Settings } from "lucide-react";
+import { Gauge, Fuel, Settings, Calendar, Clock, Bookmark } from "lucide-react";
 import { Link } from "wouter";
-import type { Vehicle } from "@shared/schema";
+import { useWebSocket } from "@/hooks/use-store";
+import { getActiveAuctions } from "@/api";
+import CountdownTimer from "@/components/countdown-timer";
+
+type Vehicle = {
+  id: string | number;
+  make: string;
+  model: string;
+  year: number;
+  color: string;
+  registration_num: string;
+  bodyType: string;
+  mileage: number;
+  fuelType: string;
+  transmission: string;
+  price: number;
+  images: string[];
+};
+
+type Auction = {
+  id: string | number;
+  title: string;
+  description: string;
+  startingPrice: number;
+  currentBid: number;
+  endTime: string;
+  status: string;
+  vehicle: Vehicle;
+  remainingTime?: number; 
+};
+
+type AuctionResponse = {
+  auctions: Auction[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  hasNextPage: boolean;
+};
+
+
 
 export default function LiveAuctionSection() {
+  const { socket } = useWebSocket();
+  const [auctions, setAuctions] = useState<Auction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [savedAuctions, setSavedAuctions] = useState<Set<string | number>>(new Set());
+
+  useEffect(() => {
+
+    const fetchAuctions = async () => {
+      try {
+        setLoading(true);
+        const data: AuctionResponse = await getActiveAuctions("");
+        
+          setAuctions(data.auctions);
+          
+          // Only attempt to subscribe if socket is open
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            data.auctions.forEach((auction) => {
+              console.log('sending message to the websocket server');
+              socket.send(
+                JSON.stringify({
+                  type: "subscribe",
+                  payload: {
+                    auctionId: auction.id,
+                  },
+                })
+              );
+            });
+          } else {
+            console.warn("WebSocket not open, using client-side timers");
+          }
+      } catch (err) {
+          setError("Failed to load auctions");
+          console.error("Failed to load auctions:", err);
+      } finally {
+          setLoading(false);
+      }
+    };
+
+    fetchAuctions();
+
+    // Handle WebSocket messages
+    const handleWebSocketMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.event === "AUCTION_TIMER") {
+          // Update the specific auction with the new remaining time
+          setAuctions(prevAuctions => 
+            prevAuctions.map(auction => 
+              auction.id.toString() === data.message.auctionId
+                ? { ...auction, remainingTime: data.message.remainingTime } 
+                : auction
+            )
+          );
+        }
+      } catch (err) {
+        console.error("Error processing WebSocket message:", err);
+      }
+    };
+
+    if (socket) {
+      socket.addEventListener("message", handleWebSocketMessage);
+    }
+
+    return () => {
+      // Cleanup: unsubscribe from auctions
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        auctions.forEach(auction => {
+          socket.send(
+            JSON.stringify({
+              type: "unsubscribe",
+              payload: auction.id,
+            })
+          );
+        });
+      }
+      
+      if (socket) {
+        socket.removeEventListener("message", handleWebSocketMessage);
+      }
+    };
+  }, [socket]); // Re-run effect if socket changes
+
+  const toggleSaveAuction = (e: React.MouseEvent, auctionId: string | number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setSavedAuctions(prev => {
+      const newSaved = new Set(prev);
+      if (newSaved.has(auctionId)) {
+        newSaved.delete(auctionId);
+      } else {
+        newSaved.add(auctionId);
+      }
+      return newSaved;
+    });
+  };
+
+  if (loading) {
+    return <div className="text-center py-8">Loading auctions...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-8 text-red-500">{error}</div>;
+  }
+
+  if (auctions.length === 0) {
+    return <div className="text-center py-8 text-gray-400">No active auctions at the moment.</div>;
+  }
+
   return (
     <section className="py-12">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold">Live Auction</h2>
-          <Link href="/auction" className="text-sm text-gray-500">View All</Link>
+          <h2 className="text-2xl font-bold">Live Auctions</h2>
+          <Link href="/auctions" className="text-sm bg-gray-100 px-4 py-1 rounded-full hover:bg-gray-200">
+            View All
+          </Link>
         </div>
-
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {
-              id: 1,
-              title: "Ford Transit - 2021",
-              description: "4.0 D5 PowerPulse Momentum 5dr AW...",
-              price: 22000,
-              mileage: 2500,
-              fuelType: "Diesel",
-              transmission: "Manual",
-              condition: "catS",
-              timeLeft: "00:02:51:28",
-              images: ["https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800"]
-            },
-            {
-              id: 2,
-              title: "New GLC - 2023",
-              description: "4.0 D5 PowerPulse Momentum 5dr AW...",
-              price: 95000,
-              mileage: 50,
-              fuelType: "Petrol",
-              transmission: "Automatic",
-              condition: "clean",
-              timeLeft: "00:02:51:28",
-              images: ["https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800"]
-            },
-            {
-              id: 3,
-              title: "Audi A6 3.5 - New",
-              description: "3.5 D5 PowerPulse Momentum 5dr AW...",
-              price: 58000,
-              mileage: 100,
-              fuelType: "Petrol",
-              transmission: "Automatic",
-              condition: "clean",
-              timeLeft: "01:12:43:26",
-              images: ["https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800"]
-            },
-            {
-              id: 4,
-              title: "Corolla Altis - 2023",
-              description: "3.5 D5 PowerPulse Momentum 5dr AW...",
-              price: 45000,
-              mileage: 15000,
-              fuelType: "Petrol",
-              transmission: "Automatic",
-              condition: "clean",
-              timeLeft: "01:03:46:51",
-              images: ["https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800"]
-            }
-          ].map((vehicle) => (
-            <Card key={vehicle.id} className="group hover:shadow-lg transition-shadow">
-              <CardContent className="p-0">
-                <AspectRatio ratio={16/9} className="relative">
-                  <img 
-                    src={vehicle.images[0]}
-                    alt={vehicle.title}
-                    className="object-cover w-full h-full rounded-t-lg"
-                  />
+          {auctions.map((auction) => (
+            <Link key={auction.id} href={`/auctions/${auction.id}`}>
+              <Card className="group relative overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                <div className="relative aspect-[4/3]">
+                  {auction.vehicle.images && auction.vehicle.images.length > 0 ? (
+                    <img 
+                      src={auction.vehicle.images[0]} 
+                      alt={`${auction.vehicle.make} ${auction.vehicle.model}`} 
+                      className="object-cover w-full h-full"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full bg-gray-200">
+                      <span className="text-gray-500">No image available</span>
+                    </div>
+                  )}
+                  
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-3 right-3 bg-white/80 hover:bg-white rounded-md"
+                    onClick={(e) => toggleSaveAuction(e, auction.id)}
+                    className="absolute top-2 right-2 bg-white/80 hover:bg-white rounded-md"
                   >
-                    <span className="sr-only">Save to favorites</span>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                    </svg>
+                    <Bookmark className={`h-4 w-4 ${savedAuctions.has(auction.id) ? 'fill-current' : ''}`} />
                   </Button>
-
-                  {/* Countdown Timer */}
-                  <div className="absolute bottom-3 right-3">
-                    <div className="bg-white shadow-md rounded-full px-3 py-1">
-                      <div className="font-mono text-sm font-medium text-gray-900">
-                        {vehicle.timeLeft}
-                      </div>
-                    </div>
-                  </div>
-                </AspectRatio>
-
-                {/* Vehicle Details */}
+                  
+                  <CountdownTimer auction={auction} />
+                </div>
+                
                 <div className="p-4">
-                  <h3 className="text-lg font-semibold mb-2">
-                    {vehicle.title}
+                  <h3 className="font-medium text-lg mb-1">
+                    {auction.vehicle.make} {auction.vehicle.model}
                   </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    {vehicle.description}
+                  
+                  <p className="text-sm text-gray-500 mb-3 line-clamp-2">
+                    {auction.description}
                   </p>
-
-                  {/* Vehicle Specifications */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Gauge className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">{vehicle.mileage} Miles</span>
+                  
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                      <Calendar size={16} />
+                      <span>{auction.vehicle.year}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Fuel className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">{vehicle.fuelType}</span>
+                    
+                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                      <Gauge size={16} />
+                      <span>{auction.vehicle.mileage.toLocaleString()} mi</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Settings className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">{vehicle.transmission}</span>
+                    
+                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                      <Fuel size={16} />
+                      <span>{auction.vehicle.fuelType}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                      <Settings size={16} />
+                      <span>{auction.vehicle.transmission}</span>
                     </div>
                   </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold">${auction.currentBid ? auction.currentBid.toLocaleString() : auction.startingPrice.toLocaleString()}</span>
+                    <span className="text-blue-600 hover:text-blue-700">Auction →</span>
+                  </div>
                 </div>
-              </CardContent>
-
-              <CardFooter className="px-4 pb-4 pt-2">
-                <div className="w-full flex justify-between items-center">
-                  <span className="text-xl font-bold">${vehicle.price.toLocaleString()}</span>
-                  <Link href={`/auction/${vehicle.id}`}>
-                    <Button className="text-blue-600 hover:text-blue-700 font-medium">
-                      Auction →
-                    </Button>
-                  </Link>
-                </div>
-              </CardFooter>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>

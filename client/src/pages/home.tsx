@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VehicleCard from "@/components/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { categories } from "@/lib/mock-data";
+// import { categories } from "@/lib/mock-data";
+import { vehicleTypes } from "@shared/schema";
 import type { Vehicle } from "@shared/schema";
 import HeroSection from "@/components/hero-section";
 import LiveAuctionSection from "@/components/live-auction-section";
@@ -33,9 +34,9 @@ export default function Home() {
   // console.log(vehicles);
   console.log(userId);
   console.log(role);
+  const vehicleCategories = ['all', ...vehicleTypes];
   return (
     <div>
-      {/* <Navbar /> */}
       
       <HeroSection />
 
@@ -54,13 +55,14 @@ export default function Home() {
           className="mb-8"
         >
           <TabsList className="w-full justify-start overflow-auto">
-            {categories.map((category) => (
+            {vehicleCategories.map((category) => (
               <TabsTrigger
-                key={category.id}
-                value={category.id}
+                value={category}
                 className="min-w-[100px]"
               >
-                {category.label}
+                <span className="text-sm font-medium text-muted-foreground">
+                  {category}
+                </span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -91,7 +93,10 @@ export default function Home() {
       </div>
 
       {/* Live Auction Section */}
-      <LiveAuctionSection />
+      <div>
+
+        <LiveAuctionSection />
+      </div>
 
       {/* Explore Categories Section */}
       <ExploreCategories />
@@ -112,7 +117,7 @@ export default function Home() {
       <VansCollection />
 
       {/* Latest Blog Post Section */}
-      <LatestBlogPost />
+      {/* <LatestBlogPost /> */}
     </div>
   );
 }

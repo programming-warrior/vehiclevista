@@ -1,5 +1,24 @@
 import {create} from "zustand";
 
+
+type WebSocketStore = {
+  socket: WebSocket | null;
+  setSocket: (socket: WebSocket | null) => void; // <-- allow null here
+  closeSocket: () => void;
+};
+
+export const useWebSocket = create<WebSocketStore>((set, get) => ({
+  socket: null,
+  setSocket: (socket: WebSocket | null ) => set({ socket }),
+  closeSocket: () => {
+    const socket = get().socket;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.close();
+    }
+    set({ socket: null });
+  },
+}));
+
 type UserState = {
     userId: string;
     role: string;

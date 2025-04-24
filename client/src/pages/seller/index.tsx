@@ -169,6 +169,7 @@ export default function SellerDashboard() {
                 <Button
                   size="lg"
                   className="bg-white text-blue-700 hover:bg-gray-100"
+                  onClick={() => setLocation('/seller/auction/create')}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Create Auction
@@ -319,7 +320,7 @@ export default function SellerDashboard() {
             <TabsContent value="auctions" className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold">Active Auctions</h2>
-                <Button className="gap-2">
+                <Button className="gap-2" >
                   <Plus className="h-4 w-4" />
                   Create Auction
                 </Button>

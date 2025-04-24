@@ -27,3 +27,28 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
   req.role = session.role;
   next();
 }
+
+export const verifyWebSocketToken = async (
+  authHeader: string
+) => {
+  console.log(authHeader)
+  const sessionId = authHeader?.split(",")[1]?.trim();
+  if (!sessionId) {
+    console.error("No token found, connection closed.");
+    return null;
+  }
+  try {
+    const redisClient = await RedisClientSingleton.getRedisClient();
+
+    const sessionData = await redisClient.get(`session:${sessionId}`);
+    console.log(sessionData);
+    if (!sessionData) {
+      return null;
+    }
+    const session: z.infer<typeof userSessionSchema> = JSON.parse(sessionData);
+    return session;
+  } catch (error: any) {
+    console.error("Invalid token:", error.message);
+    return null;
+  }
+};
