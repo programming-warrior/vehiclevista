@@ -2,14 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useWebSocket } from "@/hooks/use-store";
 import { set } from "date-fns";
 
-export default function CountdownTimer({ auction }: { auction: any }) {
+export default function CountdownTimer({ auction, setAuction }: { auction: any, setAuction:any }) {
   const [timeLeft, setTimeLeft] = useState<string>("00:00:00:00");
   const { socket } = useWebSocket();
 
   console.log(timeLeft);
 
   useEffect(() => {
-    console.log(auction);
     const initialDistance = auction.remainingTime;
 
     updateTimerDisplay(initialDistance);
@@ -18,7 +17,7 @@ export default function CountdownTimer({ auction }: { auction: any }) {
     let timerId: NodeJS.Timeout | null = null;
 
     if (!socket || socket.readyState !== WebSocket.OPEN) {
-        console.log("Socket is not open, not starting timer.");
+      console.log("Socket is not open, not starting timer.");
       timerId = setInterval(() => {
         // console.log("timer running: " + auction.id);
         const now = new Date().getTime();
@@ -26,6 +25,35 @@ export default function CountdownTimer({ auction }: { auction: any }) {
         let distance = endTimeDate - now;
         updateTimerDisplay(distance);
       }, 1000);
+    } else {
+      socket.send(
+        JSON.stringify({
+          type: "subscribe",
+          payload: {
+            auctionId: auction.id,
+          },
+        })
+      );
+    }
+
+    // Handle WebSocket messages
+    const handleWebSocketMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.event === "AUCTION_TIMER") {
+          setAuction((prevAuction: any) =>
+            prevAuction.id.toString() === data.message.auctionId
+              ? { ...prevAuction, remainingTime: data.message.remainingTime }
+              : prevAuction
+          );
+        }
+      } catch (err) {
+        console.error("Error processing WebSocket message:", err);
+      }
+    };
+
+    if (socket) {
+      socket.addEventListener("message", handleWebSocketMessage);
     }
 
     function updateTimerDisplay(distance: number) {
@@ -52,12 +80,24 @@ export default function CountdownTimer({ auction }: { auction: any }) {
       if (timerId) {
         clearInterval(timerId);
       }
+      if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(
+            JSON.stringify({
+              type: "unsubscribe",
+              payload: auction.id,
+            })
+          );
+      }
+
+      if (socket) {
+        socket.removeEventListener("message", handleWebSocketMessage);
+      }
     };
-  }, [auction.endTime, auction.remainingTime, socket]);
+  }, [auction.remainingTime, socket]);
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-center py-2 px-4">
-      {timeLeft}
-    </div>
+    <span>{timeLeft}</span>
+    // <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-center py-2 px-4">
+    // </div>
   );
 }
