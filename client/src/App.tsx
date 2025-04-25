@@ -44,6 +44,7 @@ import AuctionForm from "@/pages/seller/auction-create";
 import { useWebSocket } from "./hooks/use-store";
 import AuctionIdPage from "./pages/auction/auction-id";
 import { useToast } from "./hooks/use-toast";
+import { WEBSOCKET_URL } from "./lib/constants";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -59,7 +60,7 @@ export default function App() {
     console.log(sessionId);
     if (sessionId && !socket) {
 
-      const ws = new WebSocket(`ws://localhost:5001`, ["Authorization", sessionId]);
+      const ws = new WebSocket(`${WEBSOCKET_URL}:5001`, ["Authorization", sessionId]);
 
       ws.onopen = () => {
         console.log("WebSocket connected ✅");
