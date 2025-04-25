@@ -13,7 +13,13 @@ import {
   uploadBulkVehicle,
   getSellerVehicleListings
 } from "./vehicle-api";
-import { createAuction, getActiveAuctions, getAuctionById } from "./auction-api";
+import { 
+    createAuction, 
+    getActiveAuctions, 
+    getAuctionById, 
+    placeLiveBid, 
+    getBidsForAuction
+} from "./auction-api";
 
 
 async function uploadToPresignedUrl(file: File, presignedUrl: string): Promise<string> {
@@ -77,6 +83,8 @@ export {
   createAuction,
   getActiveAuctions,
   getAuctionById,
+  placeLiveBid,
+  getBidsForAuction,
 
   registerUser,
   loginUser,

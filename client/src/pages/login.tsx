@@ -55,6 +55,7 @@ export default function LoginPage() {
       setUser({
         userId: res.userId,
         role: res.role,
+        card_Verified: res.card_verified
       });
       localStorage.setItem('sessionId', res.sessionId)
       toast({

@@ -6,6 +6,7 @@ import RedisClientSingleton from "./redis";
 export const userSessionSchema = z.object({
   id: z.number(),
   role: z.enum(userRoles),
+  card_verified: z.boolean(),
 });
 
 export const SESSION_EXPIRY_SECONDS = 60 * 60 * 24; // 2 days
@@ -31,8 +32,14 @@ export async function createUserSession(user: User, cookies?: Cookies) {
   try {
     const sessionId = randomBytes(512).toString("hex").normalize(); //sessionId needs to be very long
     const redisClient = await RedisClientSingleton.getRedisClient();
-    const sessionData = JSON.stringify(userSessionSchema.parse(user)); // Serialize the session data
-    await redisClient.set(`session:${sessionId}`, sessionData, {
+    // Serialize the session data
+    console.log(user)
+    const sessionData: z.infer<typeof userSessionSchema> = {
+      role: user.role,
+      id: user.id,
+      card_verified: (user.card as any).paymentMethodId ? true : false
+    } 
+    await redisClient.set(`session:${sessionId}`, JSON.stringify(sessionData), {
       EX: SESSION_EXPIRY_SECONDS, // Use options object format
     });
     // setCookie(sessionId, cookies)

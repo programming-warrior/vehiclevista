@@ -19,7 +19,8 @@ export function useValidateSession() {
         
         setUser({
           userId: userData.userId,
-          role: userData.role
+          role: userData.role, 
+          card_Verified: userData.card_verified
         });
         
       } catch (error) {

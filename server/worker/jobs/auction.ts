@@ -4,6 +4,7 @@ import { connection } from "../workerRedis";
 import { db } from "../../db";
 import { auctions } from "../../../shared/schema";
 import { eq } from "drizzle-orm";
+import { auctionQueue } from "../queue";
 
 const auctionWorker = new Worker(
   "auction",
@@ -31,6 +32,26 @@ const auctionWorker = new Worker(
         .where(eq(auctions.id, auctionId));
 
       startCountdown(auctionId, endTime);
+    } else if (job.name === "endAuction") {
+      const { auctionId } = job.data;
+      const auctionRows = await db
+        .select()
+        .from(auctions)
+        .where(eq(auctions.id, auctionId));
+      const auction = auctionRows[0];
+      console.log(auction);
+      if (!auction) {
+        console.error(`Auction with ID ${auctionId} not found`);
+        return;
+      }
+      if (auction.status === "ended") {
+        console.log(`Auction ${auctionId} is already ${auction.status}`);
+        return;
+      }
+      await db
+        .update(auctions)
+        .set({ status: "ended" })
+        .where(eq(auctions.id, auctionId));
     }
   },
   { connection }
@@ -39,7 +60,7 @@ const auctionWorker = new Worker(
 const auctionCountdownIntervals = new Map<string, NodeJS.Timeout>();
 
 function startCountdown(auctionId: string, endTime: string) {
-  const interval = setInterval(() => {
+  const interval = setInterval(async () => {
     const now = new Date();
     const remainingTime = new Date(endTime).getTime() - now.getTime();
 
@@ -60,14 +81,17 @@ function startCountdown(auctionId: string, endTime: string) {
 
     if (remainingTime <= 0) {
       clearInterval(interval);
-      auctionCountdownIntervals.delete(auctionId);
 
+      auctionCountdownIntervals.delete(auctionId);
       //   WebSocketServer.broadcastToAuction(auctionId, {
       //     type: 'auctionEnded',
       //     auctionId,
       //   });
 
       // Optionally schedule next job to declare winner, etc.
+      await auctionQueue.add("endAuction", {
+        auctionId: auctionId,
+      });
     }
   }, 1000);
 

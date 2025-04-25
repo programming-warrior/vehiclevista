@@ -6,6 +6,8 @@ import { eq, or } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
 import { userRegisterSchema } from "../../shared/zodSchema/userSchema";
 import RedisClientSingleton from "../utils/redis";
+import { StringRouteParams } from "wouter";
+import { userSessionSchema } from "../utils/session";
 
 const authRouter = Router();
 
@@ -16,6 +18,7 @@ authRouter.post("/register", async (req, res) => {
     return res.status(401).json({ error: "invalid input" });
 
   const user = zodParseResult.data;
+  console.log(user);
 
   // Check if user already exists with the same email or username in a single query
   const existingUser = await db
@@ -54,7 +57,7 @@ authRouter.post("/register", async (req, res) => {
 
   });
 
-  return res.status(201).json({ userId: savedUser.id, role: savedUser.role, sessionId });
+  return res.status(200).json({ role: savedUser.role, userId: savedUser.id, card_verified: (savedUser.card as any).paymentMethodId ? true : false , sessionId });
 });
 // Login route
 authRouter.post("/login", async (req, res) => {
@@ -91,7 +94,7 @@ authRouter.post("/login", async (req, res) => {
       sameSite: "none",
     });
 
-    return res.status(200).json({ role: user.role, userId: user.id, sessionId });
+    return res.status(200).json({ role: user.role, userId: user.id, card_verified: (user.card as any).paymentMethodId ? true : false , sessionId });
   } catch (e) {
     console.log(e);
     return res.status(500).json({ error: "Internal Server Error" });
@@ -130,8 +133,8 @@ authRouter.get("/authenticate", async (req, res) => {
 
     const redisClient = await RedisClientSingleton.getRedisClient();
 
-    const sessionData = await redisClient.get(`session:${sessionId}`);
-
+    const sessionData:string = await redisClient.get(`session:${sessionId}`);
+  
     if (!sessionData) {
       res.clearCookie("sessionId");
       return res.status(401).json({ error: "Invalid session" });
@@ -142,6 +145,7 @@ authRouter.get("/authenticate", async (req, res) => {
     return res.status(200).json({
       userId: userData.id,
       role: userData.role,
+      card_verified: userData.card_verified
     });
   } catch (error) {
     console.error("Session validation error:", error);

@@ -43,13 +43,18 @@ import SellerVehilceBulkUpload from "./pages/seller/bulk-upload";
 import AuctionForm from "@/pages/seller/auction-create";
 import { useWebSocket } from "./hooks/use-store";
 import AuctionIdPage from "./pages/auction/auction-id";
+import { useToast } from "./hooks/use-toast";
 
 export default function App() {
-  const { userId, role } = useUser();
+  const { userId, role, card_verified } = useUser();
   const { isValidating } = useValidateSession();
   const { setSocket, socket, closeSocket } = useWebSocket();
+  const {toast} = useToast();
 
   useEffect(() => {
+    console.log(userId)
+    console.log(card_verified)
+    console.log(role)
     const sessionId = localStorage.getItem("sessionId");
     console.log(sessionId);
     if (sessionId && !socket) {
@@ -60,11 +65,28 @@ export default function App() {
         console.log("WebSocket connected ✅");
       };
 
-      // ws.onmessage = (event) => {
-      //   const data = JSON.parse(event.data);
-      //   console.log("WebSocket message:", data);
-      //   // handle message types here
-      // };
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        // console.log("WebSocket message:", data);
+        if(data.event==='BID_PLACED'){
+          console.log('BID_PLACED')
+          const {bidId, auctionId, bidAmount, userId} = data.message;
+          toast({
+            title:'Bid Place successfully', 
+            description: `Your bid for amount $${bidAmount} is successfull`
+          })
+        }
+        else if (data.event=='BID_PLACED_ERROR'){
+          console.log('bid error');
+          const {error, payload} = data.message;
+          toast({
+            variant: 'destructive',
+            title:'Bid Failed', 
+            description: error
+          })
+        }
+        // handle message types here
+      };
 
       ws.onerror = (err) => {
         setSocket(null);

@@ -6,7 +6,7 @@ export default function CountdownTimer({ auction, setAuction }: { auction: any, 
   const [timeLeft, setTimeLeft] = useState<string>("00:00:00:00");
   const { socket } = useWebSocket();
 
-  console.log(timeLeft);
+  // console.log(timeLeft);
 
   useEffect(() => {
     const initialDistance = auction.remainingTime;

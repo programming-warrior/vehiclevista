@@ -50,15 +50,15 @@ const ZoomableImage = ({ src, alt }:any) => {
       
       {showZoom && (
         <div 
-          className="absolute w-64 h-64 border-2 border-gray-200 bg-white rounded-md overflow-hidden shadow-xl pointer-events-none z-50"
+          className="absolute w-32 h-32 border-2 border-gray-200 bg-white rounded-md overflow-hidden shadow-xl pointer-events-none z-50"
           style={{
-            top: `${mousePosition.y + 20}px`,
-            left: `${mousePosition.x + 20}px`,
+            top: `${mousePosition.y }px`,
+            left: `${mousePosition.x }px`,
             backgroundImage: `url(${src})`,
-            backgroundPosition: `${zoomPosition.x * 100}% ${zoomPosition.y * 100}%`,
+            backgroundPosition: `${zoomPosition.x  * 100}% ${zoomPosition.y * 100}%`,
             backgroundRepeat: 'no-repeat',
             backgroundSize: `${zoomFactor * 100}%`,
-            transform: 'translate(-50%, -50%)'
+            transform: 'translate(-40%, -140%)'
           }}
         />
       )}

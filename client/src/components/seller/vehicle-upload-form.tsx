@@ -191,6 +191,24 @@ const VehicleUploadForm = () => {
           >
             {/* Full Width Fields */}
             <div className="space-y-4">
+            <FormField
+                  control={form.control}
+                  name="registration_num"
+                 
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Registration Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="e.g. ABC-1234"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <FormField
                 control={form.control}
                 name="title"
@@ -381,23 +399,7 @@ const VehicleUploadForm = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="registration_num"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Registration Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder="e.g. ABC-1234"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          
               </div>
             </div>
 

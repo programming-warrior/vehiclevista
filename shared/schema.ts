@@ -65,6 +65,7 @@ export const users = pgTable("users", {
   monthlyAllowance: integer("monthly_allowance"), // number of listings allowed per month
   usedAllowance: integer("used_allowance").default(0),
   performanceTracking: jsonb("performance_tracking").default("{}"), // Add performance tracking field
+  card : jsonb("card").default("{}")
 });
 
 // Update packages table with new structure
@@ -108,6 +109,15 @@ export const auctions = pgTable("auctions", {
   status: text("status").notNull().default("upcoming"), // upcoming, active, ended
   currentBid: real("current_bid").default(0),
   totalBids: integer("total_bids").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+//Bids table
+export const bids = pgTable("bids", {
+  id: serial("id").primaryKey(),
+  bidAmount: real("bid_amount").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  auctionId: integer("auction_id").notNull().references(() => auctions.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -397,6 +407,8 @@ export type BulkUpload = typeof bulkUploads.$inferSelect;
 export type InsertBulkUpload = z.infer<typeof insertBulkUploadSchema>;
 
 export type Auction = typeof auctions.$inferSelect;
+export type Bid = typeof bids.$inferSelect;
+
 export type InsertAuction = z.infer<typeof insertAuctionSchema>;
 
 export type Event = typeof events.$inferSelect;

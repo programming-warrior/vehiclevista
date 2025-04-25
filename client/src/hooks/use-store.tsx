@@ -22,15 +22,18 @@ export const useWebSocket = create<WebSocketStore>((set, get) => ({
 type UserState = {
     userId: string;
     role: string;
-    setUser: (user: { userId: string; role: string }) => void;
+    card_verified: boolean
+    setUser: (user: { userId: string; role: string; card_Verified: boolean }) => void;
 };
 
 export const useUser = create<UserState>((set) => ({
     userId: "",
     role: "",
+    card_verified: false, 
     setUser: (newUser) => set(() => ({ 
         userId: newUser.userId, 
-        role: newUser.role 
+        role: newUser.role ,
+        card_verified: newUser.card_Verified
     }))
 }))
 

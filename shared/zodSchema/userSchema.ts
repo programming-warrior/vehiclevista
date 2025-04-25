@@ -1,5 +1,6 @@
 import * as z from "zod";
 
+
 export const userRegisterSchema = z
   .object({
     username: z
@@ -32,6 +33,7 @@ export const userRegisterSchema = z
     businessName: z.string().optional(),
     businessAddress: z.string().optional(),
 
+    card: z.object({paymentMethodId: z.string()}).optional()
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -39,9 +41,8 @@ export const userRegisterSchema = z
   })
   .refine(
     (data) => {
-      // Conditional validation for business fields
       if (["trader", "garage"].includes(data.role)) {
-        return data.businessName
+        return data.businessName;
       }
       return true;
     },
@@ -52,9 +53,8 @@ export const userRegisterSchema = z
   )
   .refine(
     (data) => {
-      // Conditional validation for business fields
       if (["trader", "garage"].includes(data.role)) {
-        return data.businessAddress
+        return data.businessAddress;
       }
       return true;
     },

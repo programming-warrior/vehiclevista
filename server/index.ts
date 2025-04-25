@@ -22,6 +22,7 @@ declare global {
     interface Request {
       userId?: number;
       role?: string;
+      card_verified? : boolean;
     }
   }
 }

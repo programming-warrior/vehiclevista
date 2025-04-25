@@ -50,3 +50,38 @@ export async function getAuctionById(auctionId: string) {
     );
   }
 }
+
+export async function getBidsForAuction(auctionId: string) {
+  try {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/auction/bids/${auctionId}`, 
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error fetching bids list"
+    );
+  }
+}
+
+export async function placeLiveBid(auctionId: string, bidAmount: string) {
+  try {
+    const response = await axios.post(
+      `${BACKEND_URL}/api/auction/place/live-bid/${auctionId}`,
+      {
+        bidAmount
+      },
+      {
+        headers:{
+         'Content-Type':'application/json',
+         'Authorization':`Bearer ${localStorage.getItem('sessionId')}` 
+        }
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error fetching vehicle list"
+    );
+  }
+}

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db";
-import { auctions, Vehicle, vehicles } from "../../shared/schema";
+import { auctions, Vehicle, vehicles, bids,users } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
 import axios from "axios";
@@ -9,7 +9,7 @@ import { z } from "zod";
 import { verifyToken } from "../middleware/authMiddleware";
 import { parseCsvFile, extractVehicles } from "../utils/helper";
 import multer from "multer";
-import {auctionQueue} from "../worker/queue";
+import { auctionQueue, bidQueue } from "../worker/queue";
 
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 
@@ -20,12 +20,7 @@ const auctionRouter = Router();
 auctionRouter.get("/get", async (req, res) => {
   try {
     console.log(req.query);
-    const {
-      brand,
-      model,
-      page = "1",
-      limit = "10",
-    } = req.query;
+    const { brand, model, page = "1", limit = "10" } = req.query;
 
     const conditions = [];
 
@@ -33,7 +28,6 @@ auctionRouter.get("/get", async (req, res) => {
       conditions.push(eq(vehicles.make, String(brand)));
     if (model && !/all/gi.test(model as string))
       conditions.push(eq(vehicles.model, String(model)));
-
 
     console.log(conditions);
 
@@ -43,8 +37,8 @@ auctionRouter.get("/get", async (req, res) => {
 
     const result = await db
       .select({
-      auction: auctions,
-      vehicle: vehicles
+        auction: auctions,
+        vehicle: vehicles,
       })
       .from(auctions)
       .innerJoin(vehicles, eq(auctions.vehicleId, vehicles.id))
@@ -57,11 +51,10 @@ auctionRouter.get("/get", async (req, res) => {
       .from(auctions)
       .where(conditions.length ? and(...conditions) : undefined);
 
-
     const auctionsWithVehicleDetails = result.map((row) => {
       const auction = row.auction as any; // Cast to any to access auction properties
       const vehicle = row.vehicle as Vehicle; // Cast to Vehicle type
-      return {  
+      return {
         ...auction,
         remainingTime: new Date(auction.endDate).getTime() - Date.now(),
         vehicle: {
@@ -143,23 +136,85 @@ auctionRouter.get("/get/:id", async (req, res) => {
     res.status(200).json(auctionWithVehicleDetails);
   } catch (err: any) {
     console.error("Error fetching auction:", err);
-    res.status(500).json({ message: "Error fetching auction", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching auction", error: err.message });
   }
 });
 
+auctionRouter.post(
+  "/place/live-bid/:auctionId",
+  verifyToken,
+  async (req, res) => {
+    if (!req.userId || !req.card_verified) return res.status(403).json({ error: "Unauthorized" });
+    try {
+      const auctionId = parseInt(req.params.auctionId, 10);
+      if (isNaN(auctionId)) {
+        return res.status(400).json({ error: "Invalid auction ID" });
+      }
+      let { bidAmount } = req.body;
+      bidAmount = parseFloat(bidAmount);
+      if (!bidAmount || isNaN(bidAmount) || bidAmount< 0) {
+        return res.status(400).json({ error: "invalid bidAmount" });
+      }
+
+      await bidQueue.add('processBid', { auctionId, userId: req.userId, bidAmount })
+
+      return res.status(202).json({ message: "Bid queued" });
+    } catch (e: any) {
+      if (e.message === "auction not found") {
+        return res.status(404).json({ error: e.message });
+      }
+      if (e.message === "bidAmount needs to be greater than the currentBid") {
+        return res.status(400).json({ error: e.message });
+      }
+      console.log(e);
+      return res.status(500).json({ error: e.message });
+    }
+  }
+);
+
+auctionRouter.get(
+  "/bids/:auctionId",
+  async (req, res) => {
+    try {
+      const auctionId = parseInt(req.params.auctionId, 10);
+      if (isNaN(auctionId)) {
+        return res.status(400).json({ error: "Invalid auction ID" });
+      }
+
+      const result = await db
+        .select({
+          bid: bids,
+          user: {
+            id: users.id,
+            username: users.username,
+          }
+        })
+        .from(bids)
+        .innerJoin(users, eq(bids.userId, users.id))
+        .where(eq(bids.auctionId, auctionId))
+        .orderBy(sql`${bids.createdAt} DESC`);
+
+      const bidsWithUser = result.map(row => ({
+        ...row.bid,
+        user: row.user
+      }));
+
+      return res.status(200).json({ bids: bidsWithUser });
+    } catch (e: any) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+);
 
 auctionRouter.get("/seller/listings", verifyToken, async (req, res) => {
   try {
-    if(req.userId === undefined || req.role !== "seller"){
+    if (req.userId === undefined || req.role !== "seller") {
       return res.status(403).json({ error: "Unauthorized" });
     }
     console.log(req.query);
-    const {
-      brand,
-      page = "1",
-      limit = "10",
-      sort
-    } = req.query;
+    const { brand, page = "1", limit = "10", sort } = req.query;
 
     const conditions = [];
 
@@ -167,7 +222,7 @@ auctionRouter.get("/seller/listings", verifyToken, async (req, res) => {
       conditions.push(eq(vehicles.make, String(brand)));
 
     console.log(conditions);
-    conditions.push(eq(vehicles.sellerId, req.userId as number))
+    conditions.push(eq(vehicles.sellerId, req.userId as number));
 
     const pageNum = parseInt(page as string, 10);
     const pageSize = parseInt(limit as string, 10);
@@ -183,8 +238,8 @@ auctionRouter.get("/seller/listings", verifyToken, async (req, res) => {
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(vehicles)
-      .where(conditions.length ? and(...conditions) : undefined)
-    
+      .where(conditions.length ? and(...conditions) : undefined);
+
     res.status(200).json({
       vehicles: result,
       totalCount: count,
@@ -200,7 +255,6 @@ auctionRouter.get("/seller/listings", verifyToken, async (req, res) => {
   }
 });
 
-
 auctionRouter.post("/create", verifyToken, async (req, res) => {
   if (!req.userId || req.role !== "seller") {
     return res.status(403).json({ error: "Unauthorized" });
@@ -210,41 +264,59 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
     // if (result.error) {
     //   return res.status(401).json({ error: result.error });
     // }
-    console.log(req.body)
-    const {vehicleId, title, description, startDate, endDate, startingPrice} = req.body;
-    if(!vehicleId || !title.trim() || !description.trim() || !startDate || !endDate || !startingPrice || isNaN(parseFloat(startingPrice))){
-        return res.status(400).json({error:"Inalid input"});
+    console.log(req.body);
+    const { vehicleId, title, description, startDate, endDate, startingPrice } =
+      req.body;
+    if (
+      !vehicleId ||
+      !title.trim() ||
+      !description.trim() ||
+      !startDate ||
+      !endDate ||
+      !startingPrice ||
+      isNaN(parseFloat(startingPrice))
+    ) {
+      return res.status(400).json({ error: "Inalid input" });
     }
     const vehicleRows = await db
       .select()
       .from(vehicles)
       .where(eq(vehicles.id, vehicleId));
     const vehicle = vehicleRows[0];
-    if (!vehicle)  return res.status(400).json({error:"vehicle not found"});
+    if (!vehicle) return res.status(400).json({ error: "vehicle not found" });
     const newAuction = {
-        vehicleId: parseInt(vehicleId),
-        title,
-        description,
-        startingPrice: parseFloat(startingPrice),
-        startDate: new Date(startDate), 
-        endDate: new Date(endDate),
-        status: "upcoming"
-      };
+      vehicleId: parseInt(vehicleId),
+      title,
+      description,
+      startingPrice: parseFloat(startingPrice),
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      status: "upcoming",
+    };
 
-    const dbReturnData = await db.insert(auctions).values(newAuction).returning();
+    const dbReturnData = await db
+      .insert(auctions)
+      .values(newAuction)
+      .returning();
     const savedAuctionDetails = dbReturnData[0];
-    await auctionQueue.add('startAuction', { auctionId: savedAuctionDetails.id, endTime: savedAuctionDetails.endDate }, {
-      delay: savedAuctionDetails.startDate.getTime() - Date.now(),
-    });
-    console.log('added to the queue');
+    await auctionQueue.add(
+      "startAuction",
+      {
+        auctionId: savedAuctionDetails.id,
+        endTime: savedAuctionDetails.endDate,
+      },
+      {
+        delay: savedAuctionDetails.startDate.getTime() - Date.now(),
+      }
+    );
+
+    console.log("added to the queue");
     return res.status(200).json({ message: "Auction created successfully" });
   } catch (e: any) {
     console.log(e.message);
     return res.status(500).json();
   }
 });
-
-
 
 // Export the router
 export default auctionRouter;

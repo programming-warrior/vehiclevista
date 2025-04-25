@@ -25,6 +25,7 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
   const session: z.infer<typeof userSessionSchema> = JSON.parse(sessionData);
   req.userId = session.id;
   req.role = session.role;
+  req.card_verified = session.card_verified
   next();
 }
 
