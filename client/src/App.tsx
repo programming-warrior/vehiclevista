@@ -60,7 +60,7 @@ export default function App() {
     console.log(sessionId);
     if (sessionId && !socket) {
 
-      const ws = new WebSocket(`${WEBSOCKET_URL}:5001`, ["Authorization", sessionId]);
+      const ws = new WebSocket(`${WEBSOCKET_URL}`, ["Authorization", sessionId]);
 
       ws.onopen = () => {
         console.log("WebSocket connected ✅");
