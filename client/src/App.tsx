@@ -45,6 +45,7 @@ import { useWebSocket } from "./hooks/use-store";
 import AuctionIdPage from "./pages/auction/auction-id";
 import { useToast } from "./hooks/use-toast";
 import { WEBSOCKET_URL } from "./lib/constants";
+import UserProfile from "@/pages/user-profile";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -120,6 +121,7 @@ export default function App() {
           <main className="flex-1">
             <Switch>
               {/* Public Routes */}
+              <Route path="/profile" component={UserProfile} />
               <Route path="/" component={Home} />
               <Route path="/login" component={Login} />
               <Route path="/register" component={Register} />
@@ -170,22 +172,20 @@ export default function App() {
               </Route>
 
               {/* Seller Routes */}
-              <Route path="/seller" >
+              {/* <Route path="/seller" >
                 <ProtectedRoute
                   component={SellerDashboard}
                   requiredRoles={["seller"]}
                 />
-              </Route>
+              </Route> */}
               <Route path="/seller/auction/create" >
                 <ProtectedRoute
                   component={AuctionForm}
-                  requiredRoles={["seller"]}
                 />
               </Route>
               <Route path="/seller/upload" >
                 <ProtectedRoute
                   component={SellerVehicleUpload}
-                  requiredRoles={["seller"]}
                 />
               </Route>
               <Route path="/seller/bulk-upload" >

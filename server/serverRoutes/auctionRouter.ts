@@ -20,7 +20,6 @@ const auctionRouter = Router();
 
 auctionRouter.get("/get", async (req, res) => {
   try {
-    console.log(req.query);
     const { brand, model, page = "1", limit = "10", type } = req.query;
 
     const conditions = [];
@@ -29,11 +28,20 @@ auctionRouter.get("/get", async (req, res) => {
       conditions.push(eq(vehicles.make, String(brand)));
     if (model && !/all/gi.test(model as string))
       conditions.push(eq(vehicles.model, String(model)));
-    if (type && !/all/gi.test(type as string) && vehicleTypesEnum.enumValues.includes(String(type).toLocaleLowerCase() as any)) {
-      conditions.push(eq(vehicles.type, String(type).toLocaleLowerCase() as (typeof vehicleTypesEnum.enumValues)[number]));
+    // Only filter by type if provided and valid
+    if (
+      type &&
+      vehicleTypesEnum.enumValues.includes(
+        String(type).toLocaleLowerCase() as (typeof vehicleTypesEnum.enumValues)[number]
+      )
+    ) {
+      conditions.push(
+        eq(
+          vehicles.type,
+          String(type).toLocaleLowerCase() as (typeof vehicleTypesEnum.enumValues)[number]
+        )
+      );
     }
-
-    console.log(conditions);
 
     const pageNum = parseInt(page as string, 10);
     const pageSize = parseInt(limit as string, 10);
@@ -53,11 +61,12 @@ auctionRouter.get("/get", async (req, res) => {
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(auctions)
+      .innerJoin(vehicles, eq(auctions.vehicleId, vehicles.id))
       .where(conditions.length ? and(...conditions) : undefined);
 
     const auctionsWithVehicleDetails = result.map((row) => {
-      const auction = row.auction as any; // Cast to any to access auction properties
-      const vehicle = row.vehicle as Vehicle; // Cast to Vehicle type
+      const auction = row.auction as any;
+      const vehicle = row.vehicle as Vehicle;
       return {
         ...auction,
         remainingTime: new Date(auction.endDate).getTime() - Date.now(),
@@ -95,7 +104,6 @@ auctionRouter.get("/get", async (req, res) => {
 
 auctionRouter.get("/get/:id", async (req, res) => {
   try {
-    console.log(req.params.id);
     const auctionId = parseInt(req.params.id, 10);
     if (isNaN(auctionId)) {
       return res.status(400).json({ error: "Invalid auction ID" });
@@ -217,7 +225,6 @@ auctionRouter.get("/seller/listings", verifyToken, async (req, res) => {
     if (req.userId === undefined || req.role !== "seller") {
       return res.status(403).json({ error: "Unauthorized" });
     }
-    console.log(req.query);
     const { brand, page = "1", limit = "10", sort } = req.query;
 
     const conditions = [];
@@ -225,7 +232,6 @@ auctionRouter.get("/seller/listings", verifyToken, async (req, res) => {
     if (brand && !/all/gi.test(brand as string))
       conditions.push(eq(vehicles.make, String(brand)));
 
-    console.log(conditions);
     conditions.push(eq(vehicles.sellerId, req.userId as number));
 
     const pageNum = parseInt(page as string, 10);
@@ -268,7 +274,6 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
     // if (result.error) {
     //   return res.status(401).json({ error: result.error });
     // }
-    console.log(req.body);
     const { vehicleId, title, description, startDate, endDate, startingPrice } =
       req.body;
     if (

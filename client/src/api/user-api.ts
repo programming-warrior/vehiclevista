@@ -45,6 +45,42 @@ export async function logoutUser() {
 }
 
 
+export async function getUserDetails() {
+  try {
+    const sessionId = localStorage.getItem("sessionId");
+    const response = await axios.get(`${BACKEND_URL}/api/user/`, {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || "Failed to fetch user details");
+  }
+}
+
+
+//change password
+export async function changePassword(oldPassword: string, newPassword: string) {
+  try {
+    const sessionId = localStorage.getItem("sessionId");
+    const response = await axios.patch(
+      `${BACKEND_URL}/api/user/change-password`,
+      { oldPassword, newPassword },
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${sessionId}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || "Failed to change password");
+  }
+}
+
 export async function validateSession() {
   try {
     const sessionId = localStorage.getItem("sessionId");

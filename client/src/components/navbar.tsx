@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Car, ChevronDown, Search, Menu, X, Settings, User } from "lucide-react";
+import { Car, ChevronDown, Search, Menu, X, Settings, User, LogOut } from "lucide-react";
 import SearchBar from "./search-bar";
 import { useState, useEffect, useRef } from "react";
 import { useUser, useHeroSectionSearch} from "@/hooks/use-store";
@@ -138,25 +138,25 @@ export default function Navbar() {
               {/* User Menu Dropdown */}
               {userMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border">
-                    <p 
+                    {/* <p 
 
                     className="uppercase font-semibold block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     onClick={() => setUserMenuOpen(false)}
                   >
                     {role}
-                  </p>
+                  </p> */}
                   <Link 
                     href="/profile" 
-                    className="block underline px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="flex font-semibold items-center gap-1  px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     onClick={() => setUserMenuOpen(false)}
                   >
-                    Profile
+                   <User className="text-xs"/> Profile
                   </Link>
                   <button 
                     onClick={handleLogout} 
-                    className="underline block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="flex font-semibold items-center gap-1 w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
-                    Logout
+                    <LogOut/> Logout
                   </button>
                 </div>
               )}
