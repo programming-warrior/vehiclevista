@@ -81,6 +81,42 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   }
 }
 
+export async function getUserBids(){
+  try{
+    const sessionId = localStorage.getItem("sessionId");
+    const response = await axios.get(`${BACKEND_URL}/api/user/bids`, {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
+    return response.data;
+  }
+  catch(e:any){
+    throw new Error(e.response?.data?.error || "Failed to fetch user bids")
+  }
+}
+
+export async function updateUserCardInfo(paymentMethodId:string){
+  try{
+    const sessionId = localStorage.getItem("sessionId");
+    const response = await axios.patch(
+      `${BACKEND_URL}/api/user/card-info`,
+      { paymentMethodId },
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${sessionId}`,
+        },
+      }
+    );
+    return response.data;
+  }
+  catch(e:any){
+    throw new Error(e.response?.data?.error || "Failed to fetch user bids")
+  }
+}
+
 export async function validateSession() {
   try {
     const sessionId = localStorage.getItem("sessionId");

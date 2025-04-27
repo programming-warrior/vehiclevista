@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { hashPassword, comparePasswords } from "../utils/auth";
 import { db } from "../db";
-import { users, bids } from "../../shared/schema";
+import { users, bids, vehicles, auctions } from "../../shared/schema";
 import { eq, or, sql } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
 import { userRegisterSchema } from "../../shared/zodSchema/userSchema";
@@ -47,6 +47,48 @@ userRouter.get("/", verifyToken, async (req, res) => {
   return res.status(200).json(dashboardData);
 });
 
+userRouter.get("/bids", verifyToken, async (req, res) => {
+  if (!req.userId) return res.status(401).json({ error: "No user found" });
+  const userId = req.userId;
+
+  //fetch total bids
+  const result = await db
+    .select({
+      bids,
+      auctions,
+      vehicles,
+    })
+    .from(bids)
+    .innerJoin(auctions, eq(auctions.id, bids.auctionId))
+    .innerJoin(vehicles, eq(vehicles.id, auctions.vehicleId))
+    .where(eq(bids.userId, userId))
+    .orderBy(sql`${bids.createdAt} DESC`);
+
+  const userbidHistory = result.map((row) => {
+    const { bids, auctions, vehicles } = row;
+    return {
+      id: bids.id,
+      auctionId: bids.auctionId,
+      auctionTitle: auctions.title,
+      auctionStatus: auctions.status,
+      vehicleId: auctions.vehicleId,
+      vehicleTitle: vehicles.title,
+      vehicleMake: vehicles.make,
+      vehicleModel: vehicles.model,
+      vehicleYear: vehicles.year,
+      bidAmount: bids.bidAmount,
+      createdAt: bids.createdAt
+        ? new Date(bids.createdAt).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        : null,
+    };
+  });
+  return res.status(200).json(userbidHistory);
+});
+
 userRouter.patch("/change-password", verifyToken, async (req, res) => {
   if (!req.userId) return res.status(401).json({ error: "No user found" });
   const userId = req.userId;
@@ -72,6 +114,20 @@ userRouter.patch("/change-password", verifyToken, async (req, res) => {
     .where(eq(users.id, userId));
 
   return res.status(200).json({ message: "Password updated successfully" });
+});
+
+userRouter.patch("/card-info", verifyToken, async (req, res) => {
+  if (!req.userId) return res.status(401).json({ error: "No user found" });
+  const userId = req.userId;
+  const { paymentMethodId } = req.body;
+  if (!paymentMethodId) return res.status(400).json({ error: "invalid input" });
+
+  await db
+    .update(users)
+    .set({ card: { paymentMethodId } })
+    .where(eq(users.id, userId));
+
+  return res.status(200).json({ message: "Card updated successfully" });
 });
 // Registration route
 userRouter.post("/register", async (req, res) => {

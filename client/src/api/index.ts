@@ -6,7 +6,9 @@ import {
   validateSession,
   logoutUser,
   getUserDetails,
-  changePassword
+  changePassword, 
+  getUserBids, 
+  updateUserCardInfo
 } from "./user-api";
 import {
   getVehicles,
@@ -96,4 +98,6 @@ export {
   logoutUser,
   getUserDetails,
   changePassword,
+  getUserBids, 
+  updateUserCardInfo
 };
