@@ -9,6 +9,7 @@ import { z } from "zod";
 import { verifyToken } from "../middleware/authMiddleware";
 import { parseCsvFile, extractVehicles } from "../utils/helper";
 import multer from "multer";
+import { vehicleTypes, vehicleTypesEnum } from "../../shared/schema";
 
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 
@@ -71,6 +72,57 @@ vehicleRouter.get("/get", async (req, res) => {
   }
 });
 
+
+vehicleRouter.get("/featured", async (req, res) => {
+  try {
+    console.log(req.query);
+    const {
+      name,
+      page = "1",
+      limit = "5",
+    } = req.query;
+
+    const conditions = [];
+
+    if (name && !/all/gi.test(name as string)) {
+      const typeValue = String(name).toLocaleLowerCase();
+      if (vehicleTypesEnum.enumValues.includes(typeValue as any)) {
+        conditions.push(eq(vehicles.type, typeValue as (typeof vehicleTypesEnum.enumValues)[number]));
+      }
+    }
+  
+    console.log(conditions);
+
+    const pageNum = parseInt(page as string, 10);
+    const pageSize = parseInt(limit as string, 10);
+    const offset = (pageNum - 1) * pageSize;
+
+    const result = await db
+      .select()
+      .from(vehicles)
+      .where(conditions.length ? and(...conditions) : undefined)
+      .limit(pageSize + 1)
+      .offset(offset);
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(vehicles)
+      .where(conditions.length ? and(...conditions) : undefined);
+
+    res.status(200).json({
+      featuredVehicles: result,
+      totalCount: count,
+      totalPages: Math.ceil(count / pageSize),
+      currentPage: pageNum,
+      hasNextPage: result.length > pageSize,
+    });
+  } catch (err: any) {
+    console.error("Error fetching vehicles:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching vehicle list", error: err.message });
+  }
+});
 
 vehicleRouter.get("/seller/listings", verifyToken, async (req, res) => {
   try {

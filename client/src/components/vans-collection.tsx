@@ -91,8 +91,8 @@ function CountdownTimer({ endTime }: { endTime: Date }) {
 
 export default function VansCollection() {
   return (
-    <section className="py-12">
-      <div className="container mx-auto px-4">
+    <section className="">
+      <div className="container mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">Vans Collection</h2>
           <Link href="/vans" className="text-sm bg-gray-100 px-4 py-1 rounded-full hover:bg-gray-200">

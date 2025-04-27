@@ -44,7 +44,7 @@ type AuctionResponse = {
   hasNextPage: boolean;
 };
 
-export default function LiveAuctionSection() {
+export default function LiveAuctionSection({ auctionVehicleType = "" }:any) {
   const { socket } = useWebSocket();
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +57,7 @@ export default function LiveAuctionSection() {
     const fetchAuctions = async () => {
       try {
         setLoading(true);
-        const data: AuctionResponse = await getActiveAuctions("");
+        const data: AuctionResponse = await getActiveAuctions("?type="+auctionVehicleType);
 
         setAuctions(data.auctions);
 
@@ -152,9 +152,9 @@ export default function LiveAuctionSection() {
     return <div className="text-center py-8">Loading auctions...</div>;
   }
 
-  if (error) {
-    return <div className="text-center py-8 text-red-500">{error}</div>;
-  }
+  // if (error) {
+  //   return <div className="text-center py-8 text-red-500">{error}</div>;
+  // }
 
   if (auctions.length === 0) {
     return (
@@ -165,17 +165,9 @@ export default function LiveAuctionSection() {
   }
 
   return (
-    <section className="py-12">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold">Live Auctions</h2>
-          <Link
-            href="/auctions"
-            className="text-sm bg-gray-100 px-4 py-1 rounded-full hover:bg-gray-200"
-          >
-            View All
-          </Link>
-        </div>
+    <section className="">
+      <div className="container mx-auto">
+   
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {auctions.map((auction, idx) => (

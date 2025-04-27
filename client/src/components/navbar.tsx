@@ -22,7 +22,8 @@ export default function Navbar() {
       await logoutUser()
       setUser({
         userId:"",
-        role:""
+        role:"", 
+        card_Verified: false,
       })
       localStorage.deleteItem('sessionId')
       toast({

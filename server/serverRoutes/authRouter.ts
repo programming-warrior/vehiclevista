@@ -18,7 +18,6 @@ authRouter.post("/register", async (req, res) => {
     return res.status(401).json({ error: "invalid input" });
 
   const user = zodParseResult.data;
-  console.log(user);
 
   // Check if user already exists with the same email or username in a single query
   const existingUser = await db
@@ -39,7 +38,6 @@ authRouter.post("/register", async (req, res) => {
   }
 
   const hashedPassword: string = await hashPassword(user.password);
-  console.log(hashedPassword);
   // If no existing user, proceed with registration
   let [savedUser] = await db
     .insert(users)
@@ -123,10 +121,8 @@ authRouter.delete('/logout',async (req,res)=>{
 // Add this route to your existing authRouter
 authRouter.get("/authenticate", async (req, res) => {
   try {
-    console.log(req.cookies)
     // const sessionId = req.cookies.sessionId;
     const sessionId = req.headers.authorization?.split(" ")[1] || req.cookies.sessionId;
-    console.log("sessionId" + sessionId);
     if (!sessionId) {
       return res.status(401).json({ error: "No session found" });
     }

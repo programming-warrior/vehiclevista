@@ -11,7 +11,8 @@ import {
   advanceVehicleSearch,
   uploadSingleVehicle,
   uploadBulkVehicle,
-  getSellerVehicleListings
+  getSellerVehicleListings, 
+  getFeaturedVehicles
 } from "./vehicle-api";
 import { 
     createAuction, 
@@ -79,6 +80,7 @@ export {
   uploadSingleVehicle,
   uploadBulkVehicle,
   getSellerVehicleListings,
+  getFeaturedVehicles,
 
   createAuction,
   getActiveAuctions,

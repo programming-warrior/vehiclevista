@@ -3,7 +3,7 @@ import { Link } from "wouter";
 
 export default function QualityBikesSection() {
   return (
-    <section className="py-12 bg-gradient-to-br from-gray-50 to-gray-100">
+    <section className=" bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           <div className="max-w-xl">

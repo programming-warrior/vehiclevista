@@ -17,6 +17,19 @@ export async function getVehicles(searchParams: string) {
 }
 
 
+export async function getFeaturedVehicles(searchParam: string) {
+  try {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/vehicles/featured?` + searchParam,
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error fetching vehicle list"
+    );
+  }
+}
+
 
 export async function getSellerVehicleListings(searchParams: string) {
   try {

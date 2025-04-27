@@ -10,6 +10,7 @@ import { verifyToken } from "../middleware/authMiddleware";
 import { parseCsvFile, extractVehicles } from "../utils/helper";
 import multer from "multer";
 import { auctionQueue, bidQueue } from "../worker/queue";
+import { vehicleTypesEnum } from "../../shared/schema";
 
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 
@@ -20,7 +21,7 @@ const auctionRouter = Router();
 auctionRouter.get("/get", async (req, res) => {
   try {
     console.log(req.query);
-    const { brand, model, page = "1", limit = "10" } = req.query;
+    const { brand, model, page = "1", limit = "10", type } = req.query;
 
     const conditions = [];
 
@@ -28,6 +29,9 @@ auctionRouter.get("/get", async (req, res) => {
       conditions.push(eq(vehicles.make, String(brand)));
     if (model && !/all/gi.test(model as string))
       conditions.push(eq(vehicles.model, String(model)));
+    if (type && !/all/gi.test(type as string) && vehicleTypesEnum.enumValues.includes(String(type).toLocaleLowerCase() as any)) {
+      conditions.push(eq(vehicles.type, String(type).toLocaleLowerCase() as (typeof vehicleTypesEnum.enumValues)[number]));
+    }
 
     console.log(conditions);
 

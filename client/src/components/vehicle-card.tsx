@@ -1,9 +1,9 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Gauge, Fuel, Settings } from "lucide-react";
+import { Gauge, Fuel, Settings, Heart } from "lucide-react";
 import { Link } from "wouter";
+import { useState } from "react";
 import type { Vehicle } from "@shared/schema";
 
 const conditionColors = {
@@ -20,74 +20,88 @@ const conditionLabels = {
   catN: "Cat N",
 } as const;
 
-export default function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
+export default function VehicleCard({ 
+  vehicle, 
+  className = ""
+}: { 
+  vehicle: Vehicle;
+  className?: string;
+}) {
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  const toggleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsFavorite(!isFavorite);
+  };
+
   return (
-    <Card className="group hover:shadow-lg transition-shadow">
+    <Card className={`overflow-hidden group hover:shadow-lg transition-all duration-300 ${className}`}>
       <Link href={`/vehicle/${vehicle.id}`}>
-        <CardContent className="p-0">
-          {/* Image with Category Badge and Bookmark */}
-          <AspectRatio ratio={16/9} className="relative">
-            <img 
-              src={vehicle.images[0]}
-              alt={vehicle.title}
-              className="object-cover w-full h-full rounded-t-lg"
-            />
-            <div className="absolute top-3 left-3">
-              <Badge 
-                className={`${conditionColors[vehicle.condition as keyof typeof conditionColors]} border-none font-medium px-3 py-1`}
-              >
-                {conditionLabels[vehicle.condition as keyof typeof conditionLabels]}
-              </Badge>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-3 right-3 bg-white/80 hover:bg-white rounded-md"
+        <div className="relative w-full aspect-video">
+          <img 
+            src={vehicle.images[0]}
+            alt={vehicle.title}
+            className="object-cover w-full h-full absolute inset-0 group-hover:scale-105 transition-transform duration-500"
+          />
+          <div className="absolute top-3 left-3">
+            <Badge 
+              className={`${conditionColors[vehicle.condition as keyof typeof conditionColors]} border-none font-bold px-3 py-1 shadow-md`}
             >
-              <span className="sr-only">Save to favorites</span>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-              </svg>
-            </Button>
-          </AspectRatio>
-
-          {/* Vehicle Details */}
-          <div className="p-4">
-            <h3 className="text-lg font-semibold mb-2">
-              {vehicle.title}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              {vehicle.description}
+              {conditionLabels[vehicle.condition as keyof typeof conditionLabels]}
+            </Badge>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-3 right-3 bg-white/90 hover:bg-white rounded-full shadow-md"
+            onClick={toggleFavorite}
+          >
+            <span className="sr-only">Save to favorites</span>
+            <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
+          </Button>
+          
+          <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-4">
+            <p className="text-white font-bold text-xl drop-shadow-md">
+              ${vehicle.price.toLocaleString()}
             </p>
+          </div>
+        </div>
 
-            {/* Vehicle Specifications */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="flex items-center gap-2">
-                <Gauge className="h-4 w-4 text-gray-500" />
-                <span className="text-sm">{vehicle.mileage.toLocaleString()} Miles</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Fuel className="h-4 w-4 text-gray-500" />
-                <span className="text-sm">{vehicle.fuelType}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Settings className="h-4 w-4 text-gray-500" />
-                <span className="text-sm">{vehicle.transmission}</span>
-              </div>
+        <CardContent className="p-4">
+          <h3 className="text-lg font-bold mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
+            {vehicle.title}
+          </h3>
+          <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+            {vehicle.description}
+          </p>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+              <Gauge className="h-5 w-5 text-gray-700 mb-1" />
+              <span className="text-xs font-medium text-center">{vehicle.mileage.toLocaleString()} mi</span>
+            </div>
+            <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+              <Fuel className="h-5 w-5 text-gray-700 mb-1" />
+              <span className="text-xs font-medium text-center">{vehicle.fuelType}</span>
+            </div>
+            <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
+              <Settings className="h-5 w-5 text-gray-700 mb-1" />
+              <span className="text-xs font-medium text-center">{vehicle.transmission}</span>
             </div>
           </div>
         </CardContent>
       </Link>
 
-      <CardFooter className="px-4 pb-4 pt-2">
-        <div className="w-full flex justify-between items-center">
-          <span className="text-xl font-bold">${vehicle.price.toLocaleString()}</span>
-          <Link href={`/vehicle/${vehicle.id}`}>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-              Buy →
-            </Button>
-          </Link>
-        </div>
+      <CardFooter className="px-4 pb-4 pt-0">
+        <Link href={`/vehicle/${vehicle.id}`} className="w-full">
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full group relative overflow-hidden">
+            <span className="relative z-10 flex items-center justify-center gap-2 group-hover:gap-3 transition-all duration-300">
+              View Details 
+              <span className="text-lg">→</span>
+            </span>
+            <span className="absolute inset-0 w-0 bg-blue-800 transition-all duration-300 group-hover:w-full"></span>
+          </Button>
+        </Link>
       </CardFooter>
     </Card>
   );
