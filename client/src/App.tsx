@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ProtectedRoute } from "@/lib/protected-route";
 import Footer from "@/components/footer";
 import Home from "@/pages/home";
-import Vehicle from "@/pages/vehicle";
+import VehiclePage from "@/pages/vehicle";
 import Search from "@/pages/search";
 import Login from "@/pages/login";
 import SignIn from "@/pages/signin";
@@ -128,12 +128,12 @@ export default function App() {
               <Route path="/register" component={Register} />
               <Route path="/signin" component={SignIn} />
               <Route path="/classified" component={Classified} />
-              <Route path="/vehicle/:id" component={Vehicle} />
+              <Route path="/vehicle/:id" component={VehiclePage} />
               <Route path="/search" component={Search} />
               <Route path="/makes" component={MakesPage} />
               <Route path="/makes/:brand" component={BrandPage} />
               <Route path="/auction" component={AuctionPage} />
-              <Route path="/vehicles" component={VehiclesList} />
+              <Route path="/vehicle" component={VehiclesList} />
 
               <Route path="/auctions/:id" component={AuctionIdPage} />
 

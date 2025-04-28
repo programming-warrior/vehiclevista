@@ -6,6 +6,8 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import RedisClientSingleton from "./utils/redis";
 import cookieParser from "cookie-parser";
+import { flushMetrics } from "./lib/cron-jobs/flush-metrics";
+import cron from "node-cron";
 dotenv.config();
 
 import authRouter from "./serverRoutes/authRouter";
@@ -150,7 +152,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -159,9 +161,20 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
   const redisClient = await RedisClientSingleton.getRedisClient();
+
+  cron.schedule("*/5 * * * *", async () => {
+    console.log("Flushing metrics...");
+    try {
+      await flushMetrics();
+      console.log("Metrics flushed successfully!");
+    } catch (error) {
+      console.error("Error flushing metrics:", error);
+    }
+  });
+
   // ALWAYS serve the app on port 5000 and bind to all interfaces
   const port = 5000;
-  server.listen(
+  app.listen(
     {
       port,
     },

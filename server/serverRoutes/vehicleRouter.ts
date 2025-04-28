@@ -17,7 +17,7 @@ const upload = multer();
 
 const vehicleRouter = Router();
 
-vehicleRouter.get("/get", async (req, res) => {
+vehicleRouter.get("/", async (req, res) => {
   try {
     console.log(req.query);
     const {
@@ -72,25 +72,116 @@ vehicleRouter.get("/get", async (req, res) => {
   }
 });
 
+vehicleRouter.get("/:vehicleId", async (req, res) => {
+  try {
+    const { vehicleId } = req.params;
+    if (!vehicleId)
+      return res.status(400).json({ error: "Vehicle ID is required" });
+    const vehicle = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.id, Number(vehicleId)))
+      .limit(1)
+      .execute()
+      .then((rows) => rows[0]);
+    if (!vehicle) {
+      return res.status(404).json({ error: "Vehicle not found" });
+    }
+    res.status(200).json(vehicle);
+  } catch (err: any) {
+    console.error("Error fetching vehicles:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching vehicle list", error: err.message });
+  }
+});
+
+vehicleRouter.post('/increase-views', async (req, res) => {
+  try {
+    const { vehicleId } = req.body;
+    if (!vehicleId) {
+      return res.status(400).json({ error: "Vehicle ID is required" });
+    }
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+    const userAgent = req.headers["user-agent"];
+  
+    console.log("IP:", ip);
+    console.log("User Agent:", userAgent);
+    if(!ip || !userAgent) {
+      return res.status(400).json({ error: "IP or User Agent is missing" });
+    }
+    const redisClient = await RedisClientSingleton.getRedisClient()
+    const alreadyViewed= await redisClient.get(`vehicle:${vehicleId}:views:${ip}`);
+    if(alreadyViewed){
+      return res.status(200).json({ message: "Already viewed recently" });
+    }
+    await Promise.all([
+      redisClient.incr(`vehicle:${vehicleId}:views`),
+      redisClient.set(`vehicle:${vehicleId}:views:${ip}`, "1", "EX", 1 * 60) 
+    ]);
+    res.status(201).json({ message: "success" });
+  }
+  catch (err: any) {
+    console.error("Error updating views count:", err);
+    res
+      .status(500)
+      .json({ message: "Error updating views count" });
+  }
+});
+
+
+vehicleRouter.post('/increase-clicks', async (req, res) => {
+  try {
+    const { vehicleId } = req.body;
+    if (!vehicleId) {
+      return res.status(400).json({ error: "Vehicle ID is required" });
+    }
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+    const userAgent = req.headers["user-agent"];
+  
+    console.log("IP:", ip);
+    console.log("User Agent:", userAgent);
+    if(!ip || !userAgent) {
+      return res.status(400).json({ error: "IP or User Agent is missing" });
+    }
+    const redisClient = await RedisClientSingleton.getRedisClient()
+    const alreadyClicked = await redisClient.get(`vehicle:${vehicleId}:clicks:${ip}`);
+    if(alreadyClicked){
+      return res.status(200).json({ message: "Already clicked recently" });
+    }
+    await Promise.all([
+      redisClient.incr(`vehicle:${vehicleId}:clicks`),
+      redisClient.set(`vehicle:${vehicleId}:clicks:${ip}`, "1", "EX", 1 * 60) 
+    ]);
+    res.status(201).json({ message: "success" });
+  }
+  catch (err: any) {
+    console.error("Error updating clicks count:", err);
+    res
+      .status(500)
+      .json({ message: "Error updating clicks count" });
+  }
+});
 
 vehicleRouter.get("/featured", async (req, res) => {
   try {
     console.log(req.query);
-    const {
-      name,
-      page = "1",
-      limit = "5",
-    } = req.query;
+    const { name, page = "1", limit = "5" } = req.query;
 
     const conditions = [];
 
     if (name && !/all/gi.test(name as string)) {
       const typeValue = String(name).toLocaleLowerCase();
       if (vehicleTypesEnum.enumValues.includes(typeValue as any)) {
-        conditions.push(eq(vehicles.type, typeValue as (typeof vehicleTypesEnum.enumValues)[number]));
+        conditions.push(
+          eq(
+            vehicles.type,
+            typeValue as (typeof vehicleTypesEnum.enumValues)[number]
+          )
+        );
       }
     }
-  
+
     console.log(conditions);
 
     const pageNum = parseInt(page as string, 10);
@@ -126,16 +217,11 @@ vehicleRouter.get("/featured", async (req, res) => {
 
 vehicleRouter.get("/seller/listings", verifyToken, async (req, res) => {
   try {
-    if(req.userId === undefined || req.role !== "seller"){
+    if (req.userId === undefined || req.role !== "seller") {
       return res.status(403).json({ error: "Unauthorized" });
     }
     console.log(req.query);
-    const {
-      brand,
-      page = "1",
-      limit = "10",
-      sort
-    } = req.query;
+    const { brand, page = "1", limit = "10", sort } = req.query;
 
     const conditions = [];
 
@@ -143,7 +229,7 @@ vehicleRouter.get("/seller/listings", verifyToken, async (req, res) => {
       conditions.push(eq(vehicles.make, String(brand)));
 
     console.log(conditions);
-    conditions.push(eq(vehicles.sellerId, req.userId as number))
+    conditions.push(eq(vehicles.sellerId, req.userId as number));
 
     const pageNum = parseInt(page as string, 10);
     const pageSize = parseInt(limit as string, 10);
@@ -159,8 +245,8 @@ vehicleRouter.get("/seller/listings", verifyToken, async (req, res) => {
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(vehicles)
-      .where(conditions.length ? and(...conditions) : undefined)
-    
+      .where(conditions.length ? and(...conditions) : undefined);
+
     res.status(200).json({
       vehicles: result,
       totalCount: count,
@@ -175,7 +261,6 @@ vehicleRouter.get("/seller/listings", verifyToken, async (req, res) => {
       .json({ message: "Error fetching vehicle list", error: err.message });
   }
 });
-
 
 vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
   if (!req.userId || req.role !== "seller") {
@@ -217,7 +302,7 @@ vehicleRouter.post(
     if (!req.file || !req.file.buffer || req.file.mimetype !== "text/csv") {
       return res.status(400).json({ error: "No CSV file uploaded" });
     }
- 
+
     try {
       const parsedData: string[][] = await parseCsvFile(req.file.buffer);
       console.log(parsedData);
@@ -231,13 +316,11 @@ vehicleRouter.post(
           .status(400)
           .json({ error: "No valid vehicle data found in CSV" });
       }
-      const validVehicles = uploadedVehicles.filter(
-        (v) =>{
-          const result = vehicleUploadSchema.safeParse(v)
-          console.log(result.error);
-          return result.success
-        }
-      );
+      const validVehicles = uploadedVehicles.filter((v) => {
+        const result = vehicleUploadSchema.safeParse(v);
+        console.log(result.error);
+        return result.success;
+      });
 
       if (validVehicles.length === 0) {
         return res
@@ -249,26 +332,28 @@ vehicleRouter.post(
         sellerId: req.userId,
         category: "classified",
       }));
-      const registrationNumbers = validVehicles.map(v => v.registration_num);
-      
+      const registrationNumbers = validVehicles.map((v) => v.registration_num);
+
       // Check if any registration numbers already exist in the database
       const existingVehicles = await db
         .select({ registration_num: vehicles.registration_num })
         .from(vehicles)
         .where(inArray(vehicles.registration_num, registrationNumbers));
-      
+
       if (existingVehicles.length > 0) {
-        const duplicates = existingVehicles.map(v => v.registration_num).join(", ");
-        return res.status(409).json({ 
-          error: "Duplicate registration numbers found", 
-          duplicates 
+        const duplicates = existingVehicles
+          .map((v) => v.registration_num)
+          .join(", ");
+        return res.status(409).json({
+          error: "Duplicate registration numbers found",
+          duplicates,
         });
       }
       await db.insert(vehicles).values(vehilcesWithOtherAttributes);
       return res.status(200).json({ message: "vehicle uploaded successfully" });
-    } catch (e:any) {
+    } catch (e: any) {
       console.log(e);
-      if(e.message.includes('Missing')){
+      if (e.message.includes("Missing")) {
         return res.status(400).json({ error: e.message });
       }
       return res.status(500).json({ error: "Internal server error" });

@@ -1,10 +1,11 @@
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Gauge, Fuel, Settings, Heart } from "lucide-react";
 import { Link } from "wouter";
-import { useState } from "react";
 import type { Vehicle } from "@shared/schema";
+import { incrementVehicleClicks } from "@/api";
 
 const conditionColors = {
   clean: "bg-green-100 text-green-800",
@@ -20,34 +21,63 @@ const conditionLabels = {
   catN: "Cat N",
 } as const;
 
-export default function VehicleCard({ 
-  vehicle, 
-  className = ""
-}: { 
+export default function VehicleCard({
+  vehicle,
+  className = "",
+}: {
   vehicle: Vehicle;
   className?: string;
 }) {
   const [isFavorite, setIsFavorite] = useState(false);
+  const VehicleCardRef = useRef<HTMLDivElement>(null);
 
   const toggleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsFavorite(!isFavorite);
   };
 
+  useEffect(() => {
+    const handleClick = async () => {
+      try {
+        await incrementVehicleClicks(vehicle.id.toString());
+      } catch (error) {
+        console.error("Error incrementing vehicle clicks:", error);
+      }
+    };
+
+    if (!VehicleCardRef.current) return;
+
+    VehicleCardRef.current.addEventListener("click", handleClick);
+    return () => {
+      VehicleCardRef.current?.removeEventListener("click", handleClick);
+    };
+  }, [VehicleCardRef]);
+
   return (
-    <Card className={`overflow-hidden group hover:shadow-lg transition-all duration-300 ${className}`}>
+    <Card
+      ref={VehicleCardRef}
+      className={`overflow-hidden group hover:shadow-lg transition-all duration-300 ${className}`}
+    >
       <Link href={`/vehicle/${vehicle.id}`}>
         <div className="relative w-full aspect-video">
-          <img 
+          <img
             src={vehicle.images[0]}
             alt={vehicle.title}
             className="object-cover w-full h-full absolute inset-0 group-hover:scale-105 transition-transform duration-500"
           />
           <div className="absolute top-3 left-3">
-            <Badge 
-              className={`${conditionColors[vehicle.condition as keyof typeof conditionColors]} border-none font-bold px-3 py-1 shadow-md`}
+            <Badge
+              className={`${
+                conditionColors[
+                  vehicle.condition as keyof typeof conditionColors
+                ]
+              } border-none font-bold px-3 py-1 shadow-md`}
             >
-              {conditionLabels[vehicle.condition as keyof typeof conditionLabels]}
+              {
+                conditionLabels[
+                  vehicle.condition as keyof typeof conditionLabels
+                ]
+              }
             </Badge>
           </div>
           <Button
@@ -57,9 +87,13 @@ export default function VehicleCard({
             onClick={toggleFavorite}
           >
             <span className="sr-only">Save to favorites</span>
-            <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
+            <Heart
+              className={`w-5 h-5 ${
+                isFavorite ? "fill-red-500 text-red-500" : "text-gray-700"
+              }`}
+            />
           </Button>
-          
+
           <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-4">
             <p className="text-white font-bold text-xl drop-shadow-md">
               ${vehicle.price.toLocaleString()}
@@ -78,15 +112,21 @@ export default function VehicleCard({
           <div className="grid grid-cols-3 gap-2">
             <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
               <Gauge className="h-5 w-5 text-gray-700 mb-1" />
-              <span className="text-xs font-medium text-center">{vehicle.mileage.toLocaleString()} mi</span>
+              <span className="text-xs font-medium text-center">
+                {vehicle.mileage.toLocaleString()} mi
+              </span>
             </div>
             <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
               <Fuel className="h-5 w-5 text-gray-700 mb-1" />
-              <span className="text-xs font-medium text-center">{vehicle.fuelType}</span>
+              <span className="text-xs font-medium text-center">
+                {vehicle.fuelType}
+              </span>
             </div>
             <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
               <Settings className="h-5 w-5 text-gray-700 mb-1" />
-              <span className="text-xs font-medium text-center">{vehicle.transmission}</span>
+              <span className="text-xs font-medium text-center">
+                {vehicle.transmission}
+              </span>
             </div>
           </div>
         </CardContent>
@@ -96,7 +136,7 @@ export default function VehicleCard({
         <Link href={`/vehicle/${vehicle.id}`} className="w-full">
           <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full group relative overflow-hidden">
             <span className="relative z-10 flex items-center justify-center gap-2 group-hover:gap-3 transition-all duration-300">
-              View Details 
+              View Details
               <span className="text-lg">→</span>
             </span>
             <span className="absolute inset-0 w-0 bg-blue-800 transition-all duration-300 group-hover:w-full"></span>

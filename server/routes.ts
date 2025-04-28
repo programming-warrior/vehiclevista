@@ -40,7 +40,7 @@ export async function registerRoutes(app: Express) {
   console.log("HTTP server created for development");
 
   // Set up authentication routes and middleware
-  await setupAuth(app);
+  // await setupAuth(app);
 
   // Get all vehicles with optional category filter
   // app.get("/api/vehicles", async (req, res) => {
