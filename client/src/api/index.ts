@@ -25,6 +25,10 @@ import {
     placeLiveBid, 
     getBidsForAuction
 } from "./auction-api";
+import { 
+  getPerformanceMetrics,
+  getTopListings
+ } from "./admin-api/analytics-api";
 
 
 async function uploadToPresignedUrl(file: File, presignedUrl: string): Promise<string> {
@@ -99,5 +103,8 @@ export {
   getUserDetails,
   changePassword,
   getUserBids, 
-  updateUserCardInfo
+  updateUserCardInfo, 
+
+  getPerformanceMetrics,
+  getTopListings
 };

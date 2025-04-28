@@ -110,6 +110,10 @@ export const auctions = pgTable("auctions", {
   currentBid: real("current_bid").default(0),
   totalBids: integer("total_bids").default(0),
   createdAt: timestamp("created_at").defaultNow(),
+  sellerId: integer("seller_id").references(() => users.id),
+  views: integer("views").default(0),
+  clicks: integer("clicks").default(0),
+  leads: integer("leads").default(0),
 });
 
 //Bids table

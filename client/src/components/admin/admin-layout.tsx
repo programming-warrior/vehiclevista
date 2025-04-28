@@ -11,10 +11,12 @@ import {
   Wrench,
   PackageOpen,
   Tag,
-  PiggyBank
+  PiggyBank,
+  Database,
 } from "lucide-react";
 import { useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-store";
+// import { useAuth } from "@/hooks/use-auth";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -22,19 +24,20 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
-  const { user } = useAuth();
+  const { userId, role } = useUser();
 
   // Redirect if not admin
   useEffect(() => {
-    if (user && user.role !== 'admin') {
+    if ( role !== 'admin') {
       window.location.href = '/';
     }
-  }, [user]);
+  }, [role, userId]);
 
   const navItems = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/vehicles", label: "Vehicles", icon: Car },
     { href: "/admin/users", label: "Users", icon: Users },
+    { href: "/admin/blacklist", label: "PUblic BlackList", icon: Database },
     { href: "/admin/settings", label: "Settings", icon: Settings },
     { href: "/admin/auctions", label: "Auctions", icon: Gavel },
     { href: "/admin/events", label: "Events", icon: Calendar },

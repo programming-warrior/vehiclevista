@@ -46,6 +46,7 @@ import AuctionIdPage from "./pages/auction/auction-id";
 import { useToast } from "./hooks/use-toast";
 import { WEBSOCKET_URL } from "./lib/constants";
 import UserProfile from "@/pages/user-profile";
+import AdminPublicBlacklist from "./pages/admin/public-blacklist";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -139,6 +140,9 @@ export default function App() {
               {/* Admin Routes */}
               <Route path="/admin">
                 <ProtectedRoute component={AdminDashboard} adminOnly />
+              </Route>
+              <Route path="/admin/blacklist">
+                <ProtectedRoute component={AdminPublicBlacklist} adminOnly />
               </Route>
               <Route path="/admin/vehicles">
                 <ProtectedRoute component={AdminVehicles} adminOnly />

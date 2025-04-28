@@ -1,21 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminLayout from "@/components/admin/admin-layout";
 import BulkUpload from "@/components/admin/bulk-upload";
 import PerformanceDashboard from "@/components/admin/performance-dashboard";
 import PackageSelector from "@/components/packages/package-selector";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import TopListing from "@/components/admin/top-listing";
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
-  const isTraderOrGarage = user?.role === "trader" || user?.role === "garage";
+  // const { user } = useAuth();
+  const isTraderOrGarage = false;
 
   return (
     <AdminLayout>
       <div className="space-y-8">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         
-        <Tabs defaultValue="performance">
+        {/* <Tabs defaultValue="performance">
           <TabsList>
             <TabsTrigger value="performance">Performance</TabsTrigger>
             {isTraderOrGarage && (
@@ -24,11 +25,13 @@ export default function AdminDashboard() {
                 <TabsTrigger value="packages">Packages</TabsTrigger>
               </>
             )}
-          </TabsList>
+          </TabsList> */}
 
-          <TabsContent value="performance" className="space-y-8">
+          {/* <TabsContent value="performance" className="space-y-8"> */}
             <PerformanceDashboard />
-          </TabsContent>
+          
+          <TopListing/>
+          {/* </TabsContent>
 
           {isTraderOrGarage && (
             <>
@@ -41,7 +44,7 @@ export default function AdminDashboard() {
               </TabsContent>
             </>
           )}
-        </Tabs>
+        </Tabs> */}
       </div>
     </AdminLayout>
   );

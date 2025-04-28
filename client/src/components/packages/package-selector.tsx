@@ -11,12 +11,11 @@ import {
 } from "@/components/ui/card";
 import { Check, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { Package, UserPackage } from "@shared/schema";
 
 export default function PackageSelector() {
-  const { user } = useAuth();
+  const user = null; 
   const { toast } = useToast();
   const [selectedVehicleValue, setSelectedVehicleValue] = useState<number>(0);
 
