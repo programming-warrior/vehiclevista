@@ -1,3 +1,4 @@
+import { create } from "domain";
 import { pgTable, text, serial, boolean, real, integer, timestamp, jsonb, foreignKey, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -66,6 +67,43 @@ export const users = pgTable("users", {
   usedAllowance: integer("used_allowance").default(0),
   performanceTracking: jsonb("performance_tracking").default("{}"), // Add performance tracking field
   card : jsonb("card").default("{}")
+});
+
+export const lisitngReport = pgTable("listing_report", {
+  id: serial("id").primaryKey(),
+  reported_vehilce: integer("vehicle_id").references(() => vehicles.id),
+  reported_auction: integer("auction_id").references(() => auctions.id),
+  reported_by: integer("user_id").notNull().references(() => users.id),
+  description: text("reason").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  //currently don't know where to use them
+  status: text("status").notNull().default("pending"), // pending, resolved, rejected
+  resolvedAt: timestamp("resolved_at"),
+  resolution: text("resolution"),
+});
+
+export const userReport = pgTable("user_report", {
+  id: serial("id").primaryKey(),  
+  reported_by: integer("user_id").notNull().references(() => users.id),
+  reported_for: integer("reported_for").notNull().references(() => users.id),
+  description: text("reason").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  //currently don't know where to use them
+  status: text("status").notNull().default("pending"), // pending, resolved, rejected
+  resolvedAt: timestamp("resolved_at"),
+  resolution: text("resolution"),
+});
+
+export const blacklistStatusEnum = pgEnum("status", ["active", "inactive"]);
+export const blacklistCreatedByEnum = pgEnum("created_by", ["admin", "system"]);
+export const blacklist_users = pgTable("blacklist_users", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+  reason: text("reason").notNull(),
+  status: blacklistStatusEnum().notNull().default("active"), 
+  createdBy: blacklistCreatedByEnum().notNull().default("admin"),
+  adminId: integer("created_by").notNull().references(() => users.id),
 });
 
 // Update packages table with new structure
