@@ -32,6 +32,7 @@ import { useUser } from "@/hooks/use-store";
 import { useToast } from "@/hooks/use-toast";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.bubble.css";
+import ReportDialog from "@/components/ui/report-dialog";
 
 export default function AuctionIdPage() {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +43,7 @@ export default function AuctionIdPage() {
   const [bidError, setBidError] = useState("");
   const { userId, role, card_verified } = useUser();
   const { toast } = useToast();
+  const [reportOpen, setReportOpen] = useState(false);
 
   const [bids, setBids] = useState<any>([]);
 
@@ -289,6 +291,15 @@ export default function AuctionIdPage() {
                       </span>
                     </div>
                   </div>
+                  <Button
+                    variant="destructive"
+                    className="mt-2 w-full"
+                    size="lg"
+                    onClick={() => setReportOpen(true)}
+                  >
+                    <Info className="h-4 w-4 mr-2" />
+                    Report Auction
+                  </Button>
                 </div>
 
                 {/* Bid history card */}
@@ -456,6 +467,12 @@ export default function AuctionIdPage() {
           </div>
         </DialogContent>
       </Dialog>
+      <ReportDialog
+        isOpen={reportOpen}
+        onOpenChange={setReportOpen}
+        type="auction"
+        targetId={id}
+      />
     </div>
   );
 }

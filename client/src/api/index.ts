@@ -32,6 +32,11 @@ import {
   getPerformanceMetrics,
   getTopListings
  } from "./admin-api/analytics-api";
+ import { getUsers, blacklistUser, unBlacklistUser } from "./admin-api/user-api";
+ 
+ import { getListingReports } from "./admin-api/repots-api";
+
+ import { uploadUserReport, uploadListingReport } from "./report-api";
 
 
 async function uploadToPresignedUrl(file: File, presignedUrl: string): Promise<string> {
@@ -112,5 +117,12 @@ export {
   updateUserCardInfo, 
 
   getPerformanceMetrics,
-  getTopListings
+  getTopListings, 
+  getListingReports,
+  getUsers,
+  blacklistUser,
+  unBlacklistUser,
+
+  uploadListingReport,
+  uploadUserReport,
 };

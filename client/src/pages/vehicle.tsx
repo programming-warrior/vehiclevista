@@ -1,85 +1,40 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "wouter";
-import { 
-  Heart, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  Gauge, 
-  Tag, 
-  Palette, 
-  Info, 
-  MessageSquare, 
-  Check 
+import {
+  Heart,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Gauge,
+  Tag,
+  Palette,
+  Info,
+  MessageSquare,
+  Check,
 } from "lucide-react";
 import { getVehicleById } from "@/api/vehicle-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import ImageGallery from "@/components/image-gallery";
 import { incrementVehicleViews } from "@/api/vehicle-api";
+import ReportDialog from "@/components/ui/report-dialog";
 
-// New image gallery component with zoom functionality
-// const ImageGallery = ({ images, alt }) => {
-//   const [activeIndex, setActiveIndex] = useState(0);
-//   const [zoomOpen, setZoomOpen] = useState(false);
-  
-//   const nextImage = () => {
-//     setActiveIndex((prev) => (prev + 1) % images.length);
-//   };
-  
-//   const prevImage = () => {
-//     setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
-//   };
-
-//   return (
-//     <div className="relative">
-//       <div 
-//         className="aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden cursor-zoom-in" 
-//         onClick={() => setZoomOpen(true)}
-//       >
-//         {images && images.length > 0 ? (
-//           <img 
-//             src={images[activeIndex]} 
-//             alt={alt || "Vehicle image"} 
-//             className="w-full h-full object-cover"
-//           />
-//         ) : (
-//           <div className="w-full h-full flex items-center justify-center text-gray-500">
-//             No images available
-//           </div>
-//         )}
-//       </div>
-      
-//       {images && images.length > 1 && (
-//         <div className="flex mt-4 gap-2 overflow-x-auto pb-2">
-//           {images.map((img, idx) => (
-//             <div 
-//               key={idx}
-//               onClick={() => setActiveIndex(idx)}
-//               className={`w-24 h-24 flex-shrink-0 rounded-md overflow-hidden cursor-pointer border-2 ${
-//                 idx === activeIndex ? "border-primary" : "border-transparent"
-//               }`}
-//             >
-//               <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
-//             </div>
-//           ))}
-//         </div>
-//       )}
-
-
-//     </div>
-//   );
-// };
 
 export default function VehiclePage() {
   const { id } = useParams<{ id: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [vehicle, setVehicle] = useState<any>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     const fetchVehicle = async () => {
@@ -130,14 +85,13 @@ export default function VehiclePage() {
           {/* Left column - Gallery and details */}
           <div className="lg:col-span-2">
             {/* Image Gallery */}
-            {vehicle?.images &&
-                vehicle.images.length > 0 ? (
-                  <ImageGallery images={vehicle.images} />
-                ) : (
-                  <div className="aspect-[4/3] bg-gray-200 flex items-center justify-center rounded-md mb-6">
-                    <p>No images available</p>
-                  </div>
-                )}
+            {vehicle?.images && vehicle.images.length > 0 ? (
+              <ImageGallery images={vehicle.images} />
+            ) : (
+              <div className="aspect-[4/3] bg-gray-200 flex items-center justify-center rounded-md mb-6">
+                <p>No images available</p>
+              </div>
+            )}
             <div className="mt-8">
               <div className="flex justify-between items-start flex-wrap gap-4">
                 <div>
@@ -147,7 +101,7 @@ export default function VehiclePage() {
                     <span>{vehicle.location}</span>
                   </div>
                 </div>
-                
+
                 <div className="text-3xl font-bold text-primary">
                   £{vehicle.price.toLocaleString()}
                   {vehicle.negotiable && (
@@ -157,24 +111,29 @@ export default function VehiclePage() {
                   )}
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-2 mt-6">
                 <Badge variant="secondary">{vehicle.year}</Badge>
-                <Badge variant="secondary">{vehicle.mileage.toLocaleString()} miles</Badge>
+                <Badge variant="secondary">
+                  {vehicle.mileage.toLocaleString()} miles
+                </Badge>
                 <Badge variant="secondary">{vehicle.transmission}</Badge>
                 <Badge variant="secondary">{vehicle.fuelType}</Badge>
                 <Badge variant="secondary">{vehicle.bodyType}</Badge>
                 <Badge variant="secondary">{vehicle.color}</Badge>
                 <Badge variant="secondary">{vehicle.condition}</Badge>
                 {vehicle.openToPX && (
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-50 text-blue-700 border-blue-200"
+                  >
                     <Check size={14} className="mr-1" /> Open to Part Exchange
                   </Badge>
                 )}
               </div>
-              
+
               <Separator className="my-6" />
-              
+
               {/* Vehicle specifications */}
               <div className="grid md:grid-cols-2 gap-6 mb-8">
                 <div className="bg-gray-50 p-4 rounded-lg">
@@ -182,7 +141,7 @@ export default function VehiclePage() {
                     <Info size={18} className="mr-2" />
                     Vehicle Details
                   </h2>
-                  
+
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
@@ -191,7 +150,7 @@ export default function VehiclePage() {
                       </div>
                       <span className="font-medium">{vehicle.make}</span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
                         <Tag size={16} className="mr-2" />
@@ -199,7 +158,7 @@ export default function VehiclePage() {
                       </div>
                       <span className="font-medium">{vehicle.model}</span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
                         <Calendar size={16} className="mr-2" />
@@ -207,15 +166,17 @@ export default function VehiclePage() {
                       </div>
                       <span className="font-medium">{vehicle.year}</span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
                         <Gauge size={16} className="mr-2" />
                         <span>Mileage</span>
                       </div>
-                      <span className="font-medium">{vehicle.mileage.toLocaleString()} miles</span>
+                      <span className="font-medium">
+                        {vehicle.mileage.toLocaleString()} miles
+                      </span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
                         <Palette size={16} className="mr-2" />
@@ -225,13 +186,13 @@ export default function VehiclePage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h2 className="text-lg font-semibold mb-4 flex items-center">
                     <Info size={18} className="mr-2" />
                     Additional Information
                   </h2>
-                  
+
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
@@ -240,7 +201,7 @@ export default function VehiclePage() {
                       </div>
                       <span className="font-medium">{vehicle.bodyType}</span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
                         <Tag size={16} className="mr-2" />
@@ -248,44 +209,52 @@ export default function VehiclePage() {
                       </div>
                       <span className="font-medium">{vehicle.fuelType}</span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
                         <Tag size={16} className="mr-2" />
                         <span>Transmission</span>
                       </div>
-                      <span className="font-medium">{vehicle.transmission}</span>
+                      <span className="font-medium">
+                        {vehicle.transmission}
+                      </span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
                         <Tag size={16} className="mr-2" />
                         <span>Registration</span>
                       </div>
-                      <span className="font-medium">{vehicle.registration_num}</span>
+                      <span className="font-medium">
+                        {vehicle.registration_num}
+                      </span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
                         <Tag size={16} className="mr-2" />
                         <span>Category</span>
                       </div>
-                      <span className="font-medium capitalize">{vehicle.category}</span>
+                      <span className="font-medium capitalize">
+                        {vehicle.category}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               {/* Description */}
               <div>
                 <h2 className="text-xl font-semibold mb-4">Description</h2>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-gray-700 whitespace-pre-line">{vehicle.description}</p>
+                  <p className="text-gray-700 whitespace-pre-line">
+                    {vehicle.description}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-          
+
           {/* Right column - Contact */}
           <div className="lg:col-span-1">
             <Card className="sticky top-6">
@@ -294,35 +263,46 @@ export default function VehiclePage() {
                   <MapPin className="h-4 w-4" />
                   {vehicle.location}
                 </div>
-                
+
                 <div className="space-y-4">
                   {/* <Button className="w-full" size="lg">
                     <Phone className="h-4 w-4 mr-2" />
                     Show Phone Number
                   </Button> */}
-                  
-                  <Button 
-                    variant="outline" 
-                    className="w-full" 
+
+                  <Button
+                    variant="outline"
+                    className="w-full"
                     size="lg"
                     onClick={() => setContactOpen(true)}
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Contact Seller
                   </Button>
-                  
+
                   <Button variant="secondary" className="w-full" size="lg">
                     <Heart className="h-4 w-4 mr-2" />
                     Save Vehicle
                   </Button>
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    size="lg"
+                    onClick={() => setReportOpen(true)}
+                  >
+                    <Info className="h-4 w-4 mr-2" />
+                    Report Vehicle
+                  </Button>
                 </div>
-                
+
                 <div className="mt-6 pt-6 border-t">
                   <h3 className="font-medium mb-2">Listing Information</h3>
                   <div className="text-sm space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Listed</span>
-                      <span>{new Date(vehicle.createdAt).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(vehicle.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                     {/* <div className="flex justify-between">
                       <span className="text-gray-600">Views</span>
@@ -339,23 +319,24 @@ export default function VehiclePage() {
           </div>
         </div>
       </div>
-      
+
+      <ReportDialog isOpen={reportOpen} onOpenChange={setReportOpen} type="vehicle" targetId={id}/>
       {/* Contact Dialog */}
       <Dialog open={contactOpen} onOpenChange={setContactOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Contact Seller</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Your Message</label>
-              <textarea 
+              <textarea
                 className="w-full min-h-32 rounded-md border border-gray-300 p-3"
                 placeholder="I'm interested in this vehicle. Is it still available?"
               />
             </div>
-            
+
             <Button className="w-full">
               <MessageSquare className="h-4 w-4 mr-2" />
               Send Message

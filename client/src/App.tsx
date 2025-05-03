@@ -133,7 +133,7 @@ export default function App() {
               <Route path="/makes" component={MakesPage} />
               <Route path="/makes/:brand" component={BrandPage} />
               <Route path="/auction" component={AuctionPage} />
-              <Route path="/vehicle" component={VehiclesList} />
+              <Route path="/vehicles" component={VehiclesList} />
 
               <Route path="/auctions/:id" component={AuctionIdPage} />
 

@@ -1,8 +1,18 @@
 import { Router } from "express";
 import { hashPassword, comparePasswords } from "../utils/auth";
 import { db } from "../db";
-import { users, bids, vehicles, auctions } from "../../shared/schema";
-import { eq, or, sql, sum } from "drizzle-orm";
+import {
+  users,
+  bids,
+  vehicles,
+  auctions,
+  lisitngReport,
+} from "../../shared/schema";
+import { eq, or, sql, sum, aliasedTable,like , isNotNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+// import { notEq } from "drizzle-orm/pg-core";
+
+
 
 import { verifyToken } from "../middleware/authMiddleware";
 
@@ -231,6 +241,326 @@ adminRouter.get("/analytics/top-listings", verifyToken, async (req, res) => {
   }
 
   return res.status(200).json(topListings);
+});
+
+
+adminRouter.put('/black-list/:userId', verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "admin")  
+    return res.status(401).json({ error: "unauthorized access" });
+  let { userId } : any = req.params;
+  const { reason } = req.body;
+  userId = parseInt(userId as string);
+  
+  if (!userId || !reason || isNaN(userId)) {
+    return res.status(400).json({ error: "missing required fields" });
+  }
+  const [user] = await db
+    .update(users)
+    .set({
+      status: "blacklisted",
+      blacklistReason: reason,
+    })
+    .where(eq(users.id, userId))
+    .returning()
+    .execute();
+  if (!user) {
+    return res.status(404).json({ error: "user not found" });
+  }
+  return res.status(200).json({
+    message: "user blacklisted successfully",
+    userId: user.id,
+  });
+});
+
+
+adminRouter.put('/un-black-list/:userId', verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "admin")  
+    return res.status(401).json({ error: "unauthorized access" });
+  let { userId } : any = req.params;
+  const { reason } = req.body;
+  userId = parseInt(userId as string);
+  
+  if (!userId  || isNaN(userId)) {
+    return res.status(400).json({ error: "missing required fields" });
+  }
+  const [user] = await db
+    .update(users)
+    .set({
+      status: "active",
+      blacklistReason: null,
+    })
+    .where(eq(users.id, userId))
+    .returning()
+    .execute();
+  if (!user) {
+    return res.status(404).json({ error: "user not found" });
+  }
+  return res.status(200).json({
+    message: "user unblacklisted successfully",
+    userId: user.id,
+  });
+});
+
+adminRouter.get("/users", verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "admin")
+    return res.status(401).json({ error: "unauthorized access" });
+
+  const { page, limit, sortBy, filter } = req.query;
+  const pageNumber = parseInt(page as string) || 1;
+  const limitNumber = parseInt(limit as string) || 10;
+  const offset = (pageNumber - 1) * limitNumber;
+
+  // Parse filter if provided
+  let filterOptions:any = {};
+  let searchTerm = "";
+  let statusFilter = null;
+  
+  if (filter) {
+    try {
+      filterOptions = JSON.parse(filter as string);
+      searchTerm = filterOptions.search || "";
+      statusFilter = filterOptions.status || null;
+    } catch (error) {
+      console.error("Error parsing filter:", error);
+    }
+  }
+
+  // Determine sort order
+  let orderByClause = sql`${users.createdAt} DESC`;
+  
+  if (sortBy === "oldest") {
+    orderByClause = sql`${users.createdAt} ASC`;
+  } else if (sortBy === "reports") {
+    orderByClause = sql`reports_count DESC`;
+  } else if (sortBy === "bids") {
+    orderByClause = sql`bids_count DESC`;
+  } else if (sortBy === "auctions") {
+    orderByClause = sql`auctions_count DESC`;
+  } else if (sortBy === "vehicles") {
+    orderByClause = sql`vehicles_count DESC`;
+  }
+
+  // Set up query
+  const lr1 = alias(lisitngReport, "lr1");
+  const lr2 = alias(lisitngReport, "lr2");
+  
+  // Base query
+  let query = db
+    .select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      role: users.role,
+      createdAt: users.createdAt,
+      card: users.card,
+      status: users.status, 
+      blacklistReason: users.blacklistReason, 
+      auctions_count: sql<number>`COUNT(DISTINCT ${auctions.id})`.as("auctions_count"),
+      vehicles_count: sql<number>`COUNT(DISTINCT ${vehicles.id})`.as("vehicles_count"),
+      bids_count: sql<number>`COUNT(DISTINCT ${bids.id})`.as("bids_count"),
+      reports_count: sql<number>`COALESCE(COUNT(DISTINCT ${lr1.id}),0) + COALESCE(COUNT(DISTINCT ${lr2.id}),0)`.as("reports_count"),
+    })
+    .from(users)
+    .leftJoin(auctions, eq(users.id, auctions.sellerId))
+    .leftJoin(vehicles, eq(users.id, vehicles.sellerId))
+    .leftJoin(bids, eq(users.id, bids.userId))
+    .leftJoin(lr1, eq(auctions.id, lr1.reported_auction))
+    .leftJoin(lr2, eq(vehicles.id, lr2.reported_vehicle));
+
+  // Add search conditions if needed
+  if (searchTerm) {
+    query.where(
+      or(
+        like(users.username, `%${searchTerm}%`),
+        like(users.email, `%${searchTerm}%`)
+      )
+    );
+  }
+  
+  // Add status filter if needed
+  if (statusFilter) {
+    query.where(eq(users.status, statusFilter));
+  }
+
+  // Complete the query with grouping, ordering, and pagination
+  const result = await query
+    .groupBy(
+      users.id,
+      users.username,
+      users.email,
+      users.role,
+      users.createdAt,
+      users.card,
+      users.status,
+      users.blacklistReason
+    )
+    .orderBy(orderByClause)
+    .limit(limitNumber + 1)
+    .offset(offset);
+
+
+  let countQuery = db
+    .select({
+      count: sql<number>`count(*)`,
+    })
+    .from(users);
+
+  // Add the same filters to count query
+  if (searchTerm) {
+    countQuery.where(
+      or(
+        like(users.username, `%${searchTerm}%`),
+        like(users.email, `%${searchTerm}%`)
+      )
+    );
+  }
+  
+  if (statusFilter) {
+      countQuery.where(eq(users.status, statusFilter));
+  }
+
+  const [{ count: totalUsers }] = await countQuery;
+
+  return res.status(200).json({
+    users: result.splice(0, limitNumber),
+    totalUsers: totalUsers,
+    totalPages: Math.ceil(totalUsers / limitNumber),
+    page: pageNumber,
+    hasNextPage: result.length > limitNumber,
+  });
+});
+
+adminRouter.get("/reports/listings", verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "admin")
+    return res.status(401).json({ error: "unauthorized access" });
+
+  const { page, limit, filter } = req.query;
+  const pageNumber = parseInt(page as string) || 1;
+  const limitNumber = parseInt(limit as string) || 5;
+
+  console.log(filter);
+
+  const offset = (pageNumber - 1) * limitNumber;
+
+  // Define aliases for users table
+  const reportedByUser = aliasedTable(users, "reportedByUser");
+  const vehicleSeller = aliasedTable(users, "vehicleSeller");
+  const auctionSeller = aliasedTable(users, "auctionSeller");
+  const auctionVehicle = aliasedTable(vehicles, "auctionVehicle");
+
+  let query = db
+    .select({
+      lisitngReport,
+      reportedAuction: auctions,
+      reportedVehicle: vehicles,
+      reportedBy: reportedByUser,
+      vehicleSeller: vehicleSeller,
+      auctionSeller: auctionSeller,
+      auctionVehicle: auctionVehicle,
+    })
+    .from(lisitngReport)
+    .leftJoin(vehicles, eq(lisitngReport.reported_vehicle, vehicles.id))
+    .leftJoin(auctions, eq(lisitngReport.reported_auction, auctions.id))
+    .innerJoin(reportedByUser, eq(lisitngReport.reported_by, reportedByUser.id))
+    .leftJoin(vehicleSeller, eq(vehicles.sellerId, vehicleSeller.id))
+    .leftJoin(auctionSeller, eq(auctions.sellerId, auctionSeller.id))
+    // Join auction.vehicleId to auctionVehicle if reported_auction is present
+    .leftJoin(auctionVehicle, eq(auctions.vehicleId, auctionVehicle.id));
+
+  // // Apply filters if provided
+  if (filter === 'vehicle') {
+    query.where(isNotNull(lisitngReport.reported_vehicle));
+  } else if (filter === 'auction') {
+     query.where(isNotNull(lisitngReport.reported_auction));
+  } else if (filter === 'resolved') {
+     query.where(eq(lisitngReport.status, 'resolved'));
+  }
+
+  // Execute query with sorting, limit and offset
+  const result: any = await query
+    .orderBy(sql`${lisitngReport.createdAt} DESC`)
+    .limit(limitNumber + 1)
+    .offset(offset);
+
+  console.log(result);
+
+  // Build count query with same filters
+  let countQuery = db
+    .select({
+      count: sql<number>`count(*)`,
+    })
+    .from(lisitngReport);
+
+  // if (filter === 'vehicle') {
+  //   countQuery = countQuery.where(notEq(lisitngReport.reported_vehicle, null));
+  // } else if (filter === 'auction') {
+  //   countQuery = countQuery.where(notEq(lisitngReport.reported_auction, null));
+  // } else if (filter === 'resolved') {
+  //   countQuery = countQuery.where(eq(lisitngReport.status, 'resolved'));
+  // }
+
+  const [{ count: totalReports }] = await countQuery;
+
+  const reports = result.map((report: any) => ({
+    reportId: report.lisitngReport.id,
+    reportDescription: report.lisitngReport.description,
+    reportedAt: report.lisitngReport.createdAt.toString(),
+    status: report.lisitngReport.status || "pending",
+    reportedBy: {
+      id: report.reportedBy.id,
+      username: report.reportedBy.username,
+      email: report.reportedBy.email,
+    },
+    reportedVehicle: report.reportedVehicle
+      ? {
+          id: report.reportedVehicle.id,
+          title: report.reportedVehicle.title,
+          make: report.reportedVehicle.make,
+          model: report.reportedVehicle.model,
+          year: report.reportedVehicle.year,
+          image_url: report.reportedVehicle.images[0],
+          seller: report.vehicleSeller
+            ? {
+                id: report.vehicleSeller.id,
+                username: report.vehicleSeller.username,
+                email: report.vehicleSeller.email,
+              }
+            : null,
+        }
+      : null,
+    reportedAuction: report.reportedAuction
+      ? {
+          id: report.reportedAuction.id,
+          title: report.reportedAuction.title,
+          startingPrice: report.reportedAuction.startingPrice,
+          seller: report.auctionSeller
+            ? {
+                id: report.auctionSeller.id,
+                username: report.auctionSeller.username,
+                email: report.auctionSeller.email,
+              }
+            : null,
+          vehicle: report.auctionVehicle
+            ? {
+                id: report.auctionVehicle.id,
+                title: report.auctionVehicle.title,
+                make: report.auctionVehicle.make,
+                model: report.auctionVehicle.model,
+                year: report.auctionVehicle.year,
+                image_url: report.auctionVehicle.images[0],
+              }
+            : null,
+        }
+      : null,
+  }));
+
+  return res.status(200).json({
+    reports: reports,
+    totalReports: totalReports,
+    totalPages: Math.ceil(totalReports / limitNumber),
+    page: pageNumber,
+    hasNextPage: reports.length > limitNumber,
+  });
 });
 
 // Export the router

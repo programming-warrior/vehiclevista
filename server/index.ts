@@ -17,6 +17,7 @@ import { checkDomainOfScale } from "recharts/types/util/ChartUtils";
 import auctionRouter from "./serverRoutes/auctionRouter";
 import userRouter from "./serverRoutes/userRouter";
 import adminRouter from "./serverRoutes/adminRouter";
+import reportRouter from "./serverRoutes/reportRouter";
 
 const app = express();
 
@@ -50,6 +51,8 @@ app.use("/api/vehicles", vehicleRouter);
 app.use("/api/auction", auctionRouter)
 app.use("/api/user", userRouter)
 app.use("/api/admin", adminRouter)
+app.use("/api/report", reportRouter)
+
 
 // Add diagnostic endpoint
 app.get("/ping", (req, res) => {

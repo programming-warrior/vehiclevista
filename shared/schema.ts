@@ -50,7 +50,7 @@ export const vehicles = pgTable("vehicles", {
   clicks: integer("clicks").default(0),
   leads: integer("leads").default(0),
 });
-
+export const blacklistStatusEnum = pgEnum("status", ["active", "blacklisted", "inactive"]);
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -58,7 +58,8 @@ export const users = pgTable("users", {
   email: text("email").notNull(),
   role: userRolesEnum().notNull().default("buyer"), // "admin", "buyer", "seller", "trader", "garage"
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
-  // New fields for trader/garage accounts
+  status: blacklistStatusEnum().notNull().default("active"), 
+  blacklistReason: text("reason"),
   businessName: text("business_name"),
   businessAddress: text("business_address"),
   packageType: text("package_type"), // standard, premium, enterprise
@@ -71,9 +72,9 @@ export const users = pgTable("users", {
 
 export const lisitngReport = pgTable("listing_report", {
   id: serial("id").primaryKey(),
-  reported_vehilce: integer("vehicle_id").references(() => vehicles.id),
-  reported_auction: integer("auction_id").references(() => auctions.id),
-  reported_by: integer("user_id").notNull().references(() => users.id),
+  reported_vehicle: integer("reported_vehicle").references(() => vehicles.id),
+  reported_auction: integer("reported_auction").references(() => auctions.id),
+  reported_by: integer("reported_by").notNull().references(() => users.id),
   description: text("reason").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   //currently don't know where to use them
@@ -84,7 +85,7 @@ export const lisitngReport = pgTable("listing_report", {
 
 export const userReport = pgTable("user_report", {
   id: serial("id").primaryKey(),  
-  reported_by: integer("user_id").notNull().references(() => users.id),
+  reported_by: integer("reported_by").notNull().references(() => users.id),
   reported_for: integer("reported_for").notNull().references(() => users.id),
   description: text("reason").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -94,7 +95,7 @@ export const userReport = pgTable("user_report", {
   resolution: text("resolution"),
 });
 
-export const blacklistStatusEnum = pgEnum("status", ["active", "inactive"]);
+
 export const blacklistCreatedByEnum = pgEnum("created_by", ["admin", "system"]);
 export const blacklist_users = pgTable("blacklist_users", {
   id: serial("id").primaryKey(),
