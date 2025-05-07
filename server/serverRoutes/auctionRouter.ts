@@ -22,7 +22,7 @@ auctionRouter.get("/get", async (req, res) => {
   try {
     const { brand, model, page = "1", limit = "10", type } = req.query;
 
-    const conditions = [];
+    const conditions = [eq(auctions.status, "active")];
 
     if (brand && !/all/gi.test(brand as string))
       conditions.push(eq(vehicles.make, String(brand)));

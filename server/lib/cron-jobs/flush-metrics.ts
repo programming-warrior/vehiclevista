@@ -5,7 +5,9 @@ import { eq, sql } from "drizzle-orm";
 
 export async function flushMetrics() {
   const redisClient = await RedisClientSingleton.getRedisClient();
-  const keys = await redisClient.keys("vehicle:*:(views|clicks)");
+  const allKeys = await redisClient.keys("vehicle:*:*");
+  const keys = allKeys.filter((key:string) => key.endsWith(":clicks") || key.endsWith(":views"));
+  console.log(keys)
   type Metric = "views" | "clicks";
   const allowedMetrics: Metric[] = ["views", "clicks"];
 

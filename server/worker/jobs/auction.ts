@@ -33,6 +33,7 @@ const auctionWorker = new Worker(
 
       startCountdown(auctionId, endTime);
     } else if (job.name === "endAuction") {
+      console.log("end auction job started");
       const { auctionId } = job.data;
       const auctionRows = await db
         .select()

@@ -98,7 +98,7 @@ export default function AdminUsers() {
       await blacklistUser(selectedUser.id, blacklistReason);
       setUsers(
         users.map((user: any) =>
-          user.id === selectedUser?.id
+          user.id === selectedUser?.idi
             ? { ...user, status: "blacklisted", blacklistReason }
             : user
         )

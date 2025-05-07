@@ -7,12 +7,12 @@ import {
   vehicles,
   auctions,
   lisitngReport,
+  vehicleMetricsHistory,
+  auctionMetricsHistory,
 } from "../../shared/schema";
-import { eq, or, sql, sum, aliasedTable,like , isNotNull } from "drizzle-orm";
+import { eq, or, sql, sum, aliasedTable, like, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 // import { notEq } from "drizzle-orm/pg-core";
-
-
 
 import { verifyToken } from "../middleware/authMiddleware";
 
@@ -44,7 +44,40 @@ adminRouter.get(
     if (!req.userId || req.role !== "admin")
       return res.status(401).json({ error: "unauthorized access" });
 
-    //fetch the total clicks
+    const { searchBy } = req.query;
+
+    let pastDate = new Date();
+
+    if (searchBy === "week") {
+      pastDate.setDate(pastDate.getDate() - 7);
+    } else if (searchBy === "month") {
+      pastDate.setMonth(pastDate.getMonth() - 1);
+    } else if (searchBy === "year") {
+      pastDate.setFullYear(pastDate.getFullYear() - 1);
+    } else {
+      pastDate.setDate(pastDate.getDate() - 1);
+    }
+
+    const pastVehicleMetric = await db
+      .select({
+        views: sum(vehicleMetricsHistory.views).mapWith(Number),
+        clicks: sum(vehicleMetricsHistory.clicks).mapWith(Number),
+        leads: sum(vehicleMetricsHistory.leads).mapWith(Number),
+      })
+      .from(vehicleMetricsHistory)
+      .where(sql`recorded_at <= ${pastDate}`)
+
+
+    const pastAuctionMetric = await db
+      .select({
+        views: sum(vehicleMetricsHistory.views).mapWith(Number),
+        clicks: sum(vehicleMetricsHistory.clicks).mapWith(Number),
+        leads: sum(vehicleMetricsHistory.leads).mapWith(Number),
+      })
+      .from(vehicleMetricsHistory)
+      .where(sql`recorded_at <= ${pastDate}`)
+
+
     const vehicleTotals = await db
       .select({
         count: sql<number>`count(*)`,
@@ -71,6 +104,14 @@ adminRouter.get(
       .from(users);
 
     const performanceMetrics = {
+      vehicleViewsGrowth:
+        ((vehicleTotals.views - pastVehicleMetric[0].views) / (pastVehicleMetric[0].views || 1)) * 100,
+      vehicleClicksGrowth:
+        ((vehicleTotals.clicks - pastVehicleMetric[0].clicks) / ( pastVehicleMetric[0].clicks || 1)) * 100,
+      auctionViewsGrowth:
+        ((auctionTotals.views - pastAuctionMetric[0].views) / (pastAuctionMetric[0].views || 1)) * 100,
+      auctionClicksGrowth:
+        ((auctionTotals.clicks - pastAuctionMetric[0].clicks) / (pastAuctionMetric[0].clicks || 1)) * 100,
       totalUsers: totalUsers,
       totalVehicles: vehicleTotals.count,
       totalAuctions: auctionTotals.count,
@@ -243,14 +284,13 @@ adminRouter.get("/analytics/top-listings", verifyToken, async (req, res) => {
   return res.status(200).json(topListings);
 });
 
-
-adminRouter.put('/black-list/:userId', verifyToken, async (req, res) => {
-  if (!req.userId || req.role !== "admin")  
+adminRouter.put("/black-list/:userId", verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "admin")
     return res.status(401).json({ error: "unauthorized access" });
-  let { userId } : any = req.params;
+  let { userId }: any = req.params;
   const { reason } = req.body;
   userId = parseInt(userId as string);
-  
+
   if (!userId || !reason || isNaN(userId)) {
     return res.status(400).json({ error: "missing required fields" });
   }
@@ -272,15 +312,14 @@ adminRouter.put('/black-list/:userId', verifyToken, async (req, res) => {
   });
 });
 
-
-adminRouter.put('/un-black-list/:userId', verifyToken, async (req, res) => {
-  if (!req.userId || req.role !== "admin")  
+adminRouter.put("/un-black-list/:userId", verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "admin")
     return res.status(401).json({ error: "unauthorized access" });
-  let { userId } : any = req.params;
+  let { userId }: any = req.params;
   const { reason } = req.body;
   userId = parseInt(userId as string);
-  
-  if (!userId  || isNaN(userId)) {
+
+  if (!userId || isNaN(userId)) {
     return res.status(400).json({ error: "missing required fields" });
   }
   const [user] = await db
@@ -311,10 +350,10 @@ adminRouter.get("/users", verifyToken, async (req, res) => {
   const offset = (pageNumber - 1) * limitNumber;
 
   // Parse filter if provided
-  let filterOptions:any = {};
+  let filterOptions: any = {};
   let searchTerm = "";
   let statusFilter = null;
-  
+
   if (filter) {
     try {
       filterOptions = JSON.parse(filter as string);
@@ -327,7 +366,7 @@ adminRouter.get("/users", verifyToken, async (req, res) => {
 
   // Determine sort order
   let orderByClause = sql`${users.createdAt} DESC`;
-  
+
   if (sortBy === "oldest") {
     orderByClause = sql`${users.createdAt} ASC`;
   } else if (sortBy === "reports") {
@@ -343,7 +382,7 @@ adminRouter.get("/users", verifyToken, async (req, res) => {
   // Set up query
   const lr1 = alias(lisitngReport, "lr1");
   const lr2 = alias(lisitngReport, "lr2");
-  
+
   // Base query
   let query = db
     .select({
@@ -353,12 +392,19 @@ adminRouter.get("/users", verifyToken, async (req, res) => {
       role: users.role,
       createdAt: users.createdAt,
       card: users.card,
-      status: users.status, 
-      blacklistReason: users.blacklistReason, 
-      auctions_count: sql<number>`COUNT(DISTINCT ${auctions.id})`.as("auctions_count"),
-      vehicles_count: sql<number>`COUNT(DISTINCT ${vehicles.id})`.as("vehicles_count"),
+      status: users.status,
+      blacklistReason: users.blacklistReason,
+      auctions_count: sql<number>`COUNT(DISTINCT ${auctions.id})`.as(
+        "auctions_count"
+      ),
+      vehicles_count: sql<number>`COUNT(DISTINCT ${vehicles.id})`.as(
+        "vehicles_count"
+      ),
       bids_count: sql<number>`COUNT(DISTINCT ${bids.id})`.as("bids_count"),
-      reports_count: sql<number>`COALESCE(COUNT(DISTINCT ${lr1.id}),0) + COALESCE(COUNT(DISTINCT ${lr2.id}),0)`.as("reports_count"),
+      reports_count:
+        sql<number>`COALESCE(COUNT(DISTINCT ${lr1.id}),0) + COALESCE(COUNT(DISTINCT ${lr2.id}),0)`.as(
+          "reports_count"
+        ),
     })
     .from(users)
     .leftJoin(auctions, eq(users.id, auctions.sellerId))
@@ -376,7 +422,7 @@ adminRouter.get("/users", verifyToken, async (req, res) => {
       )
     );
   }
-  
+
   // Add status filter if needed
   if (statusFilter) {
     query.where(eq(users.status, statusFilter));
@@ -398,7 +444,6 @@ adminRouter.get("/users", verifyToken, async (req, res) => {
     .limit(limitNumber + 1)
     .offset(offset);
 
-
   let countQuery = db
     .select({
       count: sql<number>`count(*)`,
@@ -414,9 +459,9 @@ adminRouter.get("/users", verifyToken, async (req, res) => {
       )
     );
   }
-  
+
   if (statusFilter) {
-      countQuery.where(eq(users.status, statusFilter));
+    countQuery.where(eq(users.status, statusFilter));
   }
 
   const [{ count: totalUsers }] = await countQuery;
@@ -468,12 +513,12 @@ adminRouter.get("/reports/listings", verifyToken, async (req, res) => {
     .leftJoin(auctionVehicle, eq(auctions.vehicleId, auctionVehicle.id));
 
   // // Apply filters if provided
-  if (filter === 'vehicle') {
+  if (filter === "vehicle") {
     query.where(isNotNull(lisitngReport.reported_vehicle));
-  } else if (filter === 'auction') {
-     query.where(isNotNull(lisitngReport.reported_auction));
-  } else if (filter === 'resolved') {
-     query.where(eq(lisitngReport.status, 'resolved'));
+  } else if (filter === "auction") {
+    query.where(isNotNull(lisitngReport.reported_auction));
+  } else if (filter === "resolved") {
+    query.where(eq(lisitngReport.status, "resolved"));
   }
 
   // Execute query with sorting, limit and offset

@@ -47,6 +47,7 @@ import { useToast } from "./hooks/use-toast";
 import { WEBSOCKET_URL } from "./lib/constants";
 import UserProfile from "@/pages/user-profile";
 import AdminPublicBlacklist from "./pages/admin/public-blacklist";
+import AdminRafflePage from "./pages/admin/raffle";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -146,6 +147,9 @@ export default function App() {
               </Route>
               <Route path="/admin/vehicles">
                 <ProtectedRoute component={AdminVehicles} adminOnly />
+              </Route>
+              <Route path="/admin/raffle">
+                <ProtectedRoute component={AdminRafflePage} adminOnly />
               </Route>
               <Route path="/admin/users">
                 <ProtectedRoute component={AdminUsers} adminOnly />

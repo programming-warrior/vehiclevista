@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -9,26 +8,13 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  LineChart,
+  Line,
 } from "recharts";
-import { Loader2 } from "lucide-react";
-import type { Vehicle } from "@shared/schema";
+import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getPerformanceMetrics } from "@/api";
-import { is } from "drizzle-orm";
 import Loader from "../loader";
-
-interface PerformanceMetrics {
-  totalViews: number;
-  totalClicks: number;
-  totalLeads: number;
-  conversionRate: number;
-  metrics: {
-    date: string;
-    views: number;
-    clicks: number;
-    leads: number;
-  }[];
-}
 
 export default function PerformanceDashboard() {
   const [timeframe, setTimeframe] = useState<"week" | "month" | "year">("week");
@@ -53,13 +39,56 @@ export default function PerformanceDashboard() {
     fetchPerformanceMetrics();
   }, []);
 
-  // if (isLoading) {
-  //   return (
-  //     <div className="flex items-center justify-center h-64">
-  //       <Loader2 className="h-8 w-8 animate-spin" />
-  //     </div>
-  //   );
-  // }
+  // Generate mini chart data for trend visualization
+  const generateTrendData = (growth: number) => {
+    // Create a simple 5-point trend line
+    if (growth > 0) {
+      return [
+        { value: 10 },
+        { value: 15 },
+        { value: 25 },
+        { value: 40 },
+        { value: 50 },
+      ];
+    } else if (growth < 0) {
+      return [
+        { value: 50 },
+        { value: 40 },
+        { value: 25 },
+        { value: 15 },
+        { value: 10 },
+      ];
+    } else {
+      return [
+        { value: 30 },
+        { value: 30 },
+        { value: 30 },
+        { value: 30 },
+        { value: 30 },
+      ];
+    }
+  };
+
+  // Calculate overall growth metrics
+  const calculateOverallGrowth = () => {
+    if (!performanceMetrics) return { views: 0, clicks: 0 };
+    
+    const viewsGrowth = 
+      (performanceMetrics.vehicleViewsGrowth || 0) + 
+      (performanceMetrics.auctionViewsGrowth || 0);
+    
+    const clicksGrowth = 
+      (performanceMetrics.vehicleClicksGrowth || 0) + 
+      (performanceMetrics.auctionClicksGrowth || 0);
+    
+    return { views: viewsGrowth, clicks: clicksGrowth };
+  };
+
+  // Format growth numbers with + sign for positive values
+  const formatGrowth = (value:number) => {
+    if (value > 0) return `+${value}%`;
+    return `${value}%`;
+  };
 
   return (
     <div className="space-y-6">
@@ -88,18 +117,43 @@ export default function PerformanceDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-baseline">
-                    <p className="text-2xl font-semibold">
-                      {performanceMetrics.vehicleTotalViews +
-                        performanceMetrics.auctionTotalViews}
-                    </p>
-                    {/* <Badge variant="outline" className="ml-2 text-xs">
-                      {stat.change}
-                    </Badge> */}
+                  <div className="flex items-baseline justify-between">
+                    <div>
+                      <p className="text-2xl font-semibold">
+                        {performanceMetrics.vehicleTotalViews +
+                          performanceMetrics.auctionTotalViews}
+                      </p>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${calculateOverallGrowth().views > 0 
+                          ? 'text-green-600' 
+                          : calculateOverallGrowth().views < 0 
+                            ? 'text-red-600' 
+                            : ''}`}
+                      >
+                        {calculateOverallGrowth().views > 0 && <TrendingUp className="h-3 w-3 inline mr-1" />}
+                        {calculateOverallGrowth().views < 0 && <TrendingDown className="h-3 w-3 inline mr-1" />}
+                        {formatGrowth(calculateOverallGrowth().views)}
+                      </Badge>
+                    </div>
+                    <div className="h-12 w-20">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={generateTrendData(calculateOverallGrowth().views)}>
+                          <Line 
+                            type="monotone" 
+                            dataKey="value" 
+                            stroke={calculateOverallGrowth().views >= 0 ? "#10b981" : "#ef4444"} 
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </CardContent>
                 <div className={`h-1 w-full bg-green-500`}></div>
               </Card>
+
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-gray-500">
@@ -107,14 +161,38 @@ export default function PerformanceDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-baseline">
-                    <p className="text-2xl font-semibold">
-                      {performanceMetrics.vehicleTotalClicks +
-                        performanceMetrics.auctionTotalClicks}
-                    </p>
-                    {/* <Badge variant="outline" className="ml-2 text-xs">
-                      {stat.change}
-                    </Badge> */}
+                  <div className="flex items-baseline justify-between">
+                    <div>
+                      <p className="text-2xl font-semibold">
+                        {performanceMetrics.vehicleTotalClicks +
+                          performanceMetrics.auctionTotalClicks}
+                      </p>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${calculateOverallGrowth().clicks > 0 
+                          ? 'text-green-600' 
+                          : calculateOverallGrowth().clicks < 0 
+                            ? 'text-red-600' 
+                            : ''}`}
+                      >
+                        {calculateOverallGrowth().clicks > 0 && <TrendingUp className="h-3 w-3 inline mr-1" />}
+                        {calculateOverallGrowth().clicks < 0 && <TrendingDown className="h-3 w-3 inline mr-1" />}
+                        {formatGrowth(calculateOverallGrowth().clicks)}
+                      </Badge>
+                    </div>
+                    <div className="h-12 w-20">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={generateTrendData(calculateOverallGrowth().clicks)}>
+                          <Line 
+                            type="monotone" 
+                            dataKey="value" 
+                            stroke={calculateOverallGrowth().clicks >= 0 ? "#10b981" : "#ef4444"}
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </CardContent>
                 <div className={`h-1 w-full bg-purple-500`}></div>
@@ -127,18 +205,37 @@ export default function PerformanceDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-baseline">
-                    <p className="text-2xl font-semibold">
-                      {performanceMetrics.vehicleTotalLeads +
-                        performanceMetrics.auctionTotalLeads}
-                    </p>
-                    {/* <Badge variant="outline" className="ml-2 text-xs">
-                      {stat.change}
-                    </Badge> */}
+                  <div className="flex items-baseline justify-between">
+                    <div>
+                      <p className="text-2xl font-semibold">
+                        {performanceMetrics.vehicleTotalLeads +
+                          performanceMetrics.auctionTotalLeads}
+                      </p>
+                      <Badge 
+                        variant="outline" 
+                        className="text-xs"
+                      >
+                        No change
+                      </Badge>
+                    </div>
+                    <div className="h-12 w-20">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={generateTrendData(0)}>
+                          <Line 
+                            type="monotone" 
+                            dataKey="value" 
+                            stroke="#9ca3af" 
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </CardContent>
                 <div className={`h-1 w-full bg-red-500`}></div>
               </Card>
+
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-gray-500">
@@ -146,17 +243,33 @@ export default function PerformanceDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-baseline">
-                    <p className="text-2xl font-semibold">
-                      {performanceMetrics.totalUsers}
-                    </p>
-                    {/* <Badge variant="outline" className="ml-2 text-xs">
-                      {stat.change}
-                    </Badge> */}
+                  <div className="flex items-baseline justify-between">
+                    <div>
+                      <p className="text-2xl font-semibold">
+                        {performanceMetrics.totalUsers}
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        New
+                      </Badge>
+                    </div>
+                    <div className="h-12 w-20">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={generateTrendData(100)}>
+                          <Line 
+                            type="monotone" 
+                            dataKey="value" 
+                            stroke="#10b981" 
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </CardContent>
                 <div className={`h-1 w-full bg-yellow-500`}></div>
               </Card>
+
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-gray-500">
@@ -164,59 +277,41 @@ export default function PerformanceDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-baseline">
-                    <p className="text-2xl font-semibold">
-                      {parseInt(performanceMetrics.totalVehicles) +
-                        parseInt(performanceMetrics.totalAuctions)}
-                    </p>
-                    {/* <Badge variant="outline" className="ml-2 text-xs">
-                      {stat.change}
-                    </Badge> */}
+                  <div className="flex items-baseline justify-between">
+                    <div>
+                      <p className="text-2xl font-semibold">
+                        {parseInt(performanceMetrics.totalVehicles) +
+                          parseInt(performanceMetrics.totalAuctions)}
+                      </p>
+                      {/* <Badge 
+                        variant="outline" 
+                        className="text-xs text-green-600"
+                      >
+                        <TrendingUp className="h-3 w-3 inline mr-1" />
+                        New
+                      </Badge> */}
+                    </div>
+                    <div className="h-12 w-20">
+                      {/* <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={generateTrendData(100)}>
+                          <Line 
+                            type="monotone" 
+                            dataKey="value" 
+                            stroke="#10b981" 
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer> */}
+                    </div>
                   </div>
                 </CardContent>
                 <div className={`h-1 w-full bg-blue-500`}></div>
               </Card>
-              {/* <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Conversion Rate
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {(metrics?.conversionRate || 0).toFixed(1)}%
-                  </div>
-                </CardContent>
-              </Card> */}
             </div>
 
+            {/* Additional charts or metrics can be added here */}
 
-            {/* <Card>
-        <CardHeader>
-          <CardTitle>Performance Trends</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={metrics?.metrics}>
-              <XAxis
-                dataKey="date"
-                tickFormatter={(value) => new Date(value).toLocaleDateString()}
-              />
-              <YAxis />
-              <Tooltip
-                labelFormatter={(value) => new Date(value).toLocaleDateString()}
-              />
-              <Bar dataKey="views" fill="hsl(var(--primary))" name="Views" />
-              <Bar
-                dataKey="clicks"
-                fill="hsl(var(--secondary))"
-                name="Clicks"
-              />
-              <Bar dataKey="leads" fill="hsl(var(--accent))" name="Leads" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card> */}
           </div>
         ) : isLoading.performanceMetrics ? (
           <Loader />

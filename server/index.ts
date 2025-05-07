@@ -7,6 +7,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import RedisClientSingleton from "./utils/redis";
 import cookieParser from "cookie-parser";
 import { flushMetrics } from "./lib/cron-jobs/flush-metrics";
+import { FlushPastPerformanceMetrics } from "./lib/cron-jobs/historical-performance-metrics";
 import cron from "node-cron";
 dotenv.config();
 
@@ -169,6 +170,17 @@ app.use((req, res, next) => {
     console.log("Flushing metrics...");
     try {
       await flushMetrics();
+      console.log("Metrics flushed successfully!");
+    } catch (error) {
+      console.error("Error flushing metrics:", error);
+    }
+  });
+
+  cron.schedule("59 23 * * *", async () => {
+    console.log("Flushing historical past metrics...");
+    try {
+      const date= new Date();
+      FlushPastPerformanceMetrics(date);
       console.log("Metrics flushed successfully!");
     } catch (error) {
       console.error("Error flushing metrics:", error);

@@ -13,6 +13,7 @@ import {
   Tag,
   PiggyBank,
   Database,
+  Ticket,
 } from "lucide-react";
 import { useEffect } from "react";
 import { useUser } from "@/hooks/use-store";
@@ -37,13 +38,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/vehicles", label: "Vehicles", icon: Car },
     { href: "/admin/users", label: "Users", icon: Users },
-    { href: "/admin/blacklist", label: "PUblic BlackList", icon: Database },
-    { href: "/admin/settings", label: "Settings", icon: Settings },
+    // { href: "/admin/blacklist", label: "PUblic BlackList", icon: Database },
+    // { href: "/admin/settings", label: "Settings", icon: Settings },
     { href: "/admin/auctions", label: "Auctions", icon: Gavel },
-    { href: "/admin/events", label: "Events", icon: Calendar },
+    { href: "/admin/raffle", label: "Raffle", icon: Ticket },
+    // { href: "/admin/events", label: "Events", icon: Calendar },
     { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
     { href: "/admin/spare-parts", label: "Spare Parts", icon: Wrench },
-    { href: "/admin/inventory", label: "Inventory", icon: PackageOpen },
+    // { href: "/admin/inventory", label: "Inventory", icon: PackageOpen },
     { href: "/admin/offers", label: "Offers", icon: Tag },
     { href: "/admin/pricing", label: "Pricing", icon: PiggyBank }
   ];

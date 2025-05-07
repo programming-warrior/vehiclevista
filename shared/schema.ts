@@ -50,6 +50,26 @@ export const vehicles = pgTable("vehicles", {
   clicks: integer("clicks").default(0),
   leads: integer("leads").default(0),
 });
+
+export const vehicleMetricsHistory = pgTable("vehicle_metrics_history", {
+  id: serial("id").primaryKey(),
+  vehicleId: integer("vehicle_id").notNull().references(() => vehicles.id),
+  views: integer("views").notNull(),
+  clicks: integer("clicks").notNull(),
+  leads: integer("leads").notNull(),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
+
+export const auctionMetricsHistory = pgTable("auction_metrics_history", {
+  id: serial("id").primaryKey(),
+  auctionId: integer("vehicle_id").notNull().references(() => auctions.id),
+  views: integer("views").notNull(),
+  clicks: integer("clicks").notNull(),
+  leads: integer("leads").notNull(),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
 export const blacklistStatusEnum = pgEnum("status", ["active", "blacklisted", "inactive"]);
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
