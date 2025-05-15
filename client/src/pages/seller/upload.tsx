@@ -38,7 +38,7 @@ export default function SellerVehicleUpload() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <header className="border-b bg-white">
+      {/* <header className="border-b bg-white">
         <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
@@ -108,9 +108,8 @@ export default function SellerVehicleUpload() {
             </div>
           </div>
         </div>
-      </header>
+      </header> */}
 
-      {/* Main Content */}
       <main className="py-8 px-16">
         <VehicleUploadForm/>
       </main>

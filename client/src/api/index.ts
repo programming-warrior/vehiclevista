@@ -44,6 +44,26 @@ import {
  import { createRaffle, getRaffles } from "./admin-api/raffle-api";
 
 
+async function dvsaApi(registration_num:string){
+  try{
+    const res= await axios.post(BACKEND_URL + '/api/vehicles/dvsa',
+      {
+        registration_num
+      },
+      {
+        withCredentials: true,
+        headers:{
+          'Authorization':`Bearer ${localStorage.getItem('token')}`
+        }
+      }
+    )
+    return res.data;
+  }
+  catch(e){
+    throw e;
+  }
+}
+
 async function uploadToPresignedUrl(file: File, presignedUrl: string): Promise<string> {
     try {
       console.log(file.type);
@@ -95,6 +115,7 @@ async function getPresignedUrls(
 export {
   uploadToPresignedUrl,
   getPresignedUrls,
+  dvsaApi,
 
   getVehicles,
   getVehicleById,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useDebugValue, useEffect, useState } from "react";
 import { vehicleUploadSchema } from "@shared/zodSchema/vehicleSchema";
 import z from "zod";
 import { useForm } from "react-hook-form";
@@ -36,6 +36,8 @@ import {
 import { X, Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useDebounce } from "@/hooks/use-debounce";
+import { dvsaApi } from "@/api";
 // import { toast } from "@/hooks/use-toast";
 
 const VehicleUploadForm = () => {
@@ -49,7 +51,7 @@ const VehicleUploadForm = () => {
     resolver: zodResolver(vehicleUploadSchema),
     defaultValues: {
       title: "",
-      type: "bike",
+      type: "car",
       make: "",
       model: "",
       price: "",
@@ -69,7 +71,23 @@ const VehicleUploadForm = () => {
       negotiable: false,
     },
   });
-  const [,setLocation] = useLocation();
+  const [, setLocation] = useLocation();
+  const debouncedRegistrationNum = useDebounce(
+    form.getValues("registration_num")
+  );
+  const [registrationNumError, setRegistrationNumError] = useState("");
+
+  useEffect(() => {
+    if (debouncedRegistrationNum) {
+      dvsaApi(debouncedRegistrationNum)
+        .then((data) => {
+          console.log(data);
+        })
+        .catch((e) => {
+          setRegistrationNumError("Vehicle not found in DVSA");
+        });
+    }
+  }, [debouncedRegistrationNum]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -113,7 +131,7 @@ const VehicleUploadForm = () => {
           fileName: `${Date.now()}-${file.name.split(" ").join("")}`,
           contentType: file.type,
         }));
-        console.log(fileKeys)
+        console.log(fileKeys);
         const presignedUrlsResponse = await getPresignedUrls(fileKeys);
         const presignedUrls = presignedUrlsResponse.data.urls;
 
@@ -149,8 +167,7 @@ const VehicleUploadForm = () => {
 
       form.reset();
       setSelectedFiles([]);
-      setLocation('/seller');
-      
+      setLocation("/seller");
     } catch (error: any) {
       console.error("Error in form submission:", error);
       toast({
@@ -191,24 +208,34 @@ const VehicleUploadForm = () => {
           >
             {/* Full Width Fields */}
             <div className="space-y-4">
-            <FormField
-                  control={form.control}
-                  name="registration_num"
-                 
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Registration Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder="e.g. ABC-1234"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="registration_num"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Registration Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        placeholder="e.g. ABC-1234"
+                        className={`${
+                          registrationNumError && " border-2 border-red-600"
+                        } `}
+                        {...field}
+                      />
+                    </FormControl>
+                    <span className="text-xs text-red-600">
+                      {registrationNumError}
+                    </span>
+                    {registrationNumError && (
+                      <div className="text-xs">
+                        Enter data manually
+                      </div>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="title"
@@ -328,7 +355,12 @@ const VehicleUploadForm = () => {
                           <SelectContent>
                             {vehicleTypes.map((vt) => (
                               <SelectItem key={vt} value={vt}>
-                                {vt}
+                                {vt
+                                  .split("")
+                                  .map((ch, i) =>
+                                    i == 0 ? ch.toUpperCase() : ch
+                                  )
+                                  .join("")}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -399,7 +431,6 @@ const VehicleUploadForm = () => {
                     </FormItem>
                   )}
                 />
-          
               </div>
             </div>
 

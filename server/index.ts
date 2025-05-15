@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import { flushMetrics } from "./lib/cron-jobs/flush-metrics";
 import { FlushPastPerformanceMetrics } from "./lib/cron-jobs/historical-performance-metrics";
 import cron from "node-cron";
+import { BUCKET_NAME, s3Client } from "./utils/s3";
 dotenv.config();
 
 import authRouter from "./serverRoutes/authRouter";
@@ -65,16 +66,6 @@ app.get("/ping", (req, res) => {
 
 
 
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'ap-south-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY || '',
-    secretAccessKey: process.env.AWS_SECRET_KEY || '',
-  }
-});
-
-
-const BUCKET_NAME= process.env.BUCKET_NAME;
 
 app.post('/api/presigned-url', verifyToken, async (req: Request, res: Response) => {
   try {

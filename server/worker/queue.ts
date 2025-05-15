@@ -9,4 +9,6 @@ export const bidQueue= new Queue("bid", { connection })
 
 export const raffleQueue = new Queue("raffle", { connection })
 
+export const cleanupQueue = new Queue("cleanup",{connection});
+
 

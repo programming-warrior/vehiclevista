@@ -10,6 +10,8 @@ import { verifyToken } from "../middleware/authMiddleware";
 import { parseCsvFile, extractVehicles } from "../utils/helper";
 import multer from "multer";
 import { vehicleTypes, vehicleTypesEnum } from "../../shared/schema";
+import { deleteImagesFromS3 } from "server/utils/s3";
+import { cleanupQueue } from "../worker/queue";
 
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 
@@ -72,6 +74,45 @@ vehicleRouter.get("/", async (req, res) => {
   }
 });
 
+const dvsaApiKey = process.env.DVSA_API_KEY;
+
+vehicleRouter.post("/dvsa", async (req, res) => {
+  try {
+    const { registration_num } = req.body;
+    if (!dvsaApiKey)
+      return res.status(500).json({ error: "dvsa key not found" });
+    if (
+      registration_num &&
+      typeof registration_num == "string" &&
+      registration_num.length > 0
+    ) {
+      try {
+        const dvsaResponse = await axios.get(
+          " https://beta.check-mot.service.gov.uk/trade/vehicles/mot-tests?registration=" +
+            registration_num,
+          {
+            headers: {
+              "x-api": dvsaApiKey,
+              Accept: "application/json+v6",
+            },
+          }
+        );
+        return res.status(200).json(dvsaResponse.data);
+      } catch (e) {
+        console.log(e);
+        return res.status(500).json({ error: "dvsa api call failed" });
+      }
+    } else {
+      return res.status(400).json({ error: "invalid registration number" });
+    }
+  } catch (err: any) {
+    console.error("Error fetching vehicles:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching vehicle list", error: err.message });
+  }
+});
+
 vehicleRouter.get("/:vehicleId", async (req, res) => {
   try {
     const { vehicleId } = req.params;
@@ -96,7 +137,7 @@ vehicleRouter.get("/:vehicleId", async (req, res) => {
   }
 });
 
-vehicleRouter.post('/increase-views', async (req, res) => {
+vehicleRouter.post("/increase-views", async (req, res) => {
   try {
     const { vehicleId } = req.body;
     if (!vehicleId) {
@@ -104,33 +145,31 @@ vehicleRouter.post('/increase-views', async (req, res) => {
     }
     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
     const userAgent = req.headers["user-agent"];
-  
+
     console.log("IP:", ip);
     console.log("User Agent:", userAgent);
-    if(!ip || !userAgent) {
+    if (!ip || !userAgent) {
       return res.status(400).json({ error: "IP or User Agent is missing" });
     }
-    const redisClient = await RedisClientSingleton.getRedisClient()
-    const alreadyViewed= await redisClient.get(`vehicle:${vehicleId}:views:${ip}`);
-    if(alreadyViewed){
+    const redisClient = await RedisClientSingleton.getRedisClient();
+    const alreadyViewed = await redisClient.get(
+      `vehicle:${vehicleId}:views:${ip}`
+    );
+    if (alreadyViewed) {
       return res.status(200).json({ message: "Already viewed recently" });
     }
     await Promise.all([
       redisClient.incr(`vehicle:${vehicleId}:views`),
-      redisClient.set(`vehicle:${vehicleId}:views:${ip}`, "1", "EX", 1 * 60) 
+      redisClient.set(`vehicle:${vehicleId}:views:${ip}`, "1", "EX", 1 * 60),
     ]);
     res.status(201).json({ message: "success" });
-  }
-  catch (err: any) {
+  } catch (err: any) {
     console.error("Error updating views count:", err);
-    res
-      .status(500)
-      .json({ message: "Error updating views count" });
+    res.status(500).json({ message: "Error updating views count" });
   }
 });
 
-
-vehicleRouter.post('/increase-clicks', async (req, res) => {
+vehicleRouter.post("/increase-clicks", async (req, res) => {
   try {
     const { vehicleId } = req.body;
     if (!vehicleId) {
@@ -138,28 +177,27 @@ vehicleRouter.post('/increase-clicks', async (req, res) => {
     }
     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
     const userAgent = req.headers["user-agent"];
-  
+
     console.log("IP:", ip);
     console.log("User Agent:", userAgent);
-    if(!ip || !userAgent) {
+    if (!ip || !userAgent) {
       return res.status(400).json({ error: "IP or User Agent is missing" });
     }
-    const redisClient = await RedisClientSingleton.getRedisClient()
-    const alreadyClicked = await redisClient.get(`vehicle:${vehicleId}:clicks:${ip}`);
-    if(alreadyClicked){
+    const redisClient = await RedisClientSingleton.getRedisClient();
+    const alreadyClicked = await redisClient.get(
+      `vehicle:${vehicleId}:clicks:${ip}`
+    );
+    if (alreadyClicked) {
       return res.status(200).json({ message: "Already clicked recently" });
     }
     await Promise.all([
       redisClient.incr(`vehicle:${vehicleId}:clicks`),
-      redisClient.set(`vehicle:${vehicleId}:clicks:${ip}`, "1", "EX", 1 * 60) 
+      redisClient.set(`vehicle:${vehicleId}:clicks:${ip}`, "1", "EX", 1 * 60),
     ]);
     res.status(201).json({ message: "success" });
-  }
-  catch (err: any) {
+  } catch (err: any) {
     console.error("Error updating clicks count:", err);
-    res
-      .status(500)
-      .json({ message: "Error updating clicks count" });
+    res.status(500).json({ message: "Error updating clicks count" });
   }
 });
 
@@ -270,6 +308,14 @@ vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
     console.log(req.body);
     const result = vehicleUploadSchema.safeParse(req.body);
     if (result.error) {
+      if (req.body.images.length > 0) {
+        cleanupQueue
+          .add("delete-s3-images", { image_urls: [...req.body.images] })
+          .then(() => console.log("added orphaned images to cleanup queue"))
+          .catch((e) => {
+            console.error(e);
+          });
+      }
       return res.status(401).json({ error: result.error });
     }
 
@@ -283,6 +329,23 @@ vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
       sellerId: req.userId as number,
     };
     console.log(data);
+    const [row] = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.registration_num, data.registration_num));
+    if (row && row.id) {
+      if (data.images.length > 0) {
+        cleanupQueue
+          .add("delete-s3-images", { image_urls: [...req.body.images] })
+          .then(() => console.log("added orphaned images to cleanup queue"))
+          .catch((e) => {
+            console.error(e);
+          });
+      }
+      return res.status(400).json({
+        error: `Vehicle with registration number: ${data.registration_num} already exists`,
+      });
+    }
     await db.insert(vehicles).values(data);
     res.status(200).json({ message: "Vehicle uploaded successfully" });
   } catch (e: any) {
