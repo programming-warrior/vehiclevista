@@ -46,11 +46,9 @@ export const vehicleUploadSchema = z.object({
   color: z.string().min(1, { message: "Color is required" }),
   description: z.string().min(1, { message: "Description is required" }),
   location: z.string().min(1, { message: "Location is required" }),
-  latitude: z.number().min(-90).max(90, { message: "Latitude is required" }).optional(),
+  latitude: z.number().optional(),
   longitude: z
-    .number()
-    .min(-180)
-    .max(180, { message: "Longitude is required" }).optional(),
+    .number().optional(),
   images: z
     .array(z.string()),
   condition: z.enum(["clean", "catS", "catN"], {

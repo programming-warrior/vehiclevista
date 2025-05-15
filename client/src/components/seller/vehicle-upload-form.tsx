@@ -72,6 +72,8 @@ const VehicleUploadForm = () => {
       openToPX: false,
       contactPreference: "phone",
       negotiable: false,
+      latitude: 0,
+      longitude: 0
     },
   });
   
@@ -162,8 +164,13 @@ const VehicleUploadForm = () => {
     setSelectedFiles((prev: File[]) => prev.filter((_, i: number) => i !== index));
   };
 
-  const handleSelectLocation = (suggestion:string) => {
-    form.setValue("location", suggestion);
+  const handleSelectLocation = (suggestion:any) => {
+    console.log(suggestion.display_name);
+    console.log(suggestion.lat);
+    console.log(suggestion.lon)
+    form.setValue("location", suggestion.display_name);
+    form.setValue('latitude', parseFloat(suggestion.lat))
+    form.setValue('longitude', parseFloat(suggestion.lon))
     setShowLocationSuggestions(false);
     form.trigger("location");
   };
@@ -180,6 +187,9 @@ const VehicleUploadForm = () => {
     setUploadProgress(0);
 
     try {
+
+      
+
       // Only proceed with image upload if there are images selected
       let imageUrls: string[] = [];
 
@@ -247,6 +257,8 @@ const VehicleUploadForm = () => {
     </div>
   );
 
+  console.log("form errors", form.formState.errors);
+
   return (
     <Card className="w-full mx-auto shadow-lg border-blue-100">
       <CardHeader className="bg-blue-50 border-b border-blue-100">
@@ -255,10 +267,7 @@ const VehicleUploadForm = () => {
       <CardContent className="pt-6">
         <Form {...form}>
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              form.handleSubmit(onSubmit)(e);
-            }}
+            onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-6"
           >
             {/* Registration Number Field with Status Indicators */}
@@ -699,7 +708,7 @@ const VehicleUploadForm = () => {
                                 <div
                                   key={index}
                                   className="px-4 py-2 hover:bg-blue-50 cursor-pointer flex items-center space-x-2 text-sm border-b border-blue-50 last:border-0"
-                                  onClick={() => handleSelectLocation(suggestion.display_name)}
+                                  onClick={() => handleSelectLocation(suggestion)}
                                 >
                                   <MapPin className="h-4 w-4 text-blue-500" />
                                   <span>{suggestion.display_name}</span>

@@ -27,6 +27,7 @@ import {
 import ImageGallery from "@/components/image-gallery";
 import { incrementVehicleViews } from "@/api/vehicle-api";
 import ReportDialog from "@/components/ui/report-dialog";
+import MapComponent from "@/components/map-component";
 
 
 export default function VehiclePage() {
@@ -262,6 +263,10 @@ export default function VehiclePage() {
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
                   <MapPin className="h-4 w-4" />
                   {vehicle.location}
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
+                  <MapComponent lat={vehicle.latitude}  lon={vehicle.longitude}/>
                 </div>
 
                 <div className="space-y-4">
