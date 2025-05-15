@@ -31,6 +31,8 @@ initRedisClients().catch(console.error);
 //global websocket clients
 const clients: { [id: string]: WebSocket } = {};
 const auctionClients: { [id: string]: string[] } = {};
+const raffleClients: { [id: string]: string[] } = {}
+
 
 console.log("redis client connected");
 console.log("websocket server running on port 5001");
@@ -56,6 +58,7 @@ wss.on("connection", async (ws, req: any) => {
   clients[decodedValue.id.toString()] = ws;
 
   await subscribeToBidPlace();
+  await subscribeToRaffleTicketPurchase();
   await subscribeToBidPlaceError()
 
   ws.on("message", async (msg) => {
@@ -71,6 +74,22 @@ wss.on("connection", async (ws, req: any) => {
         JSON.stringify({
           event: "AUCTION_TIMER_SUBSCRIBED",
           auctionId: data.payload.auctionId,
+        })
+      );
+      // clients[decodedValue.id.toString()]
+      //   auctionClients.get(data.auctionId).add(ws);
+    }
+    else if (data.type === "subscribe" && data.payload.raffleId) {
+      
+      if (!raffleClients[data.payload.raffleId]) {
+        raffleClients[data.payload.raffleId] = [];
+      }
+      raffleClients[data.payload.raffleId].push(decodedValue.id.toString());
+      await subscribeToRaffleTimer(data.payload.raffleId.toString());
+      ws.send(
+        JSON.stringify({
+          event: "RAFFLE_TIMER_SUBSCRIBED",
+          raffleId: data.payload.raffleId,
         })
       );
       // clients[decodedValue.id.toString()]
@@ -101,6 +120,24 @@ async function subscribeToBidPlace() {
   }
 }
 
+async function subscribeToRaffleTicketPurchase() {
+  try {
+    await redisSubscriberClient.subscribe("RAFFLE_TICKET_PURCHASED", (message, channel) => {
+      console.log(`Message received from ${channel}: ${message}`);
+      const data = JSON.parse(message);
+      const { userId, bidId, ticketQuantity, raffleId } = data;
+      const wsData = {
+        event: "RAFFLE_TICKET_PURCHASED",
+        message: data,
+      };
+      clients[userId].send(JSON.stringify(wsData));
+    });
+    console.log("Subscribed to RAFFLE_TICKET_PURCHASED");
+  } catch (error: any) {
+    console.error("Failed to subscribe to Redis channel:", error.message);
+  }
+}
+
 async function subscribeToBidPlaceError() {
   try {
     await redisSubscriberClient.subscribe("BID_PLACED_ERROR", (message, channel) => {
@@ -117,6 +154,39 @@ async function subscribeToBidPlaceError() {
       clients[payload.userId].send(JSON.stringify(wsData));
     });
     console.log("Subscribed to BID_PLACED");
+  } catch (error: any) {
+    console.error("Failed to subscribe to Redis channel:", error.message);
+  }
+}
+
+
+async function subscribeToRaffleTimer(raffleId: string) {
+  try {
+    await redisSubscriberClient.subscribe(
+      "RAFFLE_TIMER:" + raffleId,
+      (message, channel) => {
+        console.log(`Message received from ${channel}: ${message}`);
+        const data = JSON.parse(message);
+        console.log(data.raffleId===raffleId)
+        if (data.raffleId != raffleId) return;
+
+        const wsData = {
+          event: "RAFFLE_TIMER",
+          message: data,
+        };
+        console.log(raffleClients);
+
+        raffleClients[data.raffleId]?.forEach((userId) => {
+          if (clients[userId]) {
+            console.log("sending data to the client " + userId);
+            clients[userId].send(JSON.stringify(wsData));
+          } else {
+            console.warn(`No WebSocket client found for username: ${userId}`);
+          }
+        });
+      }
+    );
+    console.log("Subscribed to Raffle Timer channel:", raffleId);
   } catch (error: any) {
     console.error("Failed to subscribe to Redis channel:", error.message);
   }

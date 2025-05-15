@@ -1,0 +1,128 @@
+import { Worker } from "bullmq";
+import { connection } from "../workerRedis";
+// import { WebSocketServer } from './websocket'; // assume you have a pub function
+import { db } from "../../db";
+import { raffle } from "../../../shared/schema";
+import { eq } from "drizzle-orm";
+import { raffleQueue } from "../queue";
+
+const raffleWorker = new Worker(
+  "raffle",
+  async (job) => {
+    console.log(job);
+    if (job.name === "startRaffle") {
+      const { raffleId, endTime } = job.data;
+      const raffleRow = await db
+        .select()
+        .from(raffle)
+        .where(eq(raffle.id, raffleId));
+      const raffleData = raffleRow[0];
+      console.log(raffleData);
+      if (!raffleData) {
+        console.error(`Raffle with ID ${raffleId} not found`);
+        return;
+      }
+      if (raffleData.status === "running" || raffleData.status === "ended") {
+        console.log(`Raffle ${raffleId} is already ${raffleData.status}`);
+        return;
+      }
+      await db
+        .update(raffle)
+        .set({ status: "running" })
+        .where(eq(raffle.id, raffleId));
+
+      startCountdown(raffleId, endTime);
+    } else if (job.name === "endRaffle") {
+      console.log("end raffle job started");
+      const { raffleId } = job.data;
+      const raffleRows = await db
+        .select()
+        .from(raffle)
+        .where(eq(raffle.id, raffleId));
+      const raffleData = raffleRows[0];
+      console.log(raffleData);
+      if (!raffleData) {
+        console.error(`raffle with ID ${raffleId} not found`);
+        return;
+      }
+      if (raffleData.status === "ended") {
+        console.log(`raffle ${raffleId} is already ${raffleData.status}`);
+        return;
+      }
+      await db
+        .update(raffle)
+        .set({ status: "ended" })
+        .where(eq(raffle.id, raffleId));
+    }
+  },
+  { connection }
+);
+
+const raffleCountdownIntervals = new Map<string, NodeJS.Timeout>();
+
+function startCountdown(raffleId: string, endTime: string) {
+  const interval = setInterval(async () => {
+    const now = new Date();
+    const remainingTime = new Date(endTime).getTime() - now.getTime();
+
+    console.log(remainingTime);
+    // WebSocketServer.broadcastToraffle(raffleId, {
+    //   type: 'countdown',
+    //   raffleId,
+    //   remaining,
+    // });
+    console.log("timer published to redis");
+    connection.publish(
+      `RAFFLE_TIMER:${raffleId}`,
+      JSON.stringify({
+        raffleId,
+        remainingTime,
+      })
+    );
+
+    if (remainingTime <= 0) {
+      clearInterval(interval);
+
+      raffleCountdownIntervals.delete(raffleId);
+      //   WebSocketServer.broadcastToraffle(raffleId, {
+      //     type: 'raffleEnded',
+      //     raffleId,
+      //   });
+
+      // Optionally schedule next job to declare winner, etc.
+      await raffleQueue.add("endRaffle", {
+        raffleId: raffleId,
+      });
+    }
+  }, 1000);
+
+  raffleCountdownIntervals.set(raffleId, interval);
+}
+
+async function initActiverafflesCountdowns() {
+  const runningRaffle = await db
+    .select()
+    .from(raffle)
+    .where(eq(raffle.status, "running"));
+
+  console.log(runningRaffle);
+
+  runningRaffle.forEach((r) => {
+    const remainingTime = new Date(r.endDate).getTime() - Date.now();
+    if (remainingTime > 0) {
+      startCountdown(r.id.toString(), r.endDate.toISOString());
+    } else {
+      db.update(raffle)
+        .set({ status: "ended" })
+        .where(eq(raffle.id, r.id));
+    }
+  });
+
+  raffleWorker.on("ready", () => {
+    console.log("raffle Worker is ready and connected to Redis");
+  });
+}
+
+initActiverafflesCountdowns().catch((error) => {
+  console.error("Error initializing active raffle countdowns:", error);
+});

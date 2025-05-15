@@ -49,6 +49,7 @@ import {
   vehicleFuelTypes,
 } from "@shared/zodSchema/vehicleSchema";
 import { getPresignedUrls, uploadToPresignedUrl } from "@/api";
+import { createRaffle } from "@/api";
 
 // Mock function for fetching vehicles - replace with actual API
 const getAdminVehicles = async () => {
@@ -98,20 +99,14 @@ const getAdminVehicles = async () => {
   };
 };
 
-// Mock function for creating raffle - replace with actual API
-const createRaffle = async (data: any) => {
-  console.log("Creating raffle with data:", data);
-  return { success: true };
-};
-
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
   message: "Please provide a valid time in 24-hour format (HH:MM)",
 });
 
 // Form schema
-const formSchema = z
+const raffleFormSchema = z
   .object({
-    vehicleId: z.string().min(1, "Please select a vehicle").optional(),
+    vehicleId: z.string().optional(),
     title: z.string().min(5, "Title must be at least 5 characters"),
     description: z
       .string()
@@ -126,14 +121,12 @@ const formSchema = z
     endTime: timeSchema,
     ticketPrice: z.number().min(1, "Ticket price must be at least 1"),
     ticketQuantity: z.number().int().min(10, "Minimum 10 tickets required"),
-    maxTicketsPerUser: z.number().int().min(1, "Minimum 1 ticket per user"),
     featuredRaffle: z.boolean().default(false),
     earlyBirdDiscount: z.boolean().default(false),
     earlyBirdPrice: z.number().optional(),
     earlyBirdEndDate: z.date().optional(),
   })
   .superRefine((data, ctx) => {
-    // Create date objects for validation
     const now = new Date();
     const startDateTime = new Date(
       data.startDate.getFullYear(),
@@ -156,7 +149,7 @@ const formSchema = z
       ctx.addIssue({
         path: ["startTime"],
         code: z.ZodIssueCode.custom,
-        message: "Raffle start time cannot be in the past",
+        message: "Auction start time cannot be in the past",
       });
     }
 
@@ -165,7 +158,7 @@ const formSchema = z
       ctx.addIssue({
         path: ["endTime"],
         code: z.ZodIssueCode.custom,
-        message: "Raffle end time must be after start time",
+        message: "Auction end time must be after start time",
       });
     }
 
@@ -251,14 +244,14 @@ export default function RaffleForm() {
   const oneWeekLater = addDays(now, 7);
 
   const form = useForm({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(raffleFormSchema),
     defaultValues: {
       vehicleId: "",
       title: "",
       description: "",
-      startDate: now,
+      startDate: new Date(),
       startTime: format(now, "HH:mm"),
-      endDate: oneWeekLater,
+      endDate: new Date(),
       endTime: format(now, "HH:mm"),
       ticketPrice: 0,
       ticketQuantity: 0,
@@ -281,10 +274,8 @@ export default function RaffleForm() {
       bodyType: "",
       registration_num: "",
       color: "",
-      description: "",
       location: "",
       images: [],
-      condition: "clean",
     },
   });
 
@@ -349,8 +340,9 @@ export default function RaffleForm() {
   };
 
   const onSubmit = async (values: any) => {
-    setSubmitting(true);
+    // setSubmitting(true);
     try {
+      console.log(values);
       const startDateTime = new Date(
         values.startDate.getFullYear(),
         values.startDate.getMonth(),
@@ -406,21 +398,27 @@ export default function RaffleForm() {
         ...vehicleData,
         title: values.title,
         description: values.description,
-        startDate: startDateTime.toISOString(),
-        endDate: endDateTime.toISOString(),
+        startDate: startDateTime,
+        endDate: endDateTime,
         ticketPrice: values.ticketPrice,
         ticketQuantity: values.ticketQuantity,
-        featuredRaffle: values.featuredRaffle,
+        featured: values.featuredRaffle,
       };
 
-      // Submit raffle
       await createRaffle(raffleData);
-      alert("Raffle created successfully!");
+      toast({
+        title: "Success",
+        description: "Raffle created successfully",
+      });
       form.reset();
       setSelectedVehicle(null);
     } catch (error) {
       console.error("Error creating raffle:", error);
-      alert("Failed to create raffle. Please try again.");
+      toast({
+        variant: "destructive",
+        title: "Failed",
+        description: "Something went wrong",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -431,7 +429,23 @@ export default function RaffleForm() {
       <h2 className="text-2xl font-bold mb-6">Create Car Raffle</h2>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            console.log("Basic form submit triggered");
+            // Debug form validation state
+            console.log("Form is valid:", form.formState.isValid);
+            console.log("Form errors:", form.formState.errors);
+
+            // Try to run the handler but catch any errors
+            try {
+              form.handleSubmit(onSubmit)(e);
+            } catch (error) {
+              console.error("Error during form submission:", error);
+            }
+          }}
+          className="space-y-6"
+        >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Left column - Vehicle selection or add new */}
             <div className="md:col-span-2">
@@ -454,7 +468,7 @@ export default function RaffleForm() {
               {/* Add New Vehicle/Spare Part Form */}
               {addNewItem ? (
                 <Form {...vehicleForm}>
-                  <form className="space-y-6">
+                  <div className="space-y-6">
                     <div className="space-y-4">
                       <FormField
                         control={vehicleForm.control}
@@ -606,7 +620,7 @@ export default function RaffleForm() {
                             </FormItem>
                           )}
                         />
-                        <FormField
+                        {/* <FormField
                           control={vehicleForm.control}
                           name="condition"
                           render={({ field }) => (
@@ -635,7 +649,7 @@ export default function RaffleForm() {
                               <FormMessage />
                             </FormItem>
                           )}
-                        />
+                        /> */}
                         <FormField
                           control={vehicleForm.control}
                           name="make"
@@ -871,7 +885,7 @@ export default function RaffleForm() {
                         )}
                       </Button>
                     </div> */}
-                  </form>
+                  </div>
                 </Form>
               ) : (
                 // Existing vehicle select (unchanged)
@@ -1062,7 +1076,7 @@ export default function RaffleForm() {
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
+                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                             initialFocus
                           />
                         </PopoverContent>
@@ -1116,11 +1130,11 @@ export default function RaffleForm() {
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                          <Calendar
+                        <Calendar
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
+                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                             initialFocus
                           />
                         </PopoverContent>
@@ -1247,7 +1261,7 @@ export default function RaffleForm() {
             <Button type="button" variant="outline">
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit">
               {submitting ? "Creating..." : "Create Raffle"}
             </Button>
           </div>

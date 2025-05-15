@@ -48,6 +48,7 @@ import { WEBSOCKET_URL } from "./lib/constants";
 import UserProfile from "@/pages/user-profile";
 import AdminPublicBlacklist from "./pages/admin/public-blacklist";
 import AdminRafflePage from "./pages/admin/raffle";
+import RaffleIdPage from "./pages/raffle/raffle-id";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -78,6 +79,14 @@ export default function App() {
           toast({
             title:'Bid Place successfully', 
             description: `Your bid for amount $${bidAmount} is successfull`
+          })
+        }
+        else if(data.event==='RAFFLE_TICKET_PURCHASED'){
+          console.log('RAFFLE_TICKET_PURCHASED')
+          const {bidId, raffleId, ticketQuantity, userId} = data.message;
+          toast({
+            title:'Bid Place successfully', 
+            description: `Your raffle $${ticketQuantity} tickets purchase is successfull`
           })
         }
         else if (data.event=='BID_PLACED_ERROR'){
@@ -137,6 +146,7 @@ export default function App() {
               <Route path="/vehicles" component={VehiclesList} />
 
               <Route path="/auctions/:id" component={AuctionIdPage} />
+               <Route path="/raffle/:id" component={RaffleIdPage} />
 
               {/* Admin Routes */}
               <Route path="/admin">

@@ -1,7 +1,8 @@
 import { create } from "domain";
+import { float } from "drizzle-orm/mysql-core";
 import { pgTable, text, serial, boolean, real, integer, timestamp, jsonb, foreignKey, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+import { number, string, z } from "zod";
 
 
 export  const userRoles =  ["buyer", "seller", "admin", "trader", "garage"] as const
@@ -50,6 +51,45 @@ export const vehicles = pgTable("vehicles", {
   clicks: integer("clicks").default(0),
   leads: integer("leads").default(0),
 });
+
+export const raffle = pgTable("raffle", {
+  id: serial("id").primaryKey(),
+
+  //vehicle data
+  type: vehicleTypesEnum().notNull().default('car'), 
+  registration_num: text("registration_num").notNull().unique(),
+  price: integer("price").notNull(),
+  year: integer("year").notNull(),
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  mileage: integer("mileage").notNull(),
+  fuelType: text("fuel_type").notNull(),
+  transmission: text("transmission").notNull(),
+  bodyType: text("body_type").notNull(),
+  color: text("color").notNull(),
+  location: text("location").notNull(),
+  images: text("images").array().notNull(),
+  condition: vehicleConditionsEnum().notNull().default('clean'),
+
+
+  //raffle data
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  ticketPrice: real('ticket_price').notNull(),
+  ticketQuantity: integer('ticket_quantity').notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  featured: boolean().notNull().default(true),
+  soldTicket: integer('sold_ticket').notNull().default(0),
+  status: text('status').notNull().default('running'),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  
+  views: integer("views").default(0),
+  clicks: integer("clicks").default(0),
+  leads: integer("leads").default(0),
+});
+
 
 export const vehicleMetricsHistory = pgTable("vehicle_metrics_history", {
   id: serial("id").primaryKey(),
@@ -181,6 +221,15 @@ export const bids = pgTable("bids", {
   bidAmount: real("bid_amount").notNull(),
   userId: integer("user_id").notNull().references(() => users.id),
   auctionId: integer("auction_id").notNull().references(() => auctions.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+//Bids table
+export const raffleTicketSale = pgTable("raffle_ticket_sale", {
+  id: serial("id").primaryKey(),
+  ticketQtn: integer("ticket_qtn").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  raffleId: integer("raffle_id").notNull().references(() => raffle.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -19,6 +19,7 @@ import auctionRouter from "./serverRoutes/auctionRouter";
 import userRouter from "./serverRoutes/userRouter";
 import adminRouter from "./serverRoutes/adminRouter";
 import reportRouter from "./serverRoutes/reportRouter";
+import raffleRouter from "./serverRoutes/raffleRouter";
 
 const app = express();
 
@@ -53,6 +54,8 @@ app.use("/api/auction", auctionRouter)
 app.use("/api/user", userRouter)
 app.use("/api/admin", adminRouter)
 app.use("/api/report", reportRouter)
+app.use("/api/raffle", raffleRouter)
+
 
 
 // Add diagnostic endpoint

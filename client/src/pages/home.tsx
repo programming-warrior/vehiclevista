@@ -17,6 +17,7 @@ import { useUser } from "@/hooks/use-store";
 import Navbar from "@/components/navbar";
 import { ChevronRight } from "lucide-react";
 import { Link } from "wouter";
+import RaffleHomeSection from "@/components/raffle-home-section";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Car");
@@ -57,6 +58,10 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-8">
       <HeroSection />
+
+      <div className="px-12 mx-auto w-full">
+        <RaffleHomeSection/>
+      </div>
 
       {/* Featured Vehicles Section */}
       <section className="px-12  mx-auto w-full">

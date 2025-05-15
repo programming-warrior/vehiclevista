@@ -28,6 +28,9 @@ import {
     placeLiveBid, 
     getBidsForAuction
 } from "./auction-api";
+
+import { getRunningRaffle, purchaseRaffleTicket, incrementRaffleViews, incrementRaffleClicks } from "./raffle-api";
+
 import { 
   getPerformanceMetrics,
   getTopListings
@@ -37,6 +40,8 @@ import {
  import { getListingReports } from "./admin-api/repots-api";
 
  import { uploadUserReport, uploadListingReport } from "./report-api";
+ 
+ import { createRaffle, getRaffles } from "./admin-api/raffle-api";
 
 
 async function uploadToPresignedUrl(file: File, presignedUrl: string): Promise<string> {
@@ -116,12 +121,17 @@ export {
   getUserBids, 
   updateUserCardInfo, 
 
+  getRunningRaffle,
+  purchaseRaffleTicket,
+
   getPerformanceMetrics,
   getTopListings, 
   getListingReports,
   getUsers,
   blacklistUser,
   unBlacklistUser,
+  createRaffle,
+  getRaffles,
 
   uploadListingReport,
   uploadUserReport,

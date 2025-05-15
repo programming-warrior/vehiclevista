@@ -9,12 +9,89 @@ import {
   lisitngReport,
   vehicleMetricsHistory,
   auctionMetricsHistory,
+  raffle,
+  raffleTicketSale,
 } from "../../shared/schema";
 import { eq, or, sql, sum, aliasedTable, like, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { raffleQueue } from "../worker/queue";
+
 // import { notEq } from "drizzle-orm/pg-core";
 
 import { verifyToken } from "../middleware/authMiddleware";
+import { z } from "zod";
+import { parse } from "path";
+
+// --- Place these at the top of your file or in a shared location ---
+const vehicleTypes = ["car", "bike", "truck", "van"] as const;
+const vehicleConditions = ["clean", "catS", "catN"] as const;
+
+const vehicleFormSchema = z.object({
+  type: z.enum(vehicleTypes, { required_error: "Type is required" }),
+  make: z.string().min(1, { message: "Make is required" }),
+  model: z.string().min(1, { message: "Model is required" }),
+  registration_num: z
+    .string()
+    .min(1, { message: "Registration number is required" }),
+  price: z.string().refine((val) => !isNaN(parseFloat(val)), {
+    message: "Price must be a valid number",
+  }),
+  year: z.string().refine((val) => !isNaN(parseInt(val)), {
+    message: "Year must be a valid number",
+  }),
+  mileage: z.string().refine((val) => !isNaN(parseFloat(val)), {
+    message: "Mileage must be a valid number",
+  }),
+  // title: z.string().min(1, { message: "Title is required" }),
+  fuelType: z.string().min(1, { message: "Fuel type is required" }),
+  transmission: z.string().min(1, { message: "Transmission is required" }),
+  bodyType: z.string().min(1, { message: "Body type is required" }),
+  color: z.string().min(1, { message: "Color is required" }),
+  // description: z.string().min(1, { message: "Description is required" }),
+  location: z.string().min(1, { message: "Location is required" }),
+  // latitude: z.number().min(-90).max(90).optional(),
+  // longitude: z.number().min(-180).max(180).optional(),
+  images: z.array(z.string()),
+  // condition: z.enum(vehicleConditions, {
+  //   required_error: "Condition is required",
+  // }),
+});
+
+const raffleFormSchema = z
+  .object({
+    vehicleId: z.string().optional(),
+    title: z.string().min(5, "Title must be at least 5 characters"),
+    description: z
+      .string()
+      .min(10, "Description must be at least 10 characters"),
+    startDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+      message: "Invalid start date",
+    }),
+    endDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+      message: "Invalid end date",
+    }),
+    ticketPrice: z.number().min(1, "Ticket price must be at least 1"),
+    ticketQuantity: z.number().int().min(10, "Minimum 10 tickets required"),
+    featured: z.boolean().default(false),
+  })
+  .superRefine((data, ctx) => {
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    if (start < new Date()) {
+      ctx.addIssue({
+        path: ["startDate"],
+        code: z.ZodIssueCode.custom,
+        message: "Raffle start time cannot be in the past",
+      });
+    }
+    if (end <= start) {
+      ctx.addIssue({
+        path: ["endDate"],
+        code: z.ZodIssueCode.custom,
+        message: "Raffle end time must be after start time",
+      });
+    }
+  });
 
 const adminRouter = Router();
 
@@ -65,8 +142,7 @@ adminRouter.get(
         leads: sum(vehicleMetricsHistory.leads).mapWith(Number),
       })
       .from(vehicleMetricsHistory)
-      .where(sql`recorded_at <= ${pastDate}`)
-
+      .where(sql`recorded_at <= ${pastDate}`);
 
     const pastAuctionMetric = await db
       .select({
@@ -75,8 +151,7 @@ adminRouter.get(
         leads: sum(vehicleMetricsHistory.leads).mapWith(Number),
       })
       .from(vehicleMetricsHistory)
-      .where(sql`recorded_at <= ${pastDate}`)
-
+      .where(sql`recorded_at <= ${pastDate}`);
 
     const vehicleTotals = await db
       .select({
@@ -105,13 +180,21 @@ adminRouter.get(
 
     const performanceMetrics = {
       vehicleViewsGrowth:
-        ((vehicleTotals.views - pastVehicleMetric[0].views) / (pastVehicleMetric[0].views || 1)) * 100,
+        ((vehicleTotals.views - pastVehicleMetric[0].views) /
+          (pastVehicleMetric[0].views || 1)) *
+        100,
       vehicleClicksGrowth:
-        ((vehicleTotals.clicks - pastVehicleMetric[0].clicks) / ( pastVehicleMetric[0].clicks || 1)) * 100,
+        ((vehicleTotals.clicks - pastVehicleMetric[0].clicks) /
+          (pastVehicleMetric[0].clicks || 1)) *
+        100,
       auctionViewsGrowth:
-        ((auctionTotals.views - pastAuctionMetric[0].views) / (pastAuctionMetric[0].views || 1)) * 100,
+        ((auctionTotals.views - pastAuctionMetric[0].views) /
+          (pastAuctionMetric[0].views || 1)) *
+        100,
       auctionClicksGrowth:
-        ((auctionTotals.clicks - pastAuctionMetric[0].clicks) / (pastAuctionMetric[0].clicks || 1)) * 100,
+        ((auctionTotals.clicks - pastAuctionMetric[0].clicks) /
+          (pastAuctionMetric[0].clicks || 1)) *
+        100,
       totalUsers: totalUsers,
       totalVehicles: vehicleTotals.count,
       totalAuctions: auctionTotals.count,
@@ -606,6 +689,90 @@ adminRouter.get("/reports/listings", verifyToken, async (req, res) => {
     page: pageNumber,
     hasNextPage: reports.length > limitNumber,
   });
+});
+
+adminRouter.post("/raffle/create", verifyToken, async (req, res) => {
+  if (!req.userId || !req.role || req.role !== "admin")
+    return res.status(401).json({ error: "unauthorized access" });
+
+  const data = req.body;
+  console.log(data);
+
+  // Validate raffle data
+  const parseResult = raffleFormSchema.safeParse(data);
+
+  if (!parseResult.success) {
+    return res
+      .status(400)
+      .json({ error: "Invalid input", details: parseResult.error.errors });
+  }
+
+  let vehicleParse: any;
+  if (!data.vehicleId) {
+    vehicleParse = vehicleFormSchema.safeParse(data);
+    if (!vehicleParse.success) {
+      return res.status(400).json({
+        error: "Invalid vehicle data",
+        details: vehicleParse.error.errors,
+      });
+    }
+  }
+  const raffleData = {
+    ...parseResult.data,
+    ...vehicleParse.data,
+    startDate: new Date(parseResult.data.startDate),
+    endDate: new Date(parseResult.data.endDate),
+    status:"upcoming"
+  };
+  const [savedRaffleDetails] = await db
+    .insert(raffle)
+    .values(raffleData)
+    .returning();
+  await raffleQueue.add(
+    "startRaffle",
+    {
+      raffleId: savedRaffleDetails.id,
+      endTime: savedRaffleDetails.endDate,
+    },
+    {
+      delay: savedRaffleDetails.startDate.getTime() - Date.now(),
+    }
+  );
+  return res.status(201).json({ message: "created" });
+});
+
+adminRouter.get("/raffle/get", verifyToken, async (req, res) => {
+  if (!req.userId || !req.role || req.role !== "admin")
+    return res.status(401).json({ error: "unauthorized access" });
+
+  const { page, limit } = req.query;
+  const pageNumber = parseInt(page as string) || 1;
+  const limitNumber = parseInt(limit as string) || 5;
+
+  const offset = (pageNumber - 1) * limitNumber;
+
+  const raffleData = await db
+    .select({
+      raffle,
+      raffleTicketSale,
+    })
+    .from(raffle)
+    .leftJoin(raffleTicketSale, eq(raffleTicketSale.raffleId, raffle.id))
+    .orderBy(sql`${raffle.createdAt} DESC`)
+    .limit(limitNumber)
+    .offset(offset);
+
+  const responseData = raffleData.map((r:any) => {
+    return {
+      ...r.raffle,
+      remainingTime: new Date(r.endDate).getTime() - Date.now(),
+      ticket_sales: {
+        ...r.raffleTicketSale,
+      },
+    };
+  });
+
+  return res.status(200).json(responseData);
 });
 
 // Export the router
