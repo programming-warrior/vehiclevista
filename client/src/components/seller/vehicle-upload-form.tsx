@@ -46,8 +46,8 @@ const VehicleUploadForm = () => {
   const [locationSuggestions, setLocationSuggestions] = useState<any>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
-  const locationRef = useRef(null);
-  const suggestionBoxRef = useRef(null);
+  const locationRef = useRef<HTMLDivElement | null>(null);
+  const suggestionBoxRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
 
   const form = useForm({
@@ -81,11 +81,15 @@ const VehicleUploadForm = () => {
   const [registrationNumError, setRegistrationNumError] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
-  // Handle outside clicks for location suggestions
+  
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (suggestionBoxRef.current && !suggestionBoxRef.current.contains(event.target) && 
-          locationRef.current && !locationRef.current.contains(event.target)) {
+    const handleClickOutside = (event:MouseEvent) => {
+      if (
+        suggestionBoxRef.current &&
+        !suggestionBoxRef.current.contains(event.target as Node) &&
+        locationRef.current &&
+        !locationRef.current.contains(event.target as Node)
+      ) {
         setShowLocationSuggestions(false);
       }
     };
@@ -155,7 +159,7 @@ const VehicleUploadForm = () => {
   };
 
   const removeFile = (index:number) => {
-    setSelectedFiles((prev:any) => prev.filter((_, i:number) => i !== index));
+    setSelectedFiles((prev: File[]) => prev.filter((_, i: number) => i !== index));
   };
 
   const handleSelectLocation = (suggestion:string) => {
@@ -170,17 +174,17 @@ const VehicleUploadForm = () => {
     }
   };
 
-  async function onSubmit(data) {
+  async function onSubmit(data:any) {
     console.log("Form submission started", data);
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
       // Only proceed with image upload if there are images selected
-      let imageUrls = [];
+      let imageUrls: string[] = [];
 
       if (selectedFiles.length > 0) {
-        const fileKeys = selectedFiles.map((file) => ({
+        const fileKeys = selectedFiles.map((file:File) => ({
           fileName: `${Date.now()}-${file.name.split(" ").join("")}`,
           contentType: file.type,
         }));
@@ -188,14 +192,14 @@ const VehicleUploadForm = () => {
         const presignedUrlsResponse = await getPresignedUrls(fileKeys);
         const presignedUrls = presignedUrlsResponse.data.urls;
 
-        const uploadPromises = selectedFiles.map((file, index) =>
+        const uploadPromises = selectedFiles.map((file:File, index:number) =>
           uploadToPresignedUrl(file, presignedUrls[index])
         );
 
         // Track progress
         let completed = 0;
         for (const promise of uploadPromises) {
-          await promise.then((url) => {
+          await promise.then((url:string) => {
             imageUrls.push(url);
             completed++;
             setUploadProgress(
@@ -207,7 +211,7 @@ const VehicleUploadForm = () => {
 
       const vehicleData = {
         ...data,
-        images: imageUrls,
+        images: imageUrls as string[],
       };
 
       const response = await uploadSingleVehicle(vehicleData);
@@ -221,8 +225,7 @@ const VehicleUploadForm = () => {
       form.reset();
       setSelectedFiles([]);
       setLocation("/seller");
-    } catch (error) {
-      console.error("Error in form submission:", error);
+    } catch (error:any) {
       toast({
         title: "Upload failed",
         description:
@@ -372,7 +375,7 @@ const VehicleUploadForm = () => {
                 {/* Preview selected images */}
                 {selectedFiles.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {selectedFiles.map((file, index) => (
+                    {selectedFiles.map((file:File, index:number) => (
                       <div
                         key={index}
                         className="relative group aspect-square border border-blue-200 rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
@@ -573,7 +576,7 @@ const VehicleUploadForm = () => {
                             <SelectValue placeholder="Select fuel type" />
                           </SelectTrigger>
                           <SelectContent className="border-blue-200">
-                            {vehicleFuelTypes[form.getValues("type")]?.map(
+                            {vehicleFuelTypes[form.getValues("type") as keyof typeof vehicleFuelTypes]?.map(
                               (fuel) => (
                                 <SelectItem key={fuel} value={fuel}>
                                   {fuel}
@@ -603,7 +606,7 @@ const VehicleUploadForm = () => {
                           </SelectTrigger>
                           <SelectContent className="border-blue-200">
                             {vehicleTransmissionsTypes[
-                              form.getValues("type")
+                              form.getValues("type") as keyof typeof vehicleTransmissionsTypes
                             ]?.map((transmission) => (
                               <SelectItem
                                 key={transmission}

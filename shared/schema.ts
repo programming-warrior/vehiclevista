@@ -14,7 +14,7 @@ export const vehicleTypesEnum = pgEnum("vehicle_types", vehicleTypes)
 export const vehicleConditions= ["clean", "catS", "catN"] as const
 export const vehicleConditionsEnum = pgEnum("vehicle_conditions", vehicleConditions)
 
-export const vehicleListingStatus = ["ACTIVE", "SOLD", "EXPIRED"] as const
+export const vehicleListingStatus = ["ACTIVE", "NEED_APPROVAL", "BLACKLISTED", "SOLD", "EXPIRED"] as const
 export const vehicleListingStatusEnum = pgEnum("vehicle_listing_status", vehicleListingStatus)
 
 
@@ -44,11 +44,11 @@ export const vehicles = pgTable("vehicles", {
   sellerId: integer("seller_id").notNull(),
   sellerType: text("seller_type"), // private, trader, garage
   contactPreference: text("contact_preference"), // 'phone', 'email', 'both'
-  listingStatus: vehicleListingStatusEnum().notNull().default("ACTIVE"), // 'ACTIVE', 'SOLD', 'EXPIRED'
+  listingStatus: vehicleListingStatusEnum().notNull().default("ACTIVE"), 
   negotiable: boolean("negotiable").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   views: integer("views").default(0),
-  clicks: integer("clicks").default(0),
+  clicks: integer("clicks").default(0), 
   leads: integer("leads").default(0),
 });
 

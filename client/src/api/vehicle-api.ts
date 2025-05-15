@@ -113,7 +113,8 @@ export async function uploadSingleVehicle(
     );
     return response.data;
   } catch (error: any) {
-    throw new Error(error.response?.data?.message);
+    console.log(error);
+    throw new Error(error.response?.data?.error);
   }
 }
 
