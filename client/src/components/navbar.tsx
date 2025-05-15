@@ -188,15 +188,15 @@ export default function Navbar() {
         <div className="container mx-auto px-4 h-12 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="secondary" className="bg-red-500 hover:bg-red-600 text-white" 
-              onClick={() => setLocation('/seller')}
+              onClick={() => setLocation('/seller/vehicle/upload')}
             >
               Sell Your Car
             </Button>
             <nav className="flex items-center gap-4">
               <Link href="/" className="text-sm font-medium hover:text-white">Home</Link>
-              <Link href="/classified" className="text-sm font-medium hover:text-white">Classified</Link>
+              <Link href="/vehicle" className="text-sm font-medium hover:text-white">Classified</Link>
               <Link href="/auction" className="text-sm font-medium hover:text-white">Auction</Link>
-              <Link href="/events" className="text-sm font-medium hover:text-white">Events</Link>
+              {/* <Link href="/events" className="text-sm font-medium hover:text-white">Events</Link> */}
               <Link href="/about" className="text-sm font-medium hover:text-white">About</Link>
               <Link href="/support" className="text-sm font-medium hover:text-white">Support</Link>
             </nav>

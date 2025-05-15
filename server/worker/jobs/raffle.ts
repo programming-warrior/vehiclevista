@@ -11,6 +11,7 @@ const raffleWorker = new Worker(
   async (job) => {
     console.log(job);
     if (job.name === "startRaffle") {
+      console.log("startRaffle called");
       const { raffleId, endTime } = job.data;
       const raffleRow = await db
         .select()
@@ -100,27 +101,39 @@ function startCountdown(raffleId: string, endTime: string) {
 }
 
 async function initActiverafflesCountdowns() {
-  const runningRaffle = await db
-    .select()
-    .from(raffle)
-    .where(eq(raffle.status, "running"));
+  try {
+    const runningRaffle = await db
+      .select()
+      .from(raffle)
+      .where(eq(raffle.status, "running"));
 
-  console.log(runningRaffle);
+    console.log(runningRaffle);
 
-  runningRaffle.forEach((r) => {
-    const remainingTime = new Date(r.endDate).getTime() - Date.now();
+    const remainingTime =
+      new Date(runningRaffle[0].endDate).getTime() - Date.now();
+    console.log(remainingTime);
     if (remainingTime > 0) {
-      startCountdown(r.id.toString(), r.endDate.toISOString());
+      console.log("startcountdown called for running raffles");
+      startCountdown(
+        runningRaffle[0].id.toString(),
+        runningRaffle[0].endDate.toISOString()
+      );
     } else {
-      db.update(raffle)
+      console.log("updating raffle status to ended");
+      await db
+        .update(raffle)
         .set({ status: "ended" })
-        .where(eq(raffle.id, r.id));
+        .where(eq(raffle.id, runningRaffle[0].id));
+      
+      console.log(runningRaffle[0].id + " status updated to ended")
     }
-  });
 
-  raffleWorker.on("ready", () => {
-    console.log("raffle Worker is ready and connected to Redis");
-  });
+    raffleWorker.on("ready", () => {
+      console.log("raffle Worker is ready and connected to Redis");
+    });
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 initActiverafflesCountdowns().catch((error) => {

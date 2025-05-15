@@ -137,15 +137,14 @@ export default function App() {
               <Route path="/login" component={Login} />
               <Route path="/register" component={Register} />
               <Route path="/signin" component={SignIn} />
-              <Route path="/classified" component={Classified} />
+              {/* <Route path="/classified" component={Classified} /> */}
+              <Route path="/vehicle" component={VehiclesList} />
               <Route path="/vehicle/:id" component={VehiclePage} />
               <Route path="/search" component={Search} />
               <Route path="/makes" component={MakesPage} />
               <Route path="/makes/:brand" component={BrandPage} />
               <Route path="/auction" component={AuctionPage} />
-              <Route path="/vehicles" component={VehiclesList} />
-
-              <Route path="/auctions/:id" component={AuctionIdPage} />
+              <Route path="/auction/:id" component={AuctionIdPage} />
                <Route path="/raffle/:id" component={RaffleIdPage} />
 
               {/* Admin Routes */}
@@ -201,15 +200,14 @@ export default function App() {
                   component={AuctionForm}
                 />
               </Route>
-              <Route path="/seller/upload" >
+              <Route path="/seller/vehicle/upload" >
                 <ProtectedRoute
                   component={SellerVehicleUpload}
                 />
               </Route>
-              <Route path="/seller/bulk-upload" >
+              <Route path="/seller/vehicle/bulk-upload" >
                 <ProtectedRoute
                   component={SellerVehilceBulkUpload}
-                  requiredRoles={["seller"]}
                 />
               </Route>
 

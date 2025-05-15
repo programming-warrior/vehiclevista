@@ -44,6 +44,16 @@ import {
  import { createRaffle, getRaffles } from "./admin-api/raffle-api";
 
 
+async function getLocationSuggestion(location:string){
+    try{
+      const res= await axios(`https://nominatim.openstreetmap.org/search?format=json&q=${location}`);
+      return res.data;
+    }
+    catch(e){
+      throw e
+    }
+}
+
 async function dvsaApi(registration_num:string){
   try{
     const res= await axios.post(BACKEND_URL + '/api/vehicles/dvsa',
@@ -116,6 +126,7 @@ export {
   uploadToPresignedUrl,
   getPresignedUrls,
   dvsaApi,
+  getLocationSuggestion,
 
   getVehicles,
   getVehicleById,

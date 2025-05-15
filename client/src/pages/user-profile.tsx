@@ -249,7 +249,7 @@ export default function UserProfile() {
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
   const { userId, role, card_verified } = useUser();
   const [userData, setUserData] = useState<any>(null);
-  const [bidHistory, setBidHistory] = useState<any>(null);
+  const [bidHistory, setBidHistory] = useState<any>([]);
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
 
   useEffect(() => {
