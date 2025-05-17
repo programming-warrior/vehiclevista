@@ -56,8 +56,9 @@ const formSchema = z
     endTime: timeSchema,
   })
   .superRefine((data, ctx) => {
-    // Create date objects for validation
+   
     const now = new Date();
+
     const startDateTime = new Date(
       data.startDate.getFullYear(),
       data.startDate.getMonth(),
@@ -93,6 +94,7 @@ const formSchema = z
     }
   });
 
+
 type AuctionFormValues = z.infer<typeof formSchema>;
 
 export default function AuctionForm() {
@@ -118,6 +120,9 @@ export default function AuctionForm() {
       description: "",
     },
   });
+
+console.log(form.watch('startTime'));
+
 
   // Fetch seller's vehicles
   useEffect(() => {
@@ -165,8 +170,8 @@ export default function AuctionForm() {
     // Format data for submission
     const auctionData = {
       vehicleId: values.vehicleId,
-      startDate: startDateTime.toISOString(),
-      endDate: endDateTime.toISOString(),
+      startDate: format(startDateTime, "yyyy-MM-dd'T'HH:mm:ss"),
+      endDate: format(endDateTime, "yyyy-MM-dd'T'HH:mm:ss"),
       startingPrice: values.startingPrice,
       description: values.description,
       title: values. title,
@@ -175,7 +180,7 @@ export default function AuctionForm() {
     console.log("Auction Created:", auctionData);
     try {
       setUploading(true);
-      await createAuction(auctionData);
+      // await createAuction(auctionData);
       toast({
         title: "Success",
         description: "Auction created successfully",

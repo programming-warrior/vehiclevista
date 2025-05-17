@@ -1,5 +1,4 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
 import dotenv from "dotenv";
 import cors from "cors";
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';

@@ -18,6 +18,10 @@ export const vehicleListingStatus = ["ACTIVE", "NEED_APPROVAL", "BLACKLISTED", "
 export const vehicleListingStatusEnum = pgEnum("vehicle_listing_status", vehicleListingStatus)
 
 
+export const auctionStatus = ["RUNNING", "NEED_APPROVAL", "BLACKLISTED", "UPCOMING", "ENDED"] as const
+export const auctinStatusEnum = pgEnum("auction_status", auctionStatus)
+
+
 // Update vehicles table with classified listing fields
 export const vehicles = pgTable("vehicles", {
   id: serial("id").primaryKey(),
@@ -45,6 +49,10 @@ export const vehicles = pgTable("vehicles", {
   sellerType: text("seller_type"), // private, trader, garage
   contactPreference: text("contact_preference"), // 'phone', 'email', 'both'
   listingStatus: vehicleListingStatusEnum().notNull().default("ACTIVE"), 
+
+  listingType: text().default('CLASSIFIED'),
+
+  blacklistReason: text("reason"),
   negotiable: boolean("negotiable").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   views: integer("views").default(0),
@@ -205,14 +213,26 @@ export const auctions = pgTable("auctions", {
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   vehicleId: integer("vehicle_id").notNull(),
-  status: text("status").notNull().default("upcoming"), // upcoming, active, ended
+  status: auctinStatusEnum().notNull().default('UPCOMING'), // upcoming, active, ended
   currentBid: real("current_bid").default(0),
   totalBids: integer("total_bids").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   sellerId: integer("seller_id").references(() => users.id),
+  blacklistReason: text(),
   views: integer("views").default(0),
   clicks: integer("clicks").default(0),
   leads: integer("leads").default(0),
+});
+
+export const auctionWinner = pgTable("auction_winner", {
+  id: serial("id").primaryKey(),
+  bidAmount: real("bid_amount").notNull(),
+  username: text().notNull(),
+  userEmail: text().notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  auctionId: integer("auction_id").notNull().references(() => auctions.id),
+  bidId: integer('bid_id').notNull().references(()=>bids.id),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 //Bids table

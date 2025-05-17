@@ -22,7 +22,7 @@ auctionRouter.get("/get", async (req, res) => {
   try {
     const { brand, model, page = "1", limit = "10", type } = req.query;
 
-    const conditions = [eq(auctions.status, "active")];
+    const conditions = [eq(auctions.status, "RUNNING")];
 
     if (brand && !/all/gi.test(brand as string))
       conditions.push(eq(vehicles.make, String(brand)));
@@ -276,6 +276,8 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
     // }
     const { vehicleId, title, description, startDate, endDate, startingPrice } =
       req.body;
+
+
     if (
       !vehicleId ||
       !title.trim() ||
@@ -287,37 +289,44 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
     ) {
       return res.status(400).json({ error: "Inalid input" });
     }
-    const vehicleRows = await db
-      .select()
-      .from(vehicles)
-      .where(eq(vehicles.id, vehicleId));
-    const vehicle = vehicleRows[0];
-    if (!vehicle) return res.status(400).json({ error: "vehicle not found" });
-    const newAuction = {
-      vehicleId: parseInt(vehicleId),
-      title,
-      description,
-      startingPrice: parseFloat(startingPrice),
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      status: "upcoming",
-    };
+    const now = new Date();
+    console.log(now);
+    console.log(new Date(startDate));
 
-    const dbReturnData = await db
-      .insert(auctions)
-      .values(newAuction)
-      .returning();
-    const savedAuctionDetails = dbReturnData[0];
-    await auctionQueue.add(
-      "startAuction",
-      {
-        auctionId: savedAuctionDetails.id,
-        endTime: savedAuctionDetails.endDate,
-      },
-      {
-        delay: savedAuctionDetails.startDate.getTime() - Date.now(),
-      }
-    );
+    // const vehicleRows = await db
+    //   .select()
+    //   .from(vehicles)
+    //   .where(eq(vehicles.id, vehicleId));
+    // const vehicle = vehicleRows[0];x
+    // if (!vehicle) return res.status(400).json({ error: "vehicle not found" });
+    // const newAuction = {
+    //   vehicleId: parseInt(vehicleId),
+    //   title,
+    //   description,
+    //   startingPrice: parseFloat(startingPrice),
+    //   startDate: new Date(startDate),
+    //   endDate: new Date(endDate),
+    //   status: "UPCOMING" as typeof auctions.$inferInsert.status,
+    // };
+
+    // console.log(startDate);
+
+    // const dbReturnData = await db
+    //   .insert(auctions)
+    //   .values(newAuction)
+    //   .returning();
+    // const savedAuctionDetails = dbReturnData[0];
+    // console.log(savedAuctionDetails.startDate);
+    // await auctionQueue.add(
+    //   "startAuction",
+    //   {
+    //     auctionId: savedAuctionDetails.id,
+    //     endTime: savedAuctionDetails.endDate,
+    //   },
+    //   {
+    //     delay: savedAuctionDetails.startDate.getTime() - Date.now(),
+    //   }
+    // );
 
     console.log("added to the queue");
     return res.status(200).json({ message: "Auction created successfully" });

@@ -36,7 +36,11 @@ import {
   getTopListings
  } from "./admin-api/analytics-api";
  import { getUsers, blacklistUser, unBlacklistUser } from "./admin-api/user-api";
- 
+
+ import { adminGetVehicles , blacklistVehicle, unBlacklistVehicle } from "./admin-api/vehicle-api";
+
+ import { adminGetAuctions } from "./admin-api/auction-api";
+
  import { getListingReports } from "./admin-api/repots-api";
 
  import { uploadUserReport, uploadListingReport } from "./report-api";
@@ -164,6 +168,11 @@ export {
   unBlacklistUser,
   createRaffle,
   getRaffles,
+  adminGetVehicles,
+  blacklistVehicle,
+  unBlacklistVehicle,
+
+  adminGetAuctions,
 
   uploadListingReport,
   uploadUserReport,

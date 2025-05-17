@@ -2,8 +2,8 @@ import { Worker } from "bullmq";
 import { connection } from "../workerRedis";
 // import { WebSocketServer } from './websocket'; // assume you have a pub function
 import { db } from "../../db";
-import { auctions } from "../../../shared/schema";
-import { eq } from "drizzle-orm";
+import { auctions, auctionWinner, bids, users } from "../../../shared/schema";
+import { eq, sql } from "drizzle-orm";
 import { auctionQueue } from "../queue";
 
 const auctionWorker = new Worker(
@@ -22,13 +22,13 @@ const auctionWorker = new Worker(
         console.error(`Auction with ID ${auctionId} not found`);
         return;
       }
-      if (auction.status === "active" || auction.status === "ended") {
+      if (auction.status === "RUNNING" || auction.status === "ENDED") {
         console.log(`Auction ${auctionId} is already ${auction.status}`);
         return;
       }
       await db
         .update(auctions)
-        .set({ status: "active" })
+        .set({ status: "RUNNING" })
         .where(eq(auctions.id, auctionId));
 
       startCountdown(auctionId, endTime);
@@ -45,13 +45,38 @@ const auctionWorker = new Worker(
         console.error(`Auction with ID ${auctionId} not found`);
         return;
       }
-      if (auction.status === "ended") {
+      if (auction.status === "ENDED") {
         console.log(`Auction ${auctionId} is already ${auction.status}`);
         return;
       }
+      const [highestBid] = await db
+        .select({
+          bids,
+          users
+        })
+        .from(bids)
+        .innerJoin(users, eq(bids.userId, users.id))
+        .where(eq(bids.auctionId, auctionId))
+        .orderBy(sql`${bids.bidAmount} DESC`)
+        .limit(1);
+      
+      let winnerId = null;
+      if (highestBid && highestBid.bids.id) {
+        winnerId = highestBid.bids.userId;
+        await db.insert(auctionWinner).values({
+          auctionId: auctionId,
+          userId: winnerId,
+          bidId: highestBid.bids.id,
+          bidAmount: highestBid.bids.bidAmount,
+          userEmail: highestBid.users.email,
+          username: highestBid.users.username,
+          createdAt: new Date()
+        });
+      }
+      
       await db
         .update(auctions)
-        .set({ status: "ended" })
+        .set({ status: "ENDED" })
         .where(eq(auctions.id, auctionId));
     }
   },
@@ -72,27 +97,24 @@ function startCountdown(auctionId: string, endTime: string) {
     //   remaining,
     // });
     console.log("timer published to redis");
-    connection.publish(
-      `AUCTION_TIMER:${auctionId}`,
-      JSON.stringify({
-        auctionId,
-        remainingTime,
-      })
-    );
 
     if (remainingTime <= 0) {
       clearInterval(interval);
 
       auctionCountdownIntervals.delete(auctionId);
-      //   WebSocketServer.broadcastToAuction(auctionId, {
-      //     type: 'auctionEnded',
-      //     auctionId,
-      //   });
 
       // Optionally schedule next job to declare winner, etc.
       await auctionQueue.add("endAuction", {
         auctionId: auctionId,
       });
+    } else {
+      connection.publish(
+        `AUCTION_TIMER:${auctionId}`,
+        JSON.stringify({
+          auctionId,
+          remainingTime,
+        })
+      );
     }
   }, 1000);
 
@@ -103,17 +125,17 @@ async function initActiveAuctionsCountdowns() {
   const activeAuctions = await db
     .select()
     .from(auctions)
-    .where(eq(auctions.status, "active"));
+    .where(eq(auctions.status, "RUNNING"));
 
   activeAuctions.forEach((auction) => {
     const remainingTime = new Date(auction.endDate).getTime() - Date.now();
-    if (remainingTime > 0) {
-      startCountdown(auction.id.toString(), auction.endDate.toISOString());
-    } else {
-      db.update(auctions)
-        .set({ status: "ended" })
-        .where(eq(auctions.id, auction.id));
-    }
+    // if (remainingTime > 0) {
+    startCountdown(auction.id.toString(), auction.endDate.toISOString());
+    // } else {
+    //   db.update(auctions)
+    //     .set({ status: "ENDED" })
+    //     .where(eq(auctions.id, auction.id));
+    // }
   });
 
   auctionWorker.on("ready", () => {

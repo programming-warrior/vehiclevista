@@ -321,7 +321,9 @@ vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
 
     const data = {
       ...result.data,
-
+      make: result.data.make.toUpperCase(),
+      model: result.data.make.toUpperCase(),
+      color: result.data.color.toUpperCase(),
       price: parseFloat(result.data.price),
       year: parseInt(result.data.year),
       mileage: parseFloat(result.data.mileage),

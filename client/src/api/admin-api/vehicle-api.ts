@@ -2,10 +2,10 @@ import axios from "axios";
 import { BACKEND_URL } from "@/lib/constants";
 
 
-export async function blacklistUser(userId: string, reason: string) {
+export async function blacklistVehicle(vehicleId: string, reason: string) {
   try {
     const response = await axios.put(
-      `${BACKEND_URL}/api/admin/black-list/users/${userId}`,
+      `${BACKEND_URL}/api/admin/black-list/vehicles/${vehicleId}`,
       { 
         reason: reason,
       },
@@ -20,15 +20,15 @@ export async function blacklistUser(userId: string, reason: string) {
     return response.data;
   } catch (error: any) {
     throw new Error(
-      error.response?.data?.message || "Error blacklisting user"
+      error.response?.data?.message || "Error blacklisting vehicle"
     );
   }
 }
 
-export async function unBlacklistUser(userId: string, reason: string) {
+export async function unBlacklistVehicle(vehicleId: string, reason: string) {
     try {
       const response = await axios.put(
-        `${BACKEND_URL}/api/admin/un-black-list/users/${userId}`,
+        `${BACKEND_URL}/api/admin/un-black-list/vehicles/${vehicleId}`,
         { 
           reason: reason,
         },
@@ -49,7 +49,7 @@ export async function unBlacklistUser(userId: string, reason: string) {
   }
 
 
-export async function getUsers(options: { 
+export async function adminGetVehicles(options: { 
   page?: number; 
   limit?: number, 
   sortBy?: string,
@@ -71,7 +71,7 @@ export async function getUsers(options: {
     }
     
     const response = await axios.get(
-      `${BACKEND_URL}/api/admin/users?${queryParams.toString()}`,
+      `${BACKEND_URL}/api/admin/vehicles?${queryParams.toString()}`,
       {
         headers: {
           "Content-Type": "application/json",

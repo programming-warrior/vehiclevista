@@ -1,209 +1,514 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import AdminLayout from "@/components/admin/admin-layout";
-import VehicleForm from "@/components/admin/vehicle-form";
+import { useEffect, useState } from "react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  AlertCircle,
+  ArrowUpDown,
+  Car,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  UserX,
+  Eye,
+  MousePointer,
+  MessageSquare,
+  Bike,
+  Truck,
+  Bus,
+} from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import type { Vehicle, InsertVehicle } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import AdminLayout from "@/components/admin/admin-layout";
+import { adminGetVehicles, blacklistVehicle, unBlacklistVehicle } from "@/api";
+import { useDebounce } from "@/hooks/use-debounce";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminVehicles() {
-  const queryClient = useQueryClient();
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const { toast } = useToast();
+  const [vehicles, setVehicles] = useState<any>([]);
+  const [filteredVehicles, setFilteredVehicles] = useState<any>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOption, setSortOption] = useState("newest");
+  const [showBlacklisted, setShowBlacklisted] = useState(false);
+  const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const [blacklistReason, setBlacklistReason] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalVehicles, setTotalVehicles] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { data: vehicles, isLoading } = useQuery<Vehicle[]>({
-    queryKey: ["/api/vehicles"],
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: InsertVehicle) => {
-      await apiRequest("POST", "/api/vehicles", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      toast({
-        title: "Success",
-        description: "Vehicle created successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: InsertVehicle }) => {
-      await apiRequest("PATCH", `/api/vehicles/${id}`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      toast({
-        title: "Success",
-        description: "Vehicle updated successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/vehicles/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vehicles"] });
-      toast({
-        title: "Success",
-        description: "Vehicle deleted successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this vehicle?")) {
-      await deleteMutation.mutateAsync(id);
+  const debouncedSearch = useDebounce(searchQuery, 500);
+    async function fetch(page:number) {
+      try {
+        setIsLoading(true);
+        const filter = {
+          search: debouncedSearch,
+          status: showBlacklisted ? "BLACKLISTED" : "ACTIVE",
+        };
+        const data = await adminGetVehicles({
+          page,
+          limit,
+          sortBy: sortOption,
+          filter: JSON.stringify(filter),
+        });
+        setVehicles(data.vehicles);
+        setFilteredVehicles(data.vehicles);
+        setTotalPages(data.totalPages);
+        setTotalVehicles(parseInt(data.totalVehicles));
+      } catch (e) {
+      } finally {
+        setIsLoading(false);
+      }
     }
+  useEffect(() => {
+    fetch(page);
+  }, [page, limit, sortOption]);
+  
+  useEffect(() => {
+    fetch(1);
+    setPage(1);
+  }, [debouncedSearch, showBlacklisted]);
+
+
+  const handleBlacklistVehicle = (vehicle: any) => {
+    setSelectedVehicle(vehicle);
+    setBlacklistDialogOpen(true);
+  };
+
+  const confirmBlacklist = async () => {
+    try {
+      await blacklistVehicle(selectedVehicle.id, blacklistReason);
+      setVehicles(
+        vehicles.map((vehicle: any) =>
+          vehicle.id === selectedVehicle?.id
+            ? { ...vehicle, status: "BLACKLISTED", blacklistReason }
+            : vehicle
+        )
+      );
+      setFilteredVehicles(
+        filteredVehicles.filter(
+          (vehicle: any) => vehicle.id !== selectedVehicle?.id
+        )
+      );
+      setBlacklistDialogOpen(false);
+      setBlacklistReason("");
+    } catch (error) {
+      console.error("Error blacklisting vehicle:", error);
+    }
+  };
+
+  const removeFromBlacklist = async (vehicleId: any) => {
+    try {
+      await unBlacklistVehicle(vehicleId, "");
+      setVehicles(
+        vehicles.map((vehicle: any) =>
+          vehicle.id === vehicleId
+            ? { ...vehicle, status: "ACTIVE", blacklistReason: "" }
+            : vehicle
+        )
+      );
+      setFilteredVehicles(
+        filteredVehicles.filter((vehicle: any) => vehicle.id !== vehicleId)
+      );
+    } catch (error) {
+      console.error("Error unblacklisting vehicle:", error);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Vehicle Management</h1>
-
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Vehicle
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedVehicle ? "Edit Vehicle" : "Add New Vehicle"}
-              </DialogTitle>
-            </DialogHeader>
-            <VehicleForm
-              defaultValues={selectedVehicle || undefined}
-              onSubmit={async (data) => {
-                if (selectedVehicle) {
-                  await updateMutation.mutateAsync({
-                    id: selectedVehicle.id,
-                    data,
-                  });
-                } else {
-                  await createMutation.mutateAsync(data);
-                }
-                setSelectedVehicle(null);
-              }}
-              isSubmitting={createMutation.isPending || updateMutation.isPending}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-semibold text-blue-700">
+            Vehicle Listing Management
+          </h2>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Search vehicles..."
+              className="w-64 border-blue-200 focus:border-blue-500"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center space-x-2">
+          <div className="flex items-center space-x-2">
+            <Button
+              variant={!showBlacklisted ? "default" : "outline"}
+              className={
+                !showBlacklisted ? "bg-blue-600 hover:bg-blue-700" : ""
+              }
+              onClick={() => setShowBlacklisted(false)}
+            >
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Active Vehicles
+            </Button>
+            <Button
+              variant={showBlacklisted ? "default" : "outline"}
+              className={showBlacklisted ? "bg-blue-600 hover:bg-blue-700" : ""}
+              onClick={() => setShowBlacklisted(true)}
+            >
+              <ShieldAlert className="mr-2 h-4 w-4" />
+              Blacklisted Vehicles
+            </Button>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-blue-600">Sort by:</span>
+            <Select value={sortOption} onValueChange={setSortOption}>
+              <SelectTrigger className="w-40 border-blue-200">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
+                <SelectItem value="reports">Reports (High to Low)</SelectItem>
+                <SelectItem value="views">Views (High to Low)</SelectItem>
+                <SelectItem value="leads">Leads (High to Low)</SelectItem>
+                <SelectItem value="clicks">Clicks (High to Low)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {showBlacklisted && filteredVehicles.length === 0 && (
+          <Alert className="border-blue-200 bg-blue-50">
+            <AlertCircle className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-700">
+              No blacklisted vehicles
+            </AlertTitle>
+            <AlertDescription className="text-blue-600">
+              There are currently no blacklisted vehicles in the system.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Card className="border-blue-200">
+          <CardHeader className="bg-blue-50">
+            <CardTitle className="text-blue-700">
+              {showBlacklisted ? "Blacklisted Vehicles" : "All Vehicles"}
+            </CardTitle>
+            <CardDescription className="text-blue-600">
+              {showBlacklisted
+                ? "Vehicles that have been blacklisted from the platform"
+                : "Manage existing vehicle listings"}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            {isLoading ? (
+              <div className="py-2 flex flex-col gap-4 border-blue-200">
+                <Skeleton className="w-full h-16 bg-blue-100" />
+                <Skeleton className="w-full h-16 bg-blue-100" />
+                <Skeleton className="w-full h-16 bg-blue-100" />
+                <Skeleton className="w-full h-16 bg-blue-100" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-blue-100">
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Vehicle
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Type
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Make & Model
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Location
+                      </th>
+                      <th className="text-center py-3 px-4 font-medium text-blue-700">
+                        <div className="flex items-center justify-center">
+                          Reports
+                          <ArrowUpDown className="ml-1 h-4 w-4" />
+                        </div>
+                      </th>
+                      <th className="text-center py-3 px-4 font-medium text-blue-700">
+                        Stats
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Listed On
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Status
+                      </th>
+                      <th className="text-right py-3 px-4 font-medium text-blue-700">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredVehicles.map((vehicle: any) => (
+                      <tr
+                        key={vehicle.id}
+                        className="border-b border-blue-100 hover:bg-blue-50"
+                      >
+                        <td className="py-4 px-4 ">
+                          <div className="flex items-center font-medium">
+                            {vehicle.title}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 ">
+                          <div className="flex items-center">
+                            {vehicle.type === "car" ? (
+                              <Car size={30} className="stroke-blue-500 mr-1" />
+                            ) : vehicle.type === "bike" ? (
+                              <Bike
+                                size={30}
+                                className="stroke-blue-500 mr-1"
+                              />
+                            ) : vehicle.type == "truck" ? (
+                              <Truck
+                                size={30}
+                                className="stroke-blue-500 mr-1"
+                              />
+                            ) : vehicle.type == "van" ? (
+                              <Bus size={30} className="stroke-blue-500 mr-1" />
+                            ) : (
+                              ""
+                            )}
+                            {vehicle.type}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          {vehicle.make} {vehicle.model}
+                        </td>
+                        <td className="py-4 px-4 max-w-xs truncate">
+                          {vehicle.location}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          {parseInt(vehicle.reports_count) > 0 ? (
+                            <Badge variant="destructive">
+                              {vehicle.reports_count}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center justify-center space-x-2">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs flex items-center"
+                            >
+                              <Eye className="mr-1 h-3 w-3" /> {vehicle.views}
+                            </Badge>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs flex items-center"
+                            >
+                              <MessageSquare className="mr-1 h-3 w-3" />{" "}
+                              {vehicle.leads}
+                            </Badge>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs flex items-center"
+                            >
+                              <MousePointer className="mr-1 h-3 w-3" />{" "}
+                              {vehicle.clicks}
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          {formatDate(vehicle.createdAt)}
+                        </td>
+                        <td className="py-4 px-4">
+                          <Badge
+                            variant={
+                              vehicle.status === "ACTIVE"
+                                ? "outline"
+                                : "destructive"
+                            }
+                            className={
+                              vehicle.status === "ACTIVE"
+                                ? "border-blue-500 text-blue-600"
+                                : ""
+                            }
+                          >
+                            {vehicle.status === "BLACKLISTED"
+                              ? "Blacklisted"
+                              : "Active"}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          {vehicle.status === "ACTIVE" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => handleBlacklistVehicle(vehicle)}
+                            >
+                              <ShieldAlert className="mr-2 h-4 w-4" />
+                              Blacklist
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                              onClick={() => removeFromBlacklist(vehicle.id)}
+                            >
+                              <ShieldCheck className="mr-2 h-4 w-4" />
+                              Restore
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="pt-2 flex justify-between bg-blue-50">
+            <div className="text-sm text-blue-600">
+              Showing {filteredVehicles.length} of {totalVehicles} vehicles
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-200 hover:bg-blue-100 text-blue-700"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={page === 1 || isLoading}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={page === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className={
+                          page === pageNum
+                            ? "w-8 h-8 p-0 bg-blue-600 hover:bg-blue-700"
+                            : "w-8 h-8 p-0 border-blue-200 text-blue-700 hover:bg-blue-100"
+                        }
+                        onClick={() => setPage(pageNum)}
+                        disabled={isLoading}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-200 hover:bg-blue-100 text-blue-700"
+                  onClick={() =>
+                    setPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={page === totalPages || isLoading}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </CardFooter>
+        </Card>
+
+        <Dialog
+          open={blacklistDialogOpen}
+          onOpenChange={setBlacklistDialogOpen}
+        >
+          <DialogContent className="border-blue-300">
+            <DialogHeader>
+              <DialogTitle className="text-blue-700">
+                Blacklist Vehicle
+              </DialogTitle>
+              <DialogDescription className="text-blue-600">
+                Are you sure you want to blacklist this {selectedVehicle?.make}{" "}
+                {selectedVehicle?.model}? This will remove it from active
+                listings.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <label
+                  htmlFor="reason"
+                  className="text-sm font-medium text-blue-700"
+                >
+                  Reason for blacklisting
+                </label>
+                <Input
+                  id="reason"
+                  placeholder="Enter reason for blacklisting"
+                  value={blacklistReason}
+                  onChange={(e) => setBlacklistReason(e.target.value)}
+                  className="border-blue-200"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                className="border-blue-200 text-blue-700"
+                onClick={() => setBlacklistDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmBlacklist}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Blacklist Vehicle
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : (
-              vehicles?.map((vehicle) => (
-                <TableRow key={vehicle.id}>
-                  <TableCell>{vehicle.title}</TableCell>
-                  <TableCell>£{vehicle.price.toLocaleString()}</TableCell>
-                  <TableCell className="capitalize">{vehicle.category}</TableCell>
-                  <TableCell>{vehicle.location}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSelectedVehicle(vehicle)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Edit Vehicle</DialogTitle>
-                          </DialogHeader>
-                          <VehicleForm
-                            defaultValues={vehicle}
-                            onSubmit={async (data) => {
-                              await updateMutation.mutateAsync({
-                                id: vehicle.id,
-                                data,
-                              });
-                              setSelectedVehicle(null);
-                            }}
-                            isSubmitting={updateMutation.isPending}
-                          />
-                        </DialogContent>
-                      </Dialog>
-
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleDelete(vehicle.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
       </div>
     </AdminLayout>
   );
