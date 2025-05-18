@@ -422,6 +422,7 @@ export default function AuctionForm() {
                                       {field.value
                                         ? format(field.value, "MMM dd, yyyy")
                                         : "Select date"}
+                                        
                                       <CalendarIcon className="ml-auto h-4 w-4 text-blue-500" />
                                     </Button>
                                   </FormControl>

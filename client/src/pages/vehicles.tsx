@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -8,42 +8,49 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Slider } from "@/components/ui/slider";
 import { useEffect, useState } from "react";
 import { getVehicles } from "@/api";
 import { useVehicleLists, useHeroSectionSearch } from "@/hooks/use-store";
 import { useToast } from "@/hooks/use-toast";
 import VehicleCard from "@/components/vehicle-card";
-import { ArrowRight, ArrowLeft } from "lucide-react";
-import Loader from "@/components/loader";
+import { AlertCircle, Infinity } from "lucide-react";
+import { ALL_MAKE, MAKE_MODEL_MAP } from "@/lib/constants";
+import { vehicleConditions, vehicleTypes } from "@shared/schema";
+import {
+  vehicleTransmissionsTypes,
+  vehicleFuelTypes,
+} from "@shared/zodSchema/vehicleSchema";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function VehiclesList() {
-  const { brand, maxBudget, minBudget, model, variant, setSearch } =
-    useHeroSectionSearch();
+  const {
+    brand,
+    maxBudget,
+    minBudget,
+    model,
+    vehicleType,
+    transmissionType,
+    fuelType,
+    setSearch,
+  } = useHeroSectionSearch();
 
   const { toast } = useToast();
-
-  // const [filters, setFilters] = useState({
-  //   minPrice: 0,
-  //   maxPrice: 100000,
-  //   make: "",
-  //   model: "",
-  //   bodyType: "",
-  // });
 
   const { vehicles, setVehicles } = useVehicleLists();
   const limit = 6;
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalVehicles, setTotalVehicles] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
-        setLoading(true);
+        setIsLoading(true);
+        console.log(maxBudget);
+        console.log(minBudget);
         let searchParam = `page=${page}&limit=${limit}&`;
         if (brand) {
           searchParam += `brand=${brand}&`;
@@ -51,14 +58,24 @@ export default function VehiclesList() {
         if (model) {
           searchParam += `model=${model}&`;
         }
-        if (variant) {
-          searchParam += `variant=${variant}&`;
+        if (minBudget && minBudget>0.0) {
+          searchParam += `minBudget=${minBudget}&`;
         }
-        if (maxBudget && minBudget) {
-          searchParam += `minBudget=${minBudget}&maxBudget=${maxBudget}&`;
+         if (maxBudget  && maxBudget>0.0 ) {
+          searchParam += `maxBudget=${maxBudget}&`;
+        }
+        if(vehicleType){
+          searchParam +=  `type=${vehicleType}&`
+        }
+        if(transmissionType){
+          searchParam +=  `transmissionType=${transmissionType}&`
+        }
+        if(fuelType){
+          searchParam +=  `fuelType=${fuelType}&`
         }
         const res: any = await getVehicles(searchParam);
         setVehicles(res.vehicles);
+        setTotalVehicles(res.totalVehicles);
         setTotalPages(res.totalPages);
         setHasNextPage(res.hasNextPage);
       } catch (e: any) {
@@ -67,153 +84,224 @@ export default function VehiclesList() {
           description: e.message || "Error Fetching Vehicle list",
         });
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     })();
-  }, [page, brand, model, variant, maxBudget, minBudget]);
+  }, [page, brand, model, maxBudget, minBudget, vehicleType, transmissionType, fuelType]);
 
-  //   const filteredVehicles = vehicles.filter((vehicle: any) => {
-  //     return (
-  //       vehicle.price >= filters.minPrice &&
-  //       vehicle.price <= filters.maxPrice &&
-  //       (filters.make ? vehicle.make === filters.make : true) &&
-  //       (filters.model ? vehicle.model === filters.model : true) &&
-  //       (filters.bodyType ? vehicle.bodyType === filters.bodyType : true)
-  //     );
-  //   });
 
   return (
     <div className="flex min-h-screen">
       {/* Filter Sidebar */}
       <div className="w-80 p-6 border-r">
-        <h2 className="text-xl font-bold mb-6">Filters</h2>
+        {/* <h2 className="text-xl font-bold mb-6 text-blue-500">Filters</h2> */}
 
         <div className="space-y-6">
           <div>
-            <h3 className="font-medium mb-2">Price Range</h3>
+            <h3 className="font-medium mb-2 text-blue-800">Price Range</h3>
             <div className="flex gap-2">
-              <Input
-                type="number"
-                placeholder="Min"
-                value={minBudget}
-                onChange={(e) =>
-                  // setFilters({ ...filters, minPrice: Number(e.target.value) })
-                  setSearch({
-                    brand,
-                    model,
-                    variant,
-                    maxBudget,
-                    minBudget: Number(e.target.value),
-                  })
-                }
-              />
-              <Input
-                type="number"
-                placeholder="Max"
-                value={maxBudget}
-                onChange={(e) =>
-                  setSearch({
-                    brand,
-                    model,
-                    variant,
-                    minBudget,
-                    maxBudget: Number(e.target.value),
-                  })
-                }
-              />
+              <div>
+                <h3 className="text-blue-600">Min</h3>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9,]*"
+                  placeholder="Min"
+                  className="pl-10 border-blue-200 focus:ring-blue-500"
+                  value={minBudget > 0 ? minBudget.toLocaleString() : ""}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/,/g, "").replace(/\D/g, "");
+                    const numValue = Number(rawValue);
+                    setSearch({
+                      brand,
+                      model,
+                      maxBudget,
+                      minBudget: rawValue === "" ? 0 : numValue,
+                    });
+                  }}
+                />
+              </div>
+
+              <div>
+                <h3 className="text-blue-600">Max</h3>
+                  <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9,]*"
+                  placeholder="Min"
+                  className="pl-10 border-blue-200 focus:ring-blue-500"
+                  value={maxBudget > 0 ? maxBudget.toLocaleString() : ""}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/,/g, "").replace(/\D/g, "");
+                    const numValue = Number(rawValue);
+                    setSearch({
+                      maxBudget: rawValue === "" ? 0 : numValue,
+                    });
+                  }}
+                />
+              </div>
             </div>
           </div>
 
           <div>
-            <h3 className="font-medium mb-2">Brand</h3>
+            <h3 className="font-medium mb-2 text-blue-800">Make</h3>
             <Select
               value={brand}
               onValueChange={(value) =>
                 setSearch({
                   brand: value,
-                  model,
-                  variant,
+                  model: value === "All" ? "All" : model,
                   minBudget,
                   maxBudget,
                 })
               }
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Brand" />
+              <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
+                <SelectValue
+                  placeholder="Brand"
+                  className="bg-white border-blue-200 focus:ring-blue-500"
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Brands</SelectItem>
-                <SelectItem value="Mercedes-Benz">Mercedes-Benz</SelectItem>
-                <SelectItem value="BMW">BMW</SelectItem>
-                <SelectItem value="Audi">Audi</SelectItem>
+                <SelectItem value="All">All</SelectItem>
+                {ALL_MAKE.map((m) => {
+                  return <SelectItem value={m}>{m}</SelectItem>;
+                })}
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <h3 className="font-medium mb-2">Model</h3>
+            <h3 className="font-medium mb-2 text-blue-800">Model</h3>
             <Select
               value={model}
+              disabled={!brand}
               onValueChange={(value) =>
                 setSearch({
                   brand,
                   model: value,
-                  variant,
                   minBudget,
                   maxBudget,
                 })
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
                 <SelectValue placeholder="Model" />
               </SelectTrigger>
+
               <SelectContent>
-                <SelectContent>
-                  <SelectItem value="All">All-Models</SelectItem>
-                  <SelectItem value="A6">A6</SelectItem>
-                  <SelectItem value="A-Class">A-Class</SelectItem>
-                  <SelectItem value="C-Class">C-Class</SelectItem>
-                  <SelectItem value="E-Class">E-Class</SelectItem>
-                </SelectContent>
+                <SelectItem value="All">All</SelectItem>
+                {MAKE_MODEL_MAP[brand]?.length > 0 &&
+                  MAKE_MODEL_MAP[brand as string].map((m) => {
+                    return <SelectItem value={m}>{m}</SelectItem>;
+                  })}
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <h3 className="font-medium mb-2">Variant</h3>
+            <h3 className="font-medium mb-2 text-blue-800">Vehicle Type</h3>
             <Select
-              value={variant}
+              value={vehicleType}
               onValueChange={(value) =>
                 setSearch({
-                  brand,
-                  model,
-                  variant: value,
-                  minBudget,
-                  maxBudget,
+                  vehicleType: value,
                 })
               }
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select variant" />
+              <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
+                <SelectValue
+                  placeholder="Vehicle Type"
+                  className="bg-white border-blue-200 focus:ring-blue-500"
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">Model Variants</SelectItem>
-                <SelectItem value="AMG">AMG</SelectItem>
-                <SelectItem value="Sport">Sport</SelectItem>
-                <SelectItem value="SE">SE</SelectItem>
+                <SelectItem value="All">Any</SelectItem>
+                {vehicleTypes.map((m) => {
+                  return (
+                    <SelectItem value={m}>
+                      {m
+                        .split("")
+                        .map((ch, i) => (i == 0 ? ch.toUpperCase() : ch))
+                        .join("")}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <h3 className="font-medium mb-2 text-blue-800">
+              Transmission Type
+            </h3>
+            <Select
+              onValueChange={(value) =>
+                setSearch({
+                  transmissionType: value,
+                })
+              }
+              defaultValue={transmissionType}
+            >
+              <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
+                <SelectValue placeholder="Select transmission type" />
+              </SelectTrigger>
+              <SelectContent className="border-blue-200">
+                <SelectItem value="All">All</SelectItem>
+                {vehicleType &&
+                  vehicleTransmissionsTypes[
+                    vehicleType as keyof typeof vehicleTransmissionsTypes
+                  ] &&
+                  vehicleTransmissionsTypes[
+                    vehicleType as keyof typeof vehicleTransmissionsTypes
+                  ].map((transmission: string) => (
+                    <SelectItem key={transmission} value={transmission}>
+                      {transmission}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <h3 className="font-medium mb-2 text-blue-800">Fuel Type</h3>
+            <Select
+              onValueChange={(value) =>
+                setSearch({
+                  fuelType: value,
+                })
+              }
+              defaultValue={fuelType}
+            >
+              <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
+                <SelectValue placeholder="Select Fuel type" />
+              </SelectTrigger>
+              <SelectContent className="border-blue-200">
+                <SelectItem value="All">All</SelectItem>
+                {vehicleType &&
+                  vehicleFuelTypes[
+                    vehicleType as keyof typeof vehicleFuelTypes
+                  ] &&
+                  vehicleFuelTypes[
+                    vehicleType as keyof typeof vehicleFuelTypes
+                  ].map((fuelType: string) => (
+                    <SelectItem key={fuelType} value={fuelType}>
+                      {fuelType}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
 
           <Button
-            className="w-full"
+            variant="outline"
+            className="w-full text-center border-blue-200 bg-white  font-normal "
             onClick={() =>
               setSearch({
                 minBudget: 0,
                 maxBudget: 0,
                 brand: "",
                 model: "",
-                variant: "",
               })
             }
           >
@@ -222,55 +310,87 @@ export default function VehiclesList() {
         </div>
       </div>
 
-      {/* Vehicle List */}
-      {loading ? (
-        <div className="flex items-center justify-center h-full w-full">
-          <Loader />
+      {isLoading ? (
+        <div className="py-2 flex flex-col gap-4 border-blue-200">
+          <Skeleton className="w-full h-16 bg-blue-100" />
+          <Skeleton className="w-full h-16 bg-blue-100" />
+          <Skeleton className="w-full h-16 bg-blue-100" />
+          <Skeleton className="w-full h-16 bg-blue-100" />
         </div>
       ) : (
         <div className="flex-1 p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {vehicles.length == 0 ? (
-              <div className="col-span-full flex items-center justify-center h-full w-full">
-                <p>No Vehicles found</p>
-              </div>
+              <Alert className="border-blue-200 bg-blue-50 w-full col-span-full mb-4">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-blue-700">0 result</AlertTitle>
+                <AlertDescription className="text-blue-600">
+                  No Vehicles Found!
+                </AlertDescription>
+              </Alert>
             ) : (
               vehicles.map((vehicle: any) => <VehicleCard vehicle={vehicle} />)
             )}
           </div>
-          <div className="flex justify-center mt-6 gap-4 ">
-            <Button
-              variant="outline"
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-            >
-              <ArrowLeft />
-            </Button>
-            {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
-              const pageNumber =
-                i + 1 + (page > 5 && totalPages > 10 ? page - 5 : 0);
-              if (pageNumber > totalPages) return null;
-              return (
+          <div className="pt-2 flex justify-between bg-blue-50 rounded-sm mt-3">
+            <div className="text-sm text-blue-600 rounded-sm px-2">
+              Showing {vehicles.length} of {totalVehicles} vehicles
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2 px-4">
                 <Button
-                  key={pageNumber}
-              
-                  variant={page === pageNumber ? "default" : "outline"}
-                  onClick={() => setPage(pageNumber)}
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-200 hover:bg-blue-100 text-blue-700"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={page === 1 || isLoading}
                 >
-                  {pageNumber}
+                  Previous
                 </Button>
-              );
-            })}
-            {totalPages > 10 && page + 5 < totalPages && <span>...</span>}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
 
-            <Button
-              variant="outline"
-              className=""
-              disabled={!hasNextPage}
-              onClick={() => setPage(page + 1)}
-            >
-              <ArrowRight />
-            </Button>
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={page === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className={
+                          page === pageNum
+                            ? "w-8 h-8 p-0 bg-blue-600 hover:bg-blue-700"
+                            : "w-8 h-8 p-0 border-blue-200 text-blue-700 hover:bg-blue-100"
+                        }
+                        onClick={() => setPage(pageNum)}
+                        disabled={isLoading}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-200 hover:bg-blue-100 text-blue-700"
+                  onClick={() =>
+                    setPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={page === totalPages || isLoading}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

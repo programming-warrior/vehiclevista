@@ -20,48 +20,49 @@ import {
 } from "@/components/ui/form";
 import { useHeroSectionSearch } from "@/hooks/use-store";
 import { useLocation } from "wouter";
-
+import { ALL_MAKE, MAKE_MODEL_MAP } from "@/lib/constants";
+import { vehicleConditions, vehicleTypes } from "@shared/schema";
+import {
+  vehicleTransmissionsTypes,
+  vehicleFuelTypes,
+} from "@shared/zodSchema/vehicleSchema";
 
 export default function HeroSection() {
   // Define complete form validation schema with Zod
-  const formSchema = z.object({
-    brand: z.string(),
-    model: z.string(),
-    variant: z.string(),
-    minBudget: z.coerce
-      .number()
-      .min(0, "Minimum budget cannot be negative")
-      .max(5000, "Minimum budget cannot exceed £5,000"),
-    maxBudget: z.coerce
-      .number()
-      .min(0, "Maximum budget cannot be negative")
-      .max(20000, "Maximum budget cannot exceed £20,000"),
-  }).refine((data) => data.minBudget < data.maxBudget, {
-    message: "Minimum budget must be less than maximum budget",
-    path: ["minBudget"],
-  });
+  const formSchema = z
+    .object({
+      brand: z.string(),
+      model: z.string(),
+      type: z.string(),
+      transmissionType: z.string(),
+      minBudget: z.coerce.number().min(0, "Minimum budget cannot be negative"),
+      maxBudget: z.coerce.number().min(0, "Maximum budget cannot be negative"),
+    })
+    .refine((data) => data.minBudget < data.maxBudget, {
+      message: "Minimum budget must be less than maximum budget",
+      path: ["minBudget"],
+    });
 
-  const [,setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   // Set up form with react-hook-form and zod resolver
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      brand: "All",
-      model: "All",
-      variant: "All",
-      minBudget: 5000,
-      maxBudget: 20000,
+      brand: "",
+      model: "",
+      type: "",
+      transmissionType: "",
+      minBudget: 0,
+      maxBudget: 0,
     },
   });
 
-  const {setSearch} = useHeroSectionSearch();
+  const { setSearch } = useHeroSectionSearch();
 
-  // Form submission handler
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     console.log("Search with parameters:", data);
-    setSearch({...data});
-    setLocation('/vehicles')
-    // Handle the search logic here
+    setSearch({ ...data });
+    setLocation("/vehicle");
   };
 
   return (
@@ -75,29 +76,6 @@ export default function HeroSection() {
       }}
     >
       <div className="container mx-auto px-4 py-16">
-        {/* Category Pills */}
-        <div className="flex gap-2 mb-12">
-          <Button
-            variant="secondary"
-            className="bg-white/20 hover:bg-white/30 text-white rounded-full px-8"
-          >
-            Cars
-          </Button>
-          <Button
-            variant="secondary"
-            className="bg-white/10 hover:bg-white/20 text-white rounded-full px-8"
-          >
-            Bikes
-          </Button>
-          <Button
-            variant="secondary"
-            className="bg-white/10 hover:bg-white/20 text-white rounded-full px-8"
-          >
-            Vans
-          </Button>
-        </div>
-
-        {/* Hero Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <div className="max-w-2xl">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight">
@@ -141,18 +119,21 @@ export default function HeroSection() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
                           >
-                            <SelectTrigger className="h-12 bg-gray-100">
-                              <SelectValue placeholder="All Brands" />
+                            <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
+                              <SelectValue
+                                placeholder="Brand"
+                                className="bg-white border-blue-200 focus:ring-blue-500"
+                              />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="All">All Brands</SelectItem>
-                              <SelectItem value="Mercedes-Benz">Mercedes-Benz</SelectItem>
-                              <SelectItem value="BMW">BMW</SelectItem>
-                              <SelectItem value="Audi">Audi</SelectItem>
+                              <SelectItem value="All">All</SelectItem>
+                              {ALL_MAKE.map((m) => {
+                                return <SelectItem value={m}>{m}</SelectItem>;
+                              })}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -168,19 +149,24 @@ export default function HeroSection() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            value={field.value || undefined} 
-                            defaultValue={field.value || undefined}
+                          <Select
+                            value={field.value}
+                            disabled={!form.getValues("brand")}
+                            onValueChange={field.onChange}
                           >
-                            <SelectTrigger className="h-12 bg-gray-100">
-                              <SelectValue  placeholder="All Models" />
+                            <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
+                              <SelectValue placeholder="Model" />
                             </SelectTrigger>
+
                             <SelectContent>
-                             <SelectItem value="All">All-Models</SelectItem>
-                              <SelectItem value="A-Class">A-Class</SelectItem>
-                              <SelectItem value="C-Class">C-Class</SelectItem>
-                              <SelectItem value="E-Class">E-Class</SelectItem>
+                              <SelectItem value="All">All</SelectItem>
+                              {MAKE_MODEL_MAP[form.getValues("brand")]?.length >
+                                0 &&
+                                MAKE_MODEL_MAP[
+                                  form.getValues("brand") as string
+                                ].map((m) => {
+                                  return <SelectItem value={m}>{m}</SelectItem>;
+                                })}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -192,22 +178,75 @@ export default function HeroSection() {
                   {/* Variant Select */}
                   <FormField
                     control={form.control}
-                    name="variant"
+                    name="type"
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
                           >
-                            <SelectTrigger className="h-12 bg-gray-100">
-                              <SelectValue placeholder="All Model Variants" />
+                            <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
+                              <SelectValue
+                                placeholder="Vehicle Type"
+                                className="bg-white border-blue-200 focus:ring-blue-500"
+                              />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="All">All Model Variants</SelectItem>
-                              <SelectItem value="AMG">AMG</SelectItem>
-                              <SelectItem value="Sport">Sport</SelectItem>
-                              <SelectItem value="SE">SE</SelectItem>
+                              <SelectItem value="All">Any</SelectItem>
+                              {vehicleTypes.map((m) => {
+                                return (
+                                  <SelectItem value={m}>
+                                    {m
+                                      .split("")
+                                      .map((ch, i) =>
+                                        i == 0 ? ch.toUpperCase() : ch
+                                      )
+                                      .join("")}
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="transmissionType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
+                              <SelectValue placeholder="Select transmission type" />
+                            </SelectTrigger>
+                            <SelectContent className="border-blue-200">
+                              <SelectItem value="All">All</SelectItem>
+                              {form.getValues("type") &&
+                                vehicleTransmissionsTypes[
+                                  form.getValues(
+                                    "type"
+                                  ) as keyof typeof vehicleTransmissionsTypes
+                                ] &&
+                                vehicleTransmissionsTypes[
+                                  form.getValues(
+                                    "type"
+                                  ) as keyof typeof vehicleTransmissionsTypes
+                                ].map((transmission: string) => (
+                                  <SelectItem
+                                    key={transmission}
+                                    value={transmission}
+                                  >
+                                    {transmission}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -228,10 +267,23 @@ export default function HeroSection() {
                             <Label className="text-xs text-gray-500">Min</Label>
                             <FormControl>
                               <Input
-                                type="number"
-                                placeholder="5000"
-                                className="h-12 bg-gray-100"
-                                {...field}
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9,]*"
+                                placeholder="Min"
+                                className="pl-10 border-blue-200 focus:ring-blue-500"
+                                value={
+                                  field.value > 0
+                                    ? field.value.toLocaleString()
+                                    : ""
+                                }
+                                onChange={(e) => {
+                                  const rawValue = e.target.value
+                                    .replace(/,/g, "")
+                                    .replace(/\D/g, "");
+                                  const numValue = Number(rawValue);
+                                  field.onChange(numValue)
+                                }}
                               />
                             </FormControl>
                             <FormMessage className="text-xs text-red-500" />
@@ -245,11 +297,24 @@ export default function HeroSection() {
                           <FormItem>
                             <Label className="text-xs text-gray-500">Max</Label>
                             <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="20000"
-                                className="h-12 bg-gray-100"
-                                {...field}
+                               <Input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9,]*"
+                                placeholder="Max"
+                                className="pl-10 border-blue-200 focus:ring-blue-500"
+                                value={
+                                  field.value > 0
+                                    ? field.value.toLocaleString()
+                                    : ""
+                                }
+                                onChange={(e) => {
+                                  const rawValue = e.target.value
+                                    .replace(/,/g, "")
+                                    .replace(/\D/g, "");
+                                  const numValue = Number(rawValue);
+                                  field.onChange(numValue)
+                                }}
                               />
                             </FormControl>
                             <FormMessage className="text-xs text-red-500" />

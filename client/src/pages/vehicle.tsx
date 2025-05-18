@@ -42,6 +42,7 @@ export default function VehiclePage() {
       setIsLoading(true);
       try {
         const response = await getVehicleById(id);
+        console.log(response);
         setVehicle(response);
       } catch (error) {
         console.error("Error fetching vehicle data:", error);
@@ -266,7 +267,11 @@ export default function VehiclePage() {
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-                  <MapComponent lat={vehicle.latitude}  lon={vehicle.longitude}/>
+                  {
+                    vehicle.latitude && vehicle.longitude ?
+                    <MapComponent lat={vehicle.latitude}  lon={vehicle.longitude}/>
+                    : <p className="text-gray-400 text-xs font-light"> No Map Preview</p>
+                  }
                 </div>
 
                 <div className="space-y-4">

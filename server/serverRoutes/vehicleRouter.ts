@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { db } from "../db";
 import { Vehicle, vehicles } from "../../shared/schema";
-import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
+import { eq, lte, or, gte, and, sql, inArray, ilike } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
 import axios from "axios";
-import { vehicleUploadSchema } from "../../shared/zodSchema/vehicleSchema";
+import { vehicleFuelTypes, vehicleUploadSchema } from "../../shared/zodSchema/vehicleSchema";
 import { z } from "zod";
 import { verifyToken } from "../middleware/authMiddleware";
 import { parseCsvFile, extractVehicles } from "../utils/helper";
@@ -25,7 +25,11 @@ vehicleRouter.get("/", async (req, res) => {
     const {
       brand,
       model,
-      variant,
+      type,
+      transmissionType,
+      color,
+      bodyType,
+      fuelType,
       minBudget,
       maxBudget,
       page = "1",
@@ -34,18 +38,38 @@ vehicleRouter.get("/", async (req, res) => {
 
     const conditions = [];
 
-    if (brand && !/all/gi.test(brand as string))
+    if (brand && String(brand).toLowerCase() !== "all")
       conditions.push(eq(vehicles.make, String(brand)));
-    if (model && !/all/gi.test(model as string))
+    if (model && String(model).toLowerCase() !== "all")
       conditions.push(eq(vehicles.model, String(model)));
-    if (minBudget) conditions.push(gte(vehicles.price, Number(minBudget)));
-    if (maxBudget) conditions.push(lte(vehicles.price, Number(maxBudget)));
+    if (
+      type &&
+      String(type).toLowerCase() !== "all" &&
+      (type as (typeof vehicleTypesEnum.enumValues)[number])
+    )
+      conditions.push(
+        eq(vehicles.type, type as (typeof vehicleTypesEnum.enumValues)[number])
+      );
+    if (transmissionType && String(transmissionType).toLowerCase() !== "all")
+      conditions.push(eq(vehicles.transmission, String(transmissionType)));
+    if (fuelType && String(fuelType).toLowerCase() !== "all")
+      conditions.push(eq(vehicles.fuelType, String(fuelType)));
+    if(bodyType && String(bodyType).toLowerCase() !== "all")
+      conditions.push(eq(vehicles.bodyType, String(bodyType)));
+    if(color && String(color).toLowerCase() !== "all")
+      conditions.push(ilike(vehicles.color, String(color)));
+    if (!isNaN(Number(minBudget)) && Number(minBudget) > 0)
+      conditions.push(gte(vehicles.price, Number(minBudget)));
+    if (!isNaN(Number(maxBudget)) && Number(maxBudget) > 0)
+      conditions.push(lte(vehicles.price, Number(maxBudget)));
 
-    console.log(conditions);
+    
 
     const pageNum = parseInt(page as string, 10);
     const pageSize = parseInt(limit as string, 10);
     const offset = (pageNum - 1) * pageSize;
+
+    console.log(conditions);
 
     const result = await db
       .select()
@@ -54,14 +78,18 @@ vehicleRouter.get("/", async (req, res) => {
       .limit(pageSize + 1)
       .offset(offset);
 
+    console.log(result[0]?.model);
+    console.log(model);
+    console.log(model === result[0]?.model);
+
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(vehicles)
       .where(conditions.length ? and(...conditions) : undefined);
 
     res.status(200).json({
-      vehicles: result,
-      totalCount: count,
+      vehicles: result.splice(0, pageSize),
+      totalVehicles: count,
       totalPages: Math.ceil(count / pageSize),
       currentPage: pageNum,
       hasNextPage: result.length > pageSize,
@@ -118,16 +146,16 @@ vehicleRouter.get("/:vehicleId", async (req, res) => {
     const { vehicleId } = req.params;
     if (!vehicleId)
       return res.status(400).json({ error: "Vehicle ID is required" });
-    const vehicle = await db
+    const [vehicle] = await db
       .select()
       .from(vehicles)
       .where(eq(vehicles.id, Number(vehicleId)))
-      .limit(1)
-      .execute()
-      .then((rows) => rows[0]);
+      .limit(1);
+
     if (!vehicle) {
       return res.status(404).json({ error: "Vehicle not found" });
     }
+    console.log(vehicle);
     res.status(200).json(vehicle);
   } catch (err: any) {
     console.error("Error fetching vehicles:", err);
