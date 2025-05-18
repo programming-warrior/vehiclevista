@@ -7,104 +7,108 @@ import { eq, sql } from "drizzle-orm";
 import { auctionQueue } from "../queue";
 
 // Add additional debug logging for Redis connection
-connection.on('connect', () => {
-  console.log('Redis client connected');
+connection.on("connect", () => {
+  console.log("Redis client connected");
 });
 
-connection.on('error', (err) => {
-  console.error('Redis connection error:', err);
+connection.on("error", (err) => {
+  console.error("Redis connection error:", err);
 });
 
 // Add extra logging to diagnose if jobs are being properly registered
 const auctionWorker = new Worker(
   "auction",
   async (job: any) => {
-    console.log('Worker processing job:', job.id, job.name);
-    
-    if (job.name === "startAuction") {
-      console.log('Starting auction job received with data:', job.data);
-      const { auctionId, endTime } = job.data;
-      const auctionRows: any = await db
-        .select()
-        .from(auctions)
-        .where(eq(auctions.id, auctionId));
-      const auction: any = auctionRows[0];
-      console.log('Found auction:', auction);
-      
-      if (!auction) {
-        console.error(`Auction with ID ${auctionId} not found`);
-        return;
-      }
-      if (auction.status === "RUNNING" || auction.status === "ENDED") {
-        console.log(`Auction ${auctionId} is already ${auction.status}`);
-        return;
-      }
-      await db
-        .update(auctions)
-        .set({ status: "RUNNING" })
-        .where(eq(auctions.id, auctionId));
-      console.log(`Updated auction ${auctionId} status to RUNNING`);
+    try {
+      console.log("Worker processing job:", job.id, job.name);
 
-      startCountdown(auctionId, endTime);
-    } else if (job.name === "endAuction") {
-      console.log("End auction job started with data:", job.data);
-      const { auctionId } = job.data;
-      const auctionRows: any = await db
-        .select()
-        .from(auctions)
-        .where(eq(auctions.id, auctionId));
-      const auction: any = auctionRows[0];
-      console.log('Found auction for ending:', auction);
-      
-      if (!auction) {
-        console.error(`Auction with ID ${auctionId} not found`);
-        return;
-      }
-      if (auction.status === "ENDED") {
-        console.log(`Auction ${auctionId} is already ${auction.status}`);
-        return;
-      }
-      const [highestBid]: any = await db
-        .select({
-          bids,
-          users,
-        })
-        .from(bids)
-        .innerJoin(users, eq(bids.userId, users.id))
-        .where(eq(bids.auctionId, auctionId))
-        .orderBy(sql`${bids.bidAmount} DESC`)
-        .limit(1);
+      if (job.name === "startAuction") {
+        console.log("Starting auction job received with data:", job.data);
+        const { auctionId, endTime } = job.data;
+        const auctionRows: any = await db
+          .select()
+          .from(auctions)
+          .where(eq(auctions.id, auctionId));
+        const auction: any = auctionRows[0];
+        console.log("Found auction:", auction);
 
-      let winnerId: any = null;
-      if (highestBid && highestBid.bids.id) {
-        winnerId = highestBid.bids.userId;
-        await db.insert(auctionWinner).values({
-          auctionId: auctionId,
-          userId: winnerId,
-          bidId: highestBid.bids.id,
-          bidAmount: highestBid.bids.bidAmount,
-          userEmail: highestBid.users.email,
-          username: highestBid.users.username,
-          createdAt: new Date(),
-        });
-        console.log(`Winner found for auction ${auctionId}:`, winnerId);
-      } else {
-        console.log(`No bids found for auction ${auctionId}`);
-      }
+        if (!auction) {
+          console.error(`Auction with ID ${auctionId} not found`);
+          return;
+        }
+        if (auction.status === "RUNNING" || auction.status === "ENDED") {
+          console.log(`Auction ${auctionId} is already ${auction.status}`);
+          return;
+        }
+        await db
+          .update(auctions)
+          .set({ status: "RUNNING" })
+          .where(eq(auctions.id, auctionId));
+        console.log(`Updated auction ${auctionId} status to RUNNING`);
 
-      await db
-        .update(auctions)
-        .set({ status: "ENDED" })
-        .where(eq(auctions.id, auctionId));
-      console.log(`Updated auction ${auctionId} status to ENDED`);
+        startCountdown(auctionId, endTime);
+      } else if (job.name === "endAuction") {
+        console.log("End auction job started with data:", job.data);
+        const { auctionId } = job.data;
+        const auctionRows: any = await db
+          .select()
+          .from(auctions)
+          .where(eq(auctions.id, auctionId));
+        const auction: any = auctionRows[0];
+        console.log("Found auction for ending:", auction);
+
+        if (!auction) {
+          console.error(`Auction with ID ${auctionId} not found`);
+          return;
+        }
+        if (auction.status === "ENDED") {
+          console.log(`Auction ${auctionId} is already ${auction.status}`);
+          return;
+        }
+        const [highestBid]: any = await db
+          .select({
+            bids,
+            users,
+          })
+          .from(bids)
+          .innerJoin(users, eq(bids.userId, users.id))
+          .where(eq(bids.auctionId, auctionId))
+          .orderBy(sql`${bids.bidAmount} DESC`)
+          .limit(1);
+
+        let winnerId: any = null;
+        if (highestBid && highestBid.bids.id) {
+          winnerId = highestBid.bids.userId;
+          await db.insert(auctionWinner).values({
+            auctionId: auctionId,
+            userId: winnerId,
+            bidId: highestBid.bids.id,
+            bidAmount: highestBid.bids.bidAmount,
+            userEmail: highestBid.users.email,
+            username: highestBid.users.username,
+            createdAt: new Date(),
+          });
+          console.log(`Winner found for auction ${auctionId}:`, winnerId);
+        } else {
+          console.log(`No bids found for auction ${auctionId}`);
+        }
+
+        await db
+          .update(auctions)
+          .set({ status: "ENDED" })
+          .where(eq(auctions.id, auctionId));
+        console.log(`Updated auction ${auctionId} status to ENDED`);
+      }
+    } catch (e) {
+      console.log(e);
     }
   },
-  { 
+  {
     connection,
     // Add options for better debugging
-    concurrency: 5,
-    lockDuration: 30000,
-    stalledInterval: 30000
+    // concurrency: 5,
+    // lockDuration: 30000,
+    // stalledInterval: 30000
   }
 );
 
@@ -133,8 +137,6 @@ auctionWorker.on("active", (job) => {
   console.log(`Job ${job.id} has started processing`);
 });
 
-
-
 const auctionCountdownIntervals = new Map<string, NodeJS.Timeout>();
 
 function startCountdown(auctionId: string, endTime: string) {
@@ -146,7 +148,9 @@ function startCountdown(auctionId: string, endTime: string) {
     console.log(`Auction ${auctionId} remaining time: ${remainingTime}ms`);
 
     if (remainingTime <= 0) {
-      console.log(`Countdown finished for auction ${auctionId}, scheduling end auction job`);
+      console.log(
+        `Countdown finished for auction ${auctionId}, scheduling end auction job`
+      );
       clearInterval(interval);
       auctionCountdownIntervals.delete(auctionId);
 
@@ -157,7 +161,7 @@ function startCountdown(auctionId: string, endTime: string) {
         });
         console.log(`End auction job added to queue with ID: ${job.id}`);
       } catch (error: any) {
-        console.error('Failed to add endAuction job to queue:', error);
+        console.error("Failed to add endAuction job to queue:", error);
       }
     } else {
       try {
@@ -169,7 +173,7 @@ function startCountdown(auctionId: string, endTime: string) {
           })
         );
       } catch (error: any) {
-        console.error('Failed to publish auction timer:', error);
+        console.error("Failed to publish auction timer:", error);
       }
     }
   }, 1000);
@@ -190,22 +194,22 @@ async function initActiveAuctionsCountdowns() {
     activeAuctions.forEach((auction: any) => {
       const remainingTime = new Date(auction.endDate).getTime() - Date.now();
       console.log(`Auction ${auction.id} remaining time: ${remainingTime}ms`);
-      
+
       startCountdown(auction.id.toString(), auction.endDate.toISOString());
     });
-    
+
     // Check for auctions that should be started
     const upcomingAuctions: any = await db
       .select()
       .from(auctions)
       .where(eq(auctions.status, "UPCOMING"));
-      
+
     console.log(`Found ${upcomingAuctions.length} upcoming auctions`);
-    
+
     for (const auction of upcomingAuctions) {
       const startDelay = new Date(auction.startDate).getTime() - Date.now();
       console.log(`Auction ${auction.id} start delay: ${startDelay}ms`);
-      
+
       // If the start time is in the past or very soon (within 1 second)
       if (startDelay <= 1000) {
         console.log(`Auction ${auction.id} should be started immediately`);
@@ -213,7 +217,7 @@ async function initActiveAuctionsCountdowns() {
           .update(auctions)
           .set({ status: "RUNNING" })
           .where(eq(auctions.id, auction.id));
-          
+
         startCountdown(auction.id.toString(), auction.endDate.toISOString());
       } else {
         // Re-schedule the job with the correct delay
@@ -228,9 +232,14 @@ async function initActiveAuctionsCountdowns() {
               delay: startDelay,
             }
           );
-          console.log(`Rescheduled start job for auction ${auction.id} with job ID: ${job.id}`);
+          console.log(
+            `Rescheduled start job for auction ${auction.id} with job ID: ${job.id}`
+          );
         } catch (error: any) {
-          console.error(`Failed to reschedule start job for auction ${auction.id}:`, error);
+          console.error(
+            `Failed to reschedule start job for auction ${auction.id}:`,
+            error
+          );
         }
       }
     }
@@ -242,38 +251,43 @@ async function initActiveAuctionsCountdowns() {
 
 // Add function to manually check the queue status
 async function checkQueueStatus() {
-  console.log('Checking auction queue status');
+  console.log("Checking auction queue status");
   try {
     const waitingCount: any = await auctionQueue.getWaitingCount();
     const activeCount: any = await auctionQueue.getActiveCount();
     const delayedCount: any = await auctionQueue.getDelayedCount();
     const completedCount: any = await auctionQueue.getCompletedCount();
     const failedCount: any = await auctionQueue.getFailedCount();
-    
-    console.log('Queue status:', {
+
+    console.log("Queue status:", {
       waiting: waitingCount,
       active: activeCount,
       delayed: delayedCount,
       completed: completedCount,
-      failed: failedCount
+      failed: failedCount,
     });
-    
+
     // Get delayed jobs to inspect them
     const delayedJobs: any = await auctionQueue.getDelayed();
     console.log(`Delayed jobs count: ${delayedJobs.length}`);
     for (const job of delayedJobs) {
       const processingIn: any = job.delay;
-      console.log(`Job ${job.id} (${job.name}) will process in ${processingIn}ms, data:`, job.data);
+      console.log(
+        `Job ${job.id} (${job.name}) will process in ${processingIn}ms, data:`,
+        job.data
+      );
     }
   } catch (error: any) {
-    console.error('Failed to check queue status:', error);
+    console.error("Failed to check queue status:", error);
   }
 }
 
 // Initialize and then check queue status
 initActiveAuctionsCountdowns()
   .then(() => {
-    console.log('----------------Active auctions initialization completed---------');
+    console.log(
+      "----------------Active auctions initialization completed---------"
+    );
     return checkQueueStatus();
   })
   .catch((error) => {

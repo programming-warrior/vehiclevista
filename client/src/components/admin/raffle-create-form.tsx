@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays } from "date-fns";
-import { CalendarIcon, ClockIcon, Info } from "lucide-react";
+import {
+  CalendarIcon,
+  ClockIcon,
+  Info,
+  Check,
+  DollarSign,
+  MapPin,
+} from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -50,54 +57,8 @@ import {
 } from "@shared/zodSchema/vehicleSchema";
 import { getPresignedUrls, uploadToPresignedUrl } from "@/api";
 import { createRaffle } from "@/api";
-
-// Mock function for fetching vehicles - replace with actual API
-const getAdminVehicles = async () => {
-  return {
-    vehicles: [
-      {
-        id: 1,
-        make: "Mercedes",
-        model: "C63 AMG",
-        year: 2023,
-        price: 85000,
-        mileage: 1200,
-      },
-      {
-        id: 2,
-        make: "Audi",
-        model: "RS6 Avant",
-        year: 2022,
-        price: 120000,
-        mileage: 5000,
-      },
-      {
-        id: 3,
-        make: "BMW",
-        model: "M4 Competition",
-        year: 2023,
-        price: 90000,
-        mileage: 3500,
-      },
-      {
-        id: 4,
-        make: "Porsche",
-        model: "911 GT3",
-        year: 2022,
-        price: 180000,
-        mileage: 2000,
-      },
-      {
-        id: 5,
-        make: "Tesla",
-        model: "Model S Plaid",
-        year: 2023,
-        price: 135000,
-        mileage: 1500,
-      },
-    ],
-  };
-};
+import { useDebounce } from "@/hooks/use-debounce";
+import { getLocationSuggestion } from "@/api";
 
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
   message: "Please provide a valid time in 24-hour format (HH:MM)",
@@ -240,6 +201,26 @@ export default function RaffleForm() {
   const { toast } = useToast();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
+  const locationRef = useRef<HTMLDivElement | null>(null);
+  const suggestionBoxRef = useRef<HTMLDivElement | null>(null);
+  const [locationSuggestions, setLocationSuggestions] = useState<any>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+
+  
+
+  const handleLocationFocus = () => {
+    if (vehicleForm.getValues("location").length >= 2) {
+      setShowLocationSuggestions(true);
+    }
+  };
+
+  const handleSelectLocation = (suggestion: any) => {
+    vehicleForm.setValue("location", suggestion.display_name);
+    setShowLocationSuggestions(false);
+    vehicleForm.trigger("location");
+  };
+
   const now = new Date();
   const oneWeekLater = addDays(now, 7);
 
@@ -279,6 +260,7 @@ export default function RaffleForm() {
     },
   });
 
+  const debouncedLocationQuery = useDebounce(vehicleForm.getValues("location"), 500);
   const vehiclePrice = vehicleForm.watch("price");
   const ticketPrice = form.watch("ticketPrice");
   const ticketQuantity = form.watch("ticketQuantity");
@@ -291,6 +273,25 @@ export default function RaffleForm() {
     }
     setTicketRevenue(ticketPrice * ticketQuantity);
   }, [vehiclePrice, ticketPrice, ticketQuantity]);
+
+
+   useEffect(() => {
+      if (debouncedLocationQuery && debouncedLocationQuery.length >= 2 && !locationSuggestions.some((l:any)=>l.display_name===debouncedLocationQuery)) {
+        setIsLoadingLocations(true);
+        setShowLocationSuggestions(true);
+        
+        getLocationSuggestion(debouncedLocationQuery)
+          .then((suggestions) => {
+            setLocationSuggestions(suggestions);
+          })
+          .finally(() => {
+            setIsLoadingLocations(false);
+          });
+      } else {
+        setLocationSuggestions([]);
+        setShowLocationSuggestions(false);
+      }
+    }, [debouncedLocationQuery]);
 
   useEffect(() => {
     // const fetchVehicles = async () => {
@@ -424,9 +425,19 @@ export default function RaffleForm() {
     }
   };
 
+   const LocationSkeleton = () => (
+    <div className="animate-pulse flex flex-col space-y-2 p-2">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="h-6 bg-blue-100 rounded w-full"></div>
+      ))}
+    </div>
+  );
+
   return (
-    <div className=" mx-auto mt-8 p-6 rounded-2xl shadow-md border bg-white">
-      <h2 className="text-2xl font-bold mb-6">Create Car Raffle</h2>
+    <div className="mx-auto mt-8 p-6 rounded-2xl shadow-md border bg-white">
+      <h2 className="text-2xl font-bold mb-6 text-blue-700 border-b pb-3 border-blue-100">
+        Create Car Raffle
+      </h2>
 
       <Form {...form}>
         <form
@@ -449,7 +460,8 @@ export default function RaffleForm() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Left column - Vehicle selection or add new */}
             <div className="md:col-span-2">
-              <h3 className="text-lg font-medium mb-4">
+              <h3 className="text-lg font-medium mb-4 text-blue-600 flex items-center">
+                <span className="bg-blue-600 w-1 h-6 rounded mr-2"></span>
                 Select Vehicle or Add New
               </h3>
 
@@ -469,21 +481,24 @@ export default function RaffleForm() {
               {addNewItem ? (
                 <Form {...vehicleForm}>
                   <div className="space-y-6">
-                    <div className="space-y-4">
+                    <div className="space-y-4 bg-blue-50 p-4 rounded-lg">
                       <FormField
                         control={vehicleForm.control}
                         name="registration_num"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Registration Number</FormLabel>
+                            <FormLabel className="text-blue-800">
+                              Registration Number
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 type="text"
                                 placeholder="e.g. ABC-1234"
+                                className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                                 {...field}
                               />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-red-500" />
                           </FormItem>
                         )}
                       />
@@ -492,7 +507,7 @@ export default function RaffleForm() {
                         name="title"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="font-medium">
+                            <FormLabel className="font-medium text-blue-800">
                               Vehicle Title
                             </FormLabel>
                             <FormControl>
@@ -500,10 +515,10 @@ export default function RaffleForm() {
                                 type="text"
                                 placeholder="Title"
                                 {...field}
-                                className="w-full"
+                                className="w-full border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                               />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-red-500" />
                           </FormItem>
                         )}
                       />
@@ -529,18 +544,18 @@ export default function RaffleForm() {
                     </div>
 
                     {/* Image Upload Section */}
-                    <div>
-                      <h3 className="text-lg font-medium mb-3">
+                    <div className="bg-gradient-to-r from-blue-50 to-white p-5 rounded-lg border border-blue-100">
+                      <h3 className="text-lg font-medium mb-3 text-blue-700">
                         Vehicle Images
                       </h3>
                       <div className="space-y-4">
-                        <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                        <div className="border border-dashed border-blue-300 rounded-lg p-6 text-center bg-white">
                           <div className="mb-4">
-                            <Upload className="mx-auto h-10 w-10 text-gray-400" />
-                            <p className="mt-2 text-sm text-gray-500">
+                            <Upload className="mx-auto h-10 w-10 text-blue-400" />
+                            <p className="mt-2 text-sm text-blue-700">
                               Upload up to 10 images of your vehicle
                             </p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-blue-400">
                               Supported formats: JPG, PNG, WEBP (max 5MB each)
                             </p>
                           </div>
@@ -548,7 +563,7 @@ export default function RaffleForm() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="relative"
+                            className="relative bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
                           >
                             <span>Select Images</span>
                             <Input
@@ -567,7 +582,7 @@ export default function RaffleForm() {
                             {selectedFiles.map((file, index) => (
                               <div
                                 key={index}
-                                className="relative group aspect-square border rounded-md overflow-hidden"
+                                className="relative group aspect-square border rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                               >
                                 <img
                                   src={URL.createObjectURL(file)}
@@ -588,8 +603,8 @@ export default function RaffleForm() {
                       </div>
                     </div>
 
-                    <div>
-                      <h3 className="text-lg font-medium mb-3">
+                    <div className="bg-white p-5 rounded-lg border border-blue-100 shadow-sm">
+                      <h3 className="text-lg font-medium mb-3 text-blue-700">
                         Basic Information
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -598,13 +613,15 @@ export default function RaffleForm() {
                           name="type"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Vehicle Type</FormLabel>
+                              <FormLabel className="text-blue-800">
+                                Vehicle Type
+                              </FormLabel>
                               <FormControl>
                                 <Select
                                   onValueChange={field.onChange}
                                   defaultValue={field.value}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="border-blue-200 focus:ring-blue-500">
                                     <SelectValue placeholder="Choose a vehicle type" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -616,7 +633,7 @@ export default function RaffleForm() {
                                   </SelectContent>
                                 </Select>
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -655,15 +672,18 @@ export default function RaffleForm() {
                           name="make"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Make</FormLabel>
+                              <FormLabel className="text-blue-800">
+                                Make
+                              </FormLabel>
                               <FormControl>
                                 <Input
                                   type="text"
                                   placeholder="e.g. Toyota"
+                                  className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                                   {...field}
                                 />
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -672,23 +692,26 @@ export default function RaffleForm() {
                           name="model"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Model</FormLabel>
+                              <FormLabel className="text-blue-800">
+                                Model
+                              </FormLabel>
                               <FormControl>
                                 <Input
                                   type="text"
                                   placeholder="e.g. Camry"
+                                  className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                                   {...field}
                                 />
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
                       </div>
                     </div>
 
-                    <div>
-                      <h3 className="text-lg font-medium mb-3">
+                    <div className="bg-gradient-to-r from-white to-blue-50 p-5 rounded-lg border border-blue-100 shadow-sm">
+                      <h3 className="text-lg font-medium mb-3 text-blue-700">
                         Vehicle Specifications
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -697,15 +720,18 @@ export default function RaffleForm() {
                           name="year"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Year</FormLabel>
+                              <FormLabel className="text-blue-800">
+                                Year
+                              </FormLabel>
                               <FormControl>
                                 <Input
                                   type="number"
                                   placeholder="e.g. 2020"
+                                  className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                                   {...field}
                                 />
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -714,15 +740,18 @@ export default function RaffleForm() {
                           name="mileage"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Mileage</FormLabel>
+                              <FormLabel className="text-blue-800">
+                                Mileage
+                              </FormLabel>
                               <FormControl>
                                 <Input
                                   type="number"
                                   placeholder="e.g. 45000"
+                                  className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                                   {...field}
                                 />
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -731,15 +760,18 @@ export default function RaffleForm() {
                           name="color"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Color</FormLabel>
+                              <FormLabel className="text-blue-800">
+                                Color
+                              </FormLabel>
                               <FormControl>
                                 <Input
                                   type="text"
                                   placeholder="e.g. Silver"
+                                  className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                                   {...field}
                                 />
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -748,13 +780,15 @@ export default function RaffleForm() {
                           name="fuelType"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Fuel Type</FormLabel>
+                              <FormLabel className="text-blue-800">
+                                Fuel Type
+                              </FormLabel>
                               <FormControl>
                                 <Select
                                   onValueChange={field.onChange}
                                   defaultValue={field.value}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="border-blue-200 focus:ring-blue-500">
                                     <SelectValue placeholder="Select fuel type" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -768,7 +802,7 @@ export default function RaffleForm() {
                                   </SelectContent>
                                 </Select>
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -777,14 +811,16 @@ export default function RaffleForm() {
                           name="transmission"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Transmission Type</FormLabel>
+                              <FormLabel className="text-blue-800">
+                                Transmission Type
+                              </FormLabel>
                               <FormControl>
                                 <Select
                                   onValueChange={field.onChange}
                                   defaultValue={field.value}
                                 >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select fuel type" />
+                                  <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                                    <SelectValue placeholder="Select transmission" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {vehicleTransmissionsTypes[
@@ -800,7 +836,7 @@ export default function RaffleForm() {
                                   </SelectContent>
                                 </Select>
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="text-red-500" />
                             </FormItem>
                           )}
                         />
@@ -809,7 +845,9 @@ export default function RaffleForm() {
                           name="bodyType"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Body Type</FormLabel>
+                              <FormLabel className="text-blue-800">
+                                Body Type
+                              </FormLabel>
                               <FormControl>
                                 <Input
                                   type="text"
@@ -826,7 +864,7 @@ export default function RaffleForm() {
 
                     {/* Two Column Layout for Listing Details */}
                     <div>
-                      <h3 className="text-lg font-medium mb-3">
+                      <h3 className="text-lg font-medium mb-3 text-blue-700">
                         Listing Details
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -835,13 +873,24 @@ export default function RaffleForm() {
                           name="price"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Price</FormLabel>
+                              <FormLabel className="text-blue-800">
+                                Price
+                              </FormLabel>
                               <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="e.g. 15000"
-                                  {...field}
-                                />
+                                <div className="relative">
+                                  <DollarSign className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    className="pl-10 border-blue-200 focus:ring-blue-500"
+                                    {...field}
+                                    onChange={(e) =>
+                                      field.onChange(parseFloat(e.target.value))
+                                    }
+                                  />
+                                </div>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -852,14 +901,54 @@ export default function RaffleForm() {
                           name="location"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Location</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="text"
-                                  placeholder="e.g. New York, NY"
-                                  {...field}
-                                />
-                              </FormControl>
+                              <FormLabel className="text-blue-800">
+                                Location
+                              </FormLabel>
+                              <div className="relative" ref={locationRef}>
+                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-500">
+                                  <MapPin className="h-4 w-4" />
+                                </div>
+                                <FormControl>
+                                  <Input
+                                    type="text"
+                                    placeholder="e.g. London, UK"
+                                    className="pl-9 border-blue-200 focus:ring-blue-500 focus:border-blue-500"
+                                    onFocus={handleLocationFocus}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                {showLocationSuggestions && (
+                                  <div
+                                    ref={suggestionBoxRef}
+                                    className="absolute z-20 w-full mt-1 bg-white border border-blue-200 rounded-md shadow-lg max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-400 scrollbar-track-blue-50"
+                                  >
+                                    {isLoadingLocations ? (
+                                      <LocationSkeleton />
+                                    ) : locationSuggestions.length > 0 ? (
+                                      locationSuggestions.map(
+                                        (suggestion: any, index: number) => (
+                                          <div
+                                            key={index}
+                                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer flex items-center space-x-2 text-sm border-b border-blue-50 last:border-0"
+                                            onClick={() =>
+                                              handleSelectLocation(suggestion)
+                                            }
+                                          >
+                                            <MapPin className="h-4 w-4 text-blue-500" />
+                                            <span>
+                                              {suggestion.display_name}
+                                            </span>
+                                          </div>
+                                        )
+                                      )
+                                    ) : (
+                                      <div className="px-4 py-2 text-sm text-gray-500">
+                                        No locations found
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -1007,7 +1096,9 @@ export default function RaffleForm() {
             </div>
 
             <div className="md:col-span-1">
-              <h3 className="text-lg font-medium mb-4">Raffle Details</h3>
+              <h3 className="text-lg font-medium mb-4 text-blue-800">
+                Raffle Details
+              </h3>
 
               {/* Title and Description */}
               <FormField
@@ -1015,11 +1106,14 @@ export default function RaffleForm() {
                 name="title"
                 render={({ field }) => (
                   <FormItem className="mb-4">
-                    <FormLabel>Raffle Title</FormLabel>
+                    <FormLabel className="text-blue-800">
+                      Raffle Title
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="text"
-                        placeholder="Win a Dream Car!"
+                        className="border-blue-200 focus:ring-blue-500"
+                        placeholder="Enter an attractive title for your raffle..."
                         {...field}
                       />
                     </FormControl>
@@ -1033,137 +1127,166 @@ export default function RaffleForm() {
                 name="description"
                 render={({ field }) => (
                   <FormItem className="mb-4">
-                    <FormLabel>Raffle Description</FormLabel>
+                    <FormLabel className="text-blue-800">
+                      Raffle Description
+                    </FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Describe the raffle and vehicle details"
-                        className="min-h-32"
+                      <textarea
+                        className="w-full min-h-32 rounded-md border border-blue-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Describe your vehicle, highlight special features, and provide any additional information buyers should know..."
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-500" />
                   </FormItem>
                 )}
               />
 
               {/* Raffle Start Date and Time */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Start Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full text-left font-normal flex justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value
-                                ? format(field.value, "PPP")
-                                : "Select date"}
-                              <CalendarIcon className="ml-auto h-4 w-4" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="space-y-2">
+                <h5 className="text-sm font-medium text-blue-700">Start</h5>
 
-                <FormField
-                  control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Time</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input type="time" {...field} />
-                          <ClockIcon className="absolute right-3 top-2.5 h-4 w-4 text-gray-500 pointer-events-none" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className="w-full border-blue-200 bg-white text-left font-normal flex justify-between"
+                              >
+                                {field.value
+                                  ? format(field.value, "MMM dd, yyyy")
+                                  : "Select date"}
+                                <CalendarIcon className="ml-auto h-4 w-4 text-blue-500" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) => {
+                                const today = new Date();
+                                return (
+                                  date <
+                                  new Date(
+                                    today.getFullYear(),
+                                    today.getMonth(),
+                                    today.getDate()
+                                  )
+                                );
+                              }}
+                              initialFocus
+                              className="border-blue-100"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="startTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type="time"
+                              className="border-blue-200 focus:ring-blue-500"
+                              {...field}
+                            />
+                            <ClockIcon className="absolute right-3 top-2.5 h-4 w-4 text-gray-500 pointer-events-none" />
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
-
               {/* Raffle End Date and Time */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>End Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full text-left font-normal flex justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value
-                                ? format(field.value, "PPP")
-                                : "Select date"}
-                              <CalendarIcon className="ml-auto h-4 w-4" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                        <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="space-y-2 mt-3">
+                <h5 className="text-sm font-medium text-blue-700">End</h5>
 
-                <FormField
-                  control={form.control}
-                  name="endTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Time</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input type="time" {...field} />
-                          <ClockIcon className="absolute right-3 top-2.5 h-4 w-4 text-gray-500 pointer-events-none" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className="w-full border-blue-200 bg-white text-left font-normal flex justify-between"
+                              >
+                                {field.value
+                                  ? format(field.value, "MMM dd, yyyy")
+                                  : "Select date"}
+                                <CalendarIcon className="ml-auto h-4 w-4 text-blue-500" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) => {
+                                const today = new Date();
+                                return (
+                                  date <
+                                  new Date(
+                                    today.getFullYear(),
+                                    today.getMonth(),
+                                    today.getDate()
+                                  )
+                                );
+                              }}
+                              initialFocus
+                              className="border-blue-100"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="endTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type="time"
+                              className="border-blue-200 focus:ring-blue-500"
+                              {...field}
+                            />
+                            <ClockIcon className="absolute right-3 top-2.5 h-4 w-4 text-gray-500 pointer-events-none" />
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               {/* Ticket Configuration */}
-              <h3 className="text-lg font-medium mb-4 mt-6">
+              <h3 className="text-lg font-medium mb-4 mt-6 text-blue-800 ">
                 Ticket Configuration
               </h3>
 
@@ -1173,14 +1296,17 @@ export default function RaffleForm() {
                   name="ticketPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ticket Price ($)</FormLabel>
+                      <FormLabel className="text-blue-800">
+                        Ticket Price ($)
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          min="1"
+                          min="0"
                           step="0.01"
-                          placeholder="20.00"
+                          placeholder="0.00"
                           {...field}
+                          className="pl-10 border-blue-200 focus:ring-blue-500"
                           onChange={(e) =>
                             field.onChange(parseFloat(e.target.value))
                           }
@@ -1196,28 +1322,17 @@ export default function RaffleForm() {
                   name="ticketQuantity"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex justify-between">
-                        <FormLabel>Total Tickets</FormLabel>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="w-48">
-                                Recommended: Set ticket quantity to match
-                                vehicle value (e.g., 1,000 tickets at $20 each
-                                for a $20,000 car)
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
+                      <FormLabel className="text-blue-800">
+                        Total Tickets
+                      </FormLabel>
+
                       <FormControl>
                         <Input
                           type="number"
-                          min="10"
+                          min="0"
+                          step="1"
                           placeholder="1000"
+                          className="pl-10 border-blue-200 focus:ring-blue-500"
                           {...field}
                           onChange={(e) =>
                             field.onChange(parseInt(e.target.value))
@@ -1258,11 +1373,26 @@ export default function RaffleForm() {
           </div>
 
           <div className="flex justify-end gap-4 pt-4">
-            <Button type="button" variant="outline">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-blue-200 text-blue-800"
+            >
               Cancel
             </Button>
-            <Button type="submit">
-              {submitting ? "Creating..." : "Create Raffle"}
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center"
+            >
+              {submitting ? (
+                <>Creating...</>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Create Raffle
+                </>
+              )}
             </Button>
           </div>
         </form>

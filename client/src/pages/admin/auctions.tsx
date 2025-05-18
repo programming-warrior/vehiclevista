@@ -13,6 +13,8 @@ import {
   Bike,
   Truck,
   Bus,
+  Clock,
+  CheckCircle
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -45,13 +47,15 @@ import AdminLayout from "@/components/admin/admin-layout";
 import { adminGetAuctions } from "@/api";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLocation } from "wouter";
 
 export default function AdminVehicles() {
   const [auctions, setAuctions] = useState<any>([]);
   const [filteredAuctions, setFilteredAuctions] = useState<any>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState("newest");
-  const [showBlacklisted, setShowBlacklisted] = useState(false);
+  const [activeTab, setActiveTab] = useState("RUNNING");
   const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [blacklistReason, setBlacklistReason] = useState("");
@@ -61,29 +65,34 @@ export default function AdminVehicles() {
   const [totalAuctions, setTotalAuctions] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [, setLocation] = useLocation();
+
   const debouncedSearch = useDebounce(searchQuery, 500);
-    async function fetch(page:number) {
-      try {
-        setIsLoading(true);
-        const filter = {
-          search: debouncedSearch,
-          status: showBlacklisted ? "BLACKLISTED" : "RUNNING",
-        };
-        const data = await adminGetAuctions({
-          page,
-          limit,
-          sortBy: sortOption,
-          filter: JSON.stringify(filter),
-        });
-        setAuctions(data.auctions);
-        setFilteredAuctions(data.auctions);
-        setTotalPages(data.totalPages);
-        setTotalAuctions(parseInt(data.totalAuctions));
-      } catch (e) {
-      } finally {
-        setIsLoading(false);
-      }
+
+  async function fetch(page:number) {
+    try {
+      setIsLoading(true);
+      const filter = {
+        search: debouncedSearch,
+        status: activeTab,
+      };
+      const data = await adminGetAuctions({
+        page,
+        limit,
+        sortBy: sortOption,
+        filter: JSON.stringify(filter),
+      });
+      setAuctions(data.auctions);
+      setFilteredAuctions(data.auctions);
+      setTotalPages(data.totalPages);
+      setTotalAuctions(parseInt(data.totalAuctions));
+    } catch (e) {
+      console.error("Error fetching auctions:", e);
+    } finally {
+      setIsLoading(false);
     }
+  }
+
   useEffect(() => {
     fetch(page);
   }, [page, limit, sortOption]);
@@ -91,10 +100,9 @@ export default function AdminVehicles() {
   useEffect(() => {
     fetch(1);
     setPage(1);
-  }, [debouncedSearch, showBlacklisted]);
+  }, [debouncedSearch, activeTab]);
 
-
-  const handleBlacklistVehicle = (vehicle: any) => {
+  const handleBlacklistVehicle = (vehicle:any) => {
     setSelectedVehicle(vehicle);
     setBlacklistDialogOpen(true);
   };
@@ -103,7 +111,7 @@ export default function AdminVehicles() {
     try {
       // await blacklistVehicle(selectedVehicle.id, blacklistReason);
       setAuctions(
-        auctions.map((vehicle: any) =>
+        auctions.map((vehicle:any) =>
           vehicle.id === selectedVehicle?.id
             ? { ...vehicle, status: "BLACKLISTED", blacklistReason }
             : vehicle
@@ -111,7 +119,7 @@ export default function AdminVehicles() {
       );
       setFilteredAuctions(
         filteredAuctions.filter(
-          (vehicle: any) => vehicle.id !== selectedVehicle?.id
+          (vehicle:any) => vehicle.id !== selectedVehicle?.id
         )
       );
       setBlacklistDialogOpen(false);
@@ -121,31 +129,63 @@ export default function AdminVehicles() {
     }
   };
 
-  const removeFromBlacklist = async (vehicleId: any) => {
+  const removeFromBlacklist = async (vehicleId:number) => {
     try {
       // await unBlacklistVehicle(vehicleId, "");
       setAuctions(
-        auctions.map((vehicle: any) =>
+        auctions.map((vehicle:any) =>
           vehicle.id === vehicleId
             ? { ...vehicle, status: "ACTIVE", blacklistReason: "" }
             : vehicle
         )
       );
       setFilteredAuctions(
-        filteredAuctions.filter((vehicle: any) => vehicle.id !== vehicleId)
+        filteredAuctions.filter((vehicle:any) => vehicle.id !== vehicleId)
       );
     } catch (error) {
       console.error("Error unblacklisting vehicle:", error);
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString:string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       year: "numeric",
-      month: "short",
+      month: "numeric",
       day: "numeric",
+      hour: "2-digit",
+      minute:"2-digit",
     });
+  };
+
+  const getStatusBadge = (status:string) => {
+    switch (status) {
+      case "RUNNING":
+        return <Badge variant="outline" className="border-green-500 text-green-600">Running</Badge>;
+      case "UPCOMING":
+        return <Badge variant="outline" className="border-blue-500 text-blue-600">Upcoming</Badge>;
+      case "ENDED":
+        return <Badge variant="outline" className="border-gray-500 text-gray-600">Ended</Badge>;
+      case "BLACKLISTED":
+        return <Badge variant="destructive">Blacklisted</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getStatusIcon = (status:string) => {
+    switch (status) {
+      case "RUNNING":
+        return <Car className="mr-2 h-4 w-4" />;
+      case "UPCOMING":
+        return <Clock className="mr-2 h-4 w-4" />;
+      case "ENDED":
+        return <CheckCircle className="mr-2 h-4 w-4" />;
+      case "BLACKLISTED":
+        return <ShieldAlert className="mr-2 h-4 w-4" />;
+      default:
+        return <Car className="mr-2 h-4 w-4" />;
+    }
   };
 
   return (
@@ -153,7 +193,7 @@ export default function AdminVehicles() {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold text-blue-700">
-            Vehicle Listing Management
+             Auction Management
           </h2>
           <div className="flex gap-2">
             <Input
@@ -165,238 +205,205 @@ export default function AdminVehicles() {
           </div>
         </div>
 
-        <div className="flex justify-between items-center space-x-2">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant={!showBlacklisted ? "default" : "outline"}
-              className={
-                !showBlacklisted ? "bg-blue-600 hover:bg-blue-700" : ""
-              }
-              onClick={() => setShowBlacklisted(false)}
-            >
-              <ShieldCheck className="mr-2 h-4 w-4" />
-              Active Vehicles
-            </Button>
-            <Button
-              variant={showBlacklisted ? "default" : "outline"}
-              className={showBlacklisted ? "bg-blue-600 hover:bg-blue-700" : ""}
-              onClick={() => setShowBlacklisted(true)}
-            >
-              <ShieldAlert className="mr-2 h-4 w-4" />
-              Blacklisted Vehicles
-            </Button>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-blue-600">Sort by:</span>
-            <Select value={sortOption} onValueChange={setSortOption}>
-              <SelectTrigger className="w-40 border-blue-200">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="oldest">Oldest</SelectItem>
-                <SelectItem value="reports">Reports (High to Low)</SelectItem>
-                <SelectItem value="views">Views (High to Low)</SelectItem>
-                <SelectItem value="leads">Leads (High to Low)</SelectItem>
-                <SelectItem value="clicks">Clicks (High to Low)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {showBlacklisted && filteredAuctions.length === 0 && (
-          <Alert className="border-blue-200 bg-blue-50">
-            <AlertCircle className="h-4 w-4 text-blue-600" />
-            <AlertTitle className="text-blue-700">
-              No blacklisted auctions
-            </AlertTitle>
-            <AlertDescription className="text-blue-600">
-              There are currently no blacklisted auctions in the system.
-            </AlertDescription>
-          </Alert>
-        )}
-
         <Card className="border-blue-200">
-          <CardHeader className="bg-blue-50">
+          <CardHeader className="bg-blue-50 pb-2">
             <CardTitle className="text-blue-700">
-              {showBlacklisted ? "Blacklisted Vehicles" : "All Vehicles"}
+              Auction Listings
             </CardTitle>
             <CardDescription className="text-blue-600">
-              {showBlacklisted
-                ? "Vehicles that have been blacklisted from the platform"
-                : "Manage existing vehicle listings"}
+              Manage all vehicle auction listings on the platform
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
-            {isLoading ? (
-              <div className="py-2 flex flex-col gap-4 border-blue-200">
-                <Skeleton className="w-full h-16 bg-blue-100" />
-                <Skeleton className="w-full h-16 bg-blue-100" />
-                <Skeleton className="w-full h-16 bg-blue-100" />
-                <Skeleton className="w-full h-16 bg-blue-100" />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="px-6 pt-2 bg-blue-50">
+              <TabsList className="grid grid-cols-4 bg-blue-100">
+                <TabsTrigger value="RUNNING" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  <Car className="mr-2 h-4 w-4" />
+                  Running
+                </TabsTrigger>
+                <TabsTrigger value="UPCOMING" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  <Clock className="mr-2 h-4 w-4" />
+                  Upcoming
+                </TabsTrigger>
+                <TabsTrigger value="ENDED" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Ended
+                </TabsTrigger>
+                <TabsTrigger value="BLACKLISTED" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                  <ShieldAlert className="mr-2 h-4 w-4" />
+                  Blacklisted
+                </TabsTrigger>
+
+              </TabsList>
+            </div>
+
+            <div className="flex justify-end px-6 py-2 bg-blue-50">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-blue-600">Sort by:</span>
+                <Select value={sortOption} onValueChange={setSortOption}>
+                  <SelectTrigger className="w-40 border-blue-200">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="oldest">Oldest</SelectItem>
+                    <SelectItem value="reports">Reports (High to Low)</SelectItem>
+                    <SelectItem value="views">Views (High to Low)</SelectItem>
+                    <SelectItem value="leads">Leads (High to Low)</SelectItem>
+                    <SelectItem value="clicks">Clicks (High to Low)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-blue-100">
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Vehicle
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Type
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Make & Model
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Location
-                      </th>
-                      <th className="text-center py-3 px-4 font-medium text-blue-700">
-                        <div className="flex items-center justify-center">
-                          Reports
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
-                        </div>
-                      </th>
-                      <th className="text-center py-3 px-4 font-medium text-blue-700">
-                        Stats
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Listed On
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Status
-                      </th>
-                      <th className="text-right py-3 px-4 font-medium text-blue-700">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAuctions.map((vehicle: any) => (
-                      <tr
-                        key={vehicle.id}
-                        className="border-b border-blue-100 hover:bg-blue-50"
-                      >
-                        <td className="py-4 px-4 ">
-                          <div className="flex items-center font-medium">
-                            {vehicle.title}
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 ">
-                          <div className="flex items-center">
-                            {vehicle.type === "car" ? (
-                              <Car size={30} className="stroke-blue-500 mr-1" />
-                            ) : vehicle.type === "bike" ? (
-                              <Bike
-                                size={30}
-                                className="stroke-blue-500 mr-1"
-                              />
-                            ) : vehicle.type == "truck" ? (
-                              <Truck
-                                size={30}
-                                className="stroke-blue-500 mr-1"
-                              />
-                            ) : vehicle.type == "van" ? (
-                              <Bus size={30} className="stroke-blue-500 mr-1" />
-                            ) : (
-                              ""
-                            )}
-                            {vehicle.type}
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          {vehicle.make} {vehicle.model}
-                        </td>
-                        <td className="py-4 px-4 max-w-xs truncate">
-                          {vehicle.location}
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          {parseInt(vehicle.reports_count) > 0 ? (
-                            <Badge variant="destructive">
-                              {vehicle.reports_count}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">0</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-center space-x-2">
-                            <Badge
-                              variant="secondary"
-                              className="text-xs flex items-center"
-                            >
-                              <Eye className="mr-1 h-3 w-3" /> {vehicle.views}
-                            </Badge>
-                            <Badge
-                              variant="secondary"
-                              className="text-xs flex items-center"
-                            >
-                              <MessageSquare className="mr-1 h-3 w-3" />{" "}
-                              {vehicle.leads}
-                            </Badge>
-                            <Badge
-                              variant="secondary"
-                              className="text-xs flex items-center"
-                            >
-                              <MousePointer className="mr-1 h-3 w-3" />{" "}
-                              {vehicle.clicks}
-                            </Badge>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          {formatDate(vehicle.createdAt)}
-                        </td>
-                        <td className="py-4 px-4">
-                          <Badge
-                            variant={
-                              vehicle.status === "ACTIVE"
-                                ? "outline"
-                                : "destructive"
-                            }
-                            className={
-                              vehicle.status === "ACTIVE"
-                                ? "border-blue-500 text-blue-600"
-                                : ""
-                            }
+            </div>
+
+            <TabsContent value={activeTab} className="mt-0">
+              <CardContent>
+                {filteredAuctions.length === 0 && !isLoading && (
+                  <Alert className="border-blue-200 bg-blue-50">
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertTitle className="text-blue-700">
+                      No {activeTab.toLowerCase()} auctions
+                    </AlertTitle>
+                    <AlertDescription className="text-blue-600">
+                      There are currently no {activeTab.toLowerCase()} auctions in the system.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {isLoading ? (
+                  <div className="py-2 flex flex-col gap-4 border-blue-200">
+                    <Skeleton className="w-full h-16 bg-blue-100" />
+                    <Skeleton className="w-full h-16 bg-blue-100" />
+                    <Skeleton className="w-full h-16 bg-blue-100" />
+                    <Skeleton className="w-full h-16 bg-blue-100" />
+                  </div>
+                ) : filteredAuctions.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-blue-100">
+                          <th className="text-left py-3 px-4 font-medium text-blue-700">
+                            Title
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-blue-700">
+                            Start Date
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-blue-700">
+                            End Date
+                          </th>
+                          <th className="text-center py-3 px-4 font-medium text-blue-700">
+                            <div className="flex items-center justify-center">
+                              Reports
+                              <ArrowUpDown className="ml-1 h-4 w-4" />
+                            </div>
+                          </th>
+                          <th className="text-center py-3 px-4 font-medium text-blue-700">
+                            Stats
+                          </th>
+                          <th className="text-center py-3 px-4 font-medium text-blue-700">
+                            Bids
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-blue-700">
+                            Status
+                          </th>
+                          <th className="text-right py-3 px-4 font-medium text-blue-700">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredAuctions.map((auction:any) => (
+                          <tr
+                            key={auction.id}
+                            onClick={()=>setLocation(`/auction/${auction.id}`)}
+                            className="border-b border-blue-100 hover:bg-blue-50 cursor-pointer"
                           >
-                            {vehicle.status === "BLACKLISTED"
-                              ? "Blacklisted"
-                              : "Active"}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-4 text-right">
-                          {vehicle.status === "ACTIVE" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                              onClick={() => handleBlacklistVehicle(vehicle)}
-                            >
-                              <ShieldAlert className="mr-2 h-4 w-4" />
-                              Blacklist
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                              onClick={() => removeFromBlacklist(vehicle.id)}
-                            >
-                              <ShieldCheck className="mr-2 h-4 w-4" />
-                              Restore
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
+                            <td className="py-4 px-4">
+                              <div className="flex items-center font-medium">
+                                {auction.title}
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              {formatDate(auction.startDate)}
+                            </td>
+                            <td className="py-4 px-4">
+                              {formatDate(auction.endDate)}
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              {parseInt(auction.reports_count) > 0 ? (
+                                <Badge variant="destructive">
+                                  {auction.reports_count}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">0</span>
+                              )}
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex items-center justify-center space-x-2">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs flex items-center"
+                                >
+                                  <Eye className="mr-1 h-3 w-3" /> {auction.views}
+                                </Badge>
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs flex items-center"
+                                >
+                                  <MessageSquare className="mr-1 h-3 w-3" />{" "}
+                                  {auction.leads}
+                                </Badge>
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs flex items-center"
+                                >
+                                  <MousePointer className="mr-1 h-3 w-3" />{" "}
+                                  {auction.clicks}
+                                </Badge>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <Badge variant="outline" className="border-blue-500 text-blue-600">
+                                {auction.total_bids}
+                              </Badge>
+                            </td>
+                            <td className="py-4 px-4">
+                              {getStatusBadge(auction.status)}
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              {auction.status !== "BLACKLISTED" ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                  onClick={() => handleBlacklistVehicle(auction)}
+                                >
+                                  <ShieldAlert className="mr-2 h-4 w-4" />
+                                  Blacklist
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                                  onClick={() => removeFromBlacklist(auction.id)}
+                                >
+                                  <ShieldCheck className="mr-2 h-4 w-4" />
+                                  Restore
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </TabsContent>
+          </Tabs>
+
           <CardFooter className="pt-2 flex justify-between bg-blue-50">
             <div className="text-sm text-blue-600">
               Showing {filteredAuctions.length} of {totalAuctions} auctions
@@ -466,11 +473,10 @@ export default function AdminVehicles() {
           <DialogContent className="border-blue-300">
             <DialogHeader>
               <DialogTitle className="text-blue-700">
-                Blacklist Vehicle
+                Blacklist Auction
               </DialogTitle>
               <DialogDescription className="text-blue-600">
-                Are you sure you want to blacklist this {selectedVehicle?.make}{" "}
-                {selectedVehicle?.model}? This will remove it from active
+                Are you sure you want to blacklist "{selectedVehicle?.title}"? This will remove it from active
                 listings.
               </DialogDescription>
             </DialogHeader>
@@ -504,7 +510,7 @@ export default function AdminVehicles() {
                 onClick={confirmBlacklist}
                 className="bg-red-600 hover:bg-red-700"
               >
-                Blacklist Vehicle
+                Blacklist Auction
               </Button>
             </DialogFooter>
           </DialogContent>

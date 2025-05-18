@@ -65,13 +65,13 @@ export default function AdminRafflePage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "running":
-        return <Badge className="bg-green-500">Running</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Running</Badge>;
       case "completed":
-        return <Badge className="bg-blue-500">Completed</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>;
       case "upcoming":
-        return <Badge className="bg-yellow-500">Upcoming</Badge>;
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Upcoming</Badge>;
       case "stopped":
-        return <Badge className="bg-red-500">Stopped</Badge>;
+        return <Badge className="bg-red-500 hover:bg-red-600">Stopped</Badge>;
       default:
         return <Badge className="bg-gray-500">{status}</Badge>;
     }
@@ -93,8 +93,8 @@ export default function AdminRafflePage() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-6">Raffle Management</h1>
+      <div className="container mx-auto p-4 bg-white">
+        <h1 className="text-3xl font-bold mb-6 text-black">Raffle Management</h1>
 
         <Tabs
           defaultValue="view"
@@ -102,9 +102,9 @@ export default function AdminRafflePage() {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="view">View Raffles</TabsTrigger>
-            <TabsTrigger value="create">Create Raffle</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100">
+            <TabsTrigger value="view" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">View Raffles</TabsTrigger>
+            <TabsTrigger value="create" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">Create Raffle</TabsTrigger>
           </TabsList>
 
           <TabsContent value="view" className="space-y-6">
@@ -113,13 +113,16 @@ export default function AdminRafflePage() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
               </div>
             ) : raffles.length === 0 ? (
-              <div className="text-center p-12 border rounded-lg bg-gray-50">
-                <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium">No raffles found</h3>
-                <p className="text-gray-500 mt-2">
+              <div className="text-center p-12 border rounded-lg bg-slate-50">
+                <AlertCircle className="mx-auto h-12 w-12 text-blue-500 mb-4" />
+                <h3 className="text-lg font-medium text-black">No raffles found</h3>
+                <p className="text-slate-600 mt-2">
                   Create your first raffle to get started.
                 </p>
-                <Button className="mt-4" onClick={() => setActiveTab("create")}>
+                <Button 
+                  className="mt-4 bg-blue-500 hover:bg-blue-600 text-white" 
+                  onClick={() => setActiveTab("create")}
+                >
                   Create Raffle
                 </Button>
               </div>
@@ -127,25 +130,25 @@ export default function AdminRafflePage() {
               <>
                 {/* Running Raffles Section */}
                 <div className="mb-8">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center">
-                    <Clock className="mr-2 h-5 w-5 text-green-500" />
+                  <h2 className="text-xl font-semibold mb-4 flex items-center text-black">
+                    <Clock className="mr-2 h-5 w-5 text-blue-500" />
                     Running Raffles
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {raffles
                       .filter((raffle: any) => raffle.status === "running")
-                      .map((raffle: any, idx:number) => (
+                      .map((raffle: any, idx: number) => (
                         <Card
                           key={raffle.id}
-                          className="overflow-hidden border-l-4 border-l-green-500 shadow-md hover:shadow-lg transition-shadow"
+                          className="overflow-hidden border-l-4 border-l-blue-500 shadow-md hover:shadow-lg transition-shadow"
                         >
-                          <CardHeader className="pb-2">
+                          <CardHeader className="pb-2 bg-slate-50">
                             <div className="flex justify-between items-start">
                               <div>
-                                <CardTitle className="text-lg">
+                                <CardTitle className="text-lg text-black">
                                   {raffle.title}
                                 </CardTitle>
-                                <CardDescription className="flex items-center mt-1">
+                                <CardDescription className="flex items-center mt-1 text-slate-600">
                                   <Car className="h-4 w-4 mr-1" />
                                   {raffle.year} {raffle.make} {raffle.model}
                                 </CardDescription>
@@ -155,24 +158,24 @@ export default function AdminRafflePage() {
                           </CardHeader>
                           <CardContent className="pb-2">
                             <div className="grid grid-cols-2 gap-y-2 text-sm">
-                              <div className="flex items-center">
-                                <DollarSign className="h-4 w-4 mr-1 text-gray-500" />
+                              <div className="flex items-center text-slate-700">
+                                <DollarSign className="h-4 w-4 mr-1 text-blue-500" />
                                 <span>{raffle.ticketPrice}/ticket</span>
                               </div>
-                              <div className="flex items-center">
-                                <Users className="h-4 w-4 mr-1 text-gray-500" />
+                              <div className="flex items-center text-slate-700">
+                                <Users className="h-4 w-4 mr-1 text-blue-500" />
                                 <span>{raffle.leads || 0} entries</span>
                               </div>
                               <div className="col-span-2 mt-1">
                                 <div className="flex justify-between items-center">
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-slate-500">
                                     Time remaining:
                                   </span>
                                   <RaffleCountDownTimer
                                     raffle={raffle}
                                     setRaffle={(updater: any) =>
-                                      setRaffles((prev:any) =>
-                                        prev.map((a, i) =>
+                                      setRaffles((prev: any) =>
+                                        prev.map((a: any, i: number) =>
                                           i === idx
                                             ? typeof updater === "function"
                                               ? updater(a)
@@ -183,9 +186,9 @@ export default function AdminRafflePage() {
                                     }
                                   />
                                 </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                <div className="w-full bg-slate-200 rounded-full h-2 mt-1">
                                   <div
-                                    className="bg-green-500 h-2 rounded-full"
+                                    className="bg-blue-500 h-2 rounded-full"
                                     style={{
                                       width: `${Math.min(
                                         100,
@@ -196,17 +199,18 @@ export default function AdminRafflePage() {
                                     }}
                                   ></div>
                                 </div>
-                                <div className="flex justify-between text-xs mt-1">
+                                <div className="flex justify-between text-xs mt-1 text-slate-600">
                                   <span>{raffle.leads || 0} sold</span>
                                   <span>{raffle.ticketQuantity} total</span>
                                 </div>
                               </div>
                             </div>
                           </CardContent>
-                          <CardFooter className="pt-2 flex justify-between">
+                          <CardFooter className="pt-2 flex justify-between bg-slate-50">
                             <Button
                               variant="outline"
                               size="sm"
+                              className="border-blue-500 text-blue-500 hover:bg-blue-50"
                               onClick={() =>
                                 window.open(`/raffles/${raffle.id}`, "_blank")
                               }
@@ -216,6 +220,7 @@ export default function AdminRafflePage() {
                             <Button
                               variant="destructive"
                               size="sm"
+                              className="bg-red-500 hover:bg-red-600"
                               onClick={() => handleStopRaffle(raffle.id)}
                             >
                               Stop Raffle
@@ -226,8 +231,8 @@ export default function AdminRafflePage() {
                     {!raffles.some(
                       (raffle: any) => raffle.status === "running"
                     ) && (
-                      <div className="col-span-full text-center p-8 border rounded-lg bg-gray-50">
-                        <p className="text-gray-500">
+                      <div className="col-span-full text-center p-8 border rounded-lg bg-slate-50">
+                        <p className="text-slate-600">
                           No running raffles at the moment
                         </p>
                       </div>
@@ -237,18 +242,18 @@ export default function AdminRafflePage() {
 
                 {/* Other Raffles Section */}
                 <div>
-                  <h2 className="text-xl font-semibold mb-4">Other Raffles</h2>
-                  <div className="overflow-x-auto">
+                  <h2 className="text-xl font-semibold mb-4 text-black">Other Raffles</h2>
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
                     <table className="w-full border-collapse">
                       <thead>
-                        <tr className="bg-gray-100">
-                          <th className="text-left p-3">Title</th>
-                          <th className="text-left p-3">Vehicle</th>
-                          <th className="text-left p-3">Status</th>
-                          <th className="text-left p-3">Ticket Price</th>
-                          <th className="text-left p-3">Tickets Sold</th>
-                          <th className="text-left p-3">Date Range</th>
-                          <th className="text-center p-3">Actions</th>
+                        <tr className="bg-slate-100">
+                          <th className="text-left p-3 text-black">Title</th>
+                          <th className="text-left p-3 text-black">Vehicle</th>
+                          <th className="text-left p-3 text-black">Status</th>
+                          <th className="text-left p-3 text-black">Ticket Price</th>
+                          <th className="text-left p-3 text-black">Tickets Sold</th>
+                          <th className="text-left p-3 text-black">Date Range</th>
+                          <th className="text-center p-3 text-black">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -257,20 +262,20 @@ export default function AdminRafflePage() {
                           .map((raffle: any) => (
                             <tr
                               key={raffle.id}
-                              className="border-b hover:bg-gray-50"
+                              className="border-b hover:bg-slate-50"
                             >
-                              <td className="p-3">{raffle.title}</td>
-                              <td className="p-3">
+                              <td className="p-3 text-slate-800">{raffle.title}</td>
+                              <td className="p-3 text-slate-800">
                                 {raffle.year} {raffle.make} {raffle.model}
                               </td>
                               <td className="p-3">
                                 {getStatusBadge(raffle.status)}
                               </td>
-                              <td className="p-3">₹{raffle.ticketPrice}</td>
-                              <td className="p-3">
+                              <td className="p-3 text-slate-800">₹{raffle.ticketPrice}</td>
+                              <td className="p-3 text-slate-800">
                                 {raffle.leads || 0}/{raffle.ticketQuantity}
                               </td>
-                              <td className="p-3 text-xs">
+                              <td className="p-3 text-xs text-slate-600">
                                 {formatDate(raffle.startDate)}
                                 <br />
                                 to
@@ -281,7 +286,7 @@ export default function AdminRafflePage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="mr-2"
+                                  className="mr-2 border-blue-500 text-blue-500 hover:bg-blue-50"
                                   onClick={() =>
                                     window.open(
                                       `/raffles/${raffle.id}`,
@@ -292,7 +297,7 @@ export default function AdminRafflePage() {
                                   View
                                 </Button>
                                 {raffle.status === "upcoming" && (
-                                  <Button size="sm" variant="default">
+                                  <Button size="sm" variant="default" className="bg-blue-500 hover:bg-blue-600">
                                     Start
                                   </Button>
                                 )}
@@ -305,7 +310,7 @@ export default function AdminRafflePage() {
                           <tr>
                             <td
                               colSpan={7}
-                              className="p-8 text-center text-gray-500"
+                              className="p-8 text-center text-slate-500"
                             >
                               No other raffles available
                             </td>
@@ -320,10 +325,10 @@ export default function AdminRafflePage() {
           </TabsContent>
 
           <TabsContent value="create">
-            <Card>
-              <CardHeader>
-                <CardTitle>Create New Raffle</CardTitle>
-                <CardDescription>
+            <Card className="border border-slate-200">
+              <CardHeader className="bg-slate-50">
+                <CardTitle className="text-black">Create New Raffle</CardTitle>
+                <CardDescription className="text-slate-600">
                   Set up a new vehicle raffle with all the necessary details.
                 </CardDescription>
               </CardHeader>

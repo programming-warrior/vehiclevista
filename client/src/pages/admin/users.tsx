@@ -10,6 +10,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -104,9 +105,7 @@ export default function AdminUsers() {
         )
       );
       setFilteredUsers(
-        users.filter((user: any) =>
-          user.id !== selectedUser?.id
-        )
+        users.filter((user: any) => user.id !== selectedUser?.id)
       );
       setBlacklistDialogOpen(false);
       setBlacklistReason("");
@@ -125,11 +124,7 @@ export default function AdminUsers() {
             : user
         )
       );
-      setFilteredUsers(
-        users.filter((user: any) =>
-          user.id !== userId
-        )
-      );
+      setFilteredUsers(users.filter((user: any) => user.id !== userId));
       setBlacklistDialogOpen(false);
       setBlacklistReason("");
     } catch (error) {
@@ -150,11 +145,13 @@ export default function AdminUsers() {
     <AdminLayout>
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-semibold">User Management</h2>
+          <h2 className="text-2xl font-semibold text-blue-700">
+            User Management
+          </h2>
           <div className="flex gap-2">
             <Input
               placeholder="Search users..."
-              className="w-64"
+              className="w-64 border-blue-200 focus:border-blue-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -165,6 +162,9 @@ export default function AdminUsers() {
           <div className="flex items-center space-x-2">
             <Button
               variant={!showBlacklisted ? "default" : "outline"}
+              className={
+                !showBlacklisted ? "bg-blue-600 hover:bg-blue-700" : ""
+              }
               onClick={() => setShowBlacklisted(false)}
             >
               <ShieldCheck className="mr-2 h-4 w-4" />
@@ -172,6 +172,9 @@ export default function AdminUsers() {
             </Button>
             <Button
               variant={showBlacklisted ? "default" : "outline"}
+              className={
+                showBlacklisted ? "bg-blue-600 hover:bg-blue-700" : ""
+              }
               onClick={() => setShowBlacklisted(true)}
             >
               <ShieldAlert className="mr-2 h-4 w-4" />
@@ -180,9 +183,9 @@ export default function AdminUsers() {
           </div>
 
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">Sort by:</span>
+            <span className="text-sm text-blue-600">Sort by:</span>
             <Select value={sortOption} onValueChange={setSortOption}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-40 border-blue-200">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -198,124 +201,160 @@ export default function AdminUsers() {
         </div>
 
         {showBlacklisted && filteredUsers.length === 0 && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>No blacklisted users</AlertTitle>
-            <AlertDescription>
+          <Alert className="border-blue-200 bg-blue-50">
+            <AlertCircle className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-700">
+              No blacklisted users
+            </AlertTitle>
+            <AlertDescription className="text-blue-600">
               There are currently no blacklisted users in the system.
             </AlertDescription>
           </Alert>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
+        <Card className="border-blue-200">
+          <CardHeader className="bg-blue-50">
+            <CardTitle className="text-blue-700">
               {showBlacklisted ? "Blacklisted Users" : "All Users"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-blue-600">
               {showBlacklisted
                 ? "Users who have been blacklisted from the platform"
                 : "Manage existing user accounts"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">
-                      Username
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium">Email</th>
-                    <th className="text-left py-3 px-4 font-medium">Role</th>
-                    <th className="text-center py-3 px-4 font-medium">
-                      <div className="flex items-center justify-center">
-                        Reports
-                        <ArrowUpDown className="ml-1 h-4 w-4" />
-                      </div>
-                    </th>
-                    <th className="text-center py-3 px-4 font-medium">Stats</th>
-                    <th className="text-left py-3 px-4 font-medium">Joined</th>
-                    <th className="text-left py-3 px-4 font-medium">Status</th>
-                    <th className="text-right py-3 px-4 font-medium">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user: any) => (
-                    <tr key={user.id} className="border-b">
-                      <td className="py-4 px-4 font-medium">{user.username}</td>
-                      <td className="py-4 px-4">{user.email}</td>
-                      <td className="py-4 px-4">
-                        <Badge variant="outline" className="capitalize">
-                          {user.role}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        {parseInt(user.reports_count) > 0 ? (
-                          <Badge variant="destructive">
-                            {user.reports_count}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">0</span>
-                        )}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-center space-x-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {user.auctions_count} Auctions
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {user.vehicles_count} Vehicles
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {user.bids_count} Bids
-                          </Badge>
+            {isLoading ? (
+              <div className="py-2 flex flex-col gap-4 border-blue-200">
+                <Skeleton className="w-full h-16 bg-blue-100" />
+                <Skeleton className="w-full h-16 bg-blue-100" />
+                <Skeleton className="w-full h-16 bg-blue-100" />
+                <Skeleton className="w-full h-16 bg-blue-100" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-blue-100">
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Username
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Email
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Role
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        <div className="flex items-center justify-center">
+                          Reports
+                          <ArrowUpDown className="ml-1 h-4 w-4" />
                         </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        {formatDate(user.createdAt)}
-                      </td>
-                      <td className="py-4 px-4">
-                        <Badge
-                          variant={
-                            user.status === "active" ? "outline" : "destructive"
-                          }
-                        >
-                          {user.status === "blacklisted"
-                            ? "Blacklisted"
-                            : "Active"}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                      {user.status === "active" ? (
-                                  <Button
-                                    className="text-red-600"
-                                    onClick={() => handleBlacklistUser(user)}
-                                  >
-                                    <UserX className="mr-2 h-4 w-4" />
-                                    Blacklist User
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    className="text-green-600"
-                                    onClick={() => removeFromBlacklist(user.id)}
-                                  >
-                                    <ShieldCheck className="mr-2 h-4 w-4" />
-                                    Remove from Blacklist
-                                  </Button>
-                                )}
-                
-                      </td>
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Stats
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Joined
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-blue-700">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user: any) => (
+                      <tr
+                        key={user.id}
+                        className="border-b border-blue-100 hover:bg-blue-50"
+                      >
+                        <td className="py-4 px-4 font-medium">
+                          {user.username}
+                        </td>
+                        <td className="py-4 px-4">{user.email}</td>
+                        <td className="py-4 px-4">
+                          <Badge variant="outline" className="capitalize">
+                            {user.role}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          {parseInt(user.reports_count) > 0 ? (
+                            <Badge variant="destructive">
+                              {user.reports_count}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center justify-center space-x-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {user.auctions_count} Auctions
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {user.vehicles_count} Vehicles
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {user.bids_count} Bids
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          {formatDate(user.createdAt)}
+                        </td>
+                        <td className="py-4 px-4">
+                          <Badge
+                            variant={
+                              user.status === "active"
+                                ? "outline"
+                                : "destructive"
+                            }
+                            className={
+                              user.status === "active"
+                                ? "border-blue-500 text-blue-600"
+                                : ""
+                            }
+                          >
+                            {user.status === "blacklisted"
+                              ? "Blacklisted"
+                              : "Active"}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          {user.status === "active" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => handleBlacklistUser(user)}
+                            >
+                              <ShieldAlert className="mr-2 h-4 w-4" />
+                              Blacklist
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                              onClick={() => removeFromBlacklist(user.id)}
+                            >
+                              <ShieldCheck className="mr-2 h-4 w-4" />
+                              Restore
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
-          <CardFooter className="flex justify-between">
-            <div className="text-sm text-muted-foreground">
+          <CardFooter className="pt-2 flex justify-between bg-blue-50">
+            <div className="text-sm text-blue-600">
               Showing {filteredUsers.length} of {totalUsers} users
             </div>
             {totalPages > 1 && (
@@ -323,6 +362,7 @@ export default function AdminUsers() {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="border-blue-200 hover:bg-blue-100 text-blue-700"
                   onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                   disabled={page === 1 || isLoading}
                 >
@@ -330,7 +370,6 @@ export default function AdminUsers() {
                 </Button>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                    // Show pages around current page
                     let pageNum;
                     if (totalPages <= 5) {
                       pageNum = i + 1;
@@ -347,7 +386,11 @@ export default function AdminUsers() {
                         key={pageNum}
                         variant={page === pageNum ? "default" : "outline"}
                         size="sm"
-                        className="w-8 h-8 p-0"
+                        className={
+                          page === pageNum
+                            ? "w-8 h-8 p-0 bg-blue-600 hover:bg-blue-700"
+                            : "w-8 h-8 p-0 border-blue-200 text-blue-700 hover:bg-blue-100"
+                        }
                         onClick={() => setPage(pageNum)}
                         disabled={isLoading}
                       >
@@ -359,6 +402,7 @@ export default function AdminUsers() {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="border-blue-200 hover:bg-blue-100 text-blue-700"
                   onClick={() =>
                     setPage((prev) => Math.min(prev + 1, totalPages))
                   }
@@ -375,22 +419,28 @@ export default function AdminUsers() {
           open={blacklistDialogOpen}
           onOpenChange={setBlacklistDialogOpen}
         >
-          <DialogContent>
+          <DialogContent className="border-blue-300">
             <DialogHeader>
-              <DialogTitle>Blacklist User</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-blue-700">
+                Blacklist User
+              </DialogTitle>
+              <DialogDescription className="text-blue-600">
                 Are you sure you want to blacklist {selectedUser?.username}?
                 This will prevent them from accessing the platform.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <label htmlFor="reason" className="text-sm font-medium">
+                <label
+                  htmlFor="reason"
+                  className="text-sm font-medium text-blue-700"
+                >
                   Reason for blacklisting
                 </label>
                 <Input
                   id="reason"
                   placeholder="Enter reason for blacklisting"
+                  className="border-blue-200"
                   value={blacklistReason}
                   onChange={(e) => setBlacklistReason(e.target.value)}
                 />
@@ -399,11 +449,16 @@ export default function AdminUsers() {
             <DialogFooter>
               <Button
                 variant="outline"
+                className="border-blue-200 text-blue-700"
                 onClick={() => setBlacklistDialogOpen(false)}
               >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={confirmBlacklist}>
+              <Button
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700"
+                onClick={confirmBlacklist}
+              >
                 Blacklist User
               </Button>
             </DialogFooter>
