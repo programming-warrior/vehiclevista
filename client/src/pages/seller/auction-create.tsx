@@ -180,7 +180,7 @@ console.log(form.watch('startTime'));
     console.log("Auction Created:", auctionData);
     try {
       setUploading(true);
-      // await createAuction(auctionData);
+      await createAuction(auctionData);
       toast({
         title: "Success",
         description: "Auction created successfully",
@@ -343,7 +343,12 @@ console.log(form.watch('startTime'));
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
+                            disabled={(date) => {
+                              const today = new Date();
+                              const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                              if (isPast) return true;
+                              return false;
+                            }}
                             initialFocus
                           />
                         </PopoverContent>
@@ -397,11 +402,16 @@ console.log(form.watch('startTime'));
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                          <Calendar
+                           <Calendar
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
+                            disabled={(date) => {
+                              const today = new Date();
+                              const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                              if (isPast) return true;
+                              return false;
+                            }}
                             initialFocus
                           />
                         </PopoverContent>

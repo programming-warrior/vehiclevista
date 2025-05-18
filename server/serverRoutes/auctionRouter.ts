@@ -266,7 +266,7 @@ auctionRouter.get("/seller/listings", verifyToken, async (req, res) => {
 });
 
 auctionRouter.post("/create", verifyToken, async (req, res) => {
-  if (!req.userId || req.role !== "seller") {
+  if (!req.userId || !req.card_verified) {
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {
@@ -277,7 +277,6 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
     const { vehicleId, title, description, startDate, endDate, startingPrice } =
       req.body;
 
-
     if (
       !vehicleId ||
       !title.trim() ||
@@ -287,52 +286,90 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
       !startingPrice ||
       isNaN(parseFloat(startingPrice))
     ) {
-      return res.status(400).json({ error: "Inalid input" });
+      return res.status(400).json({ error: "Invalid input" });
     }
+
     const now = new Date();
-    console.log(now);
-    console.log(new Date(startDate));
+    console.log("Current time:", now);
+    console.log("Auction start date:", new Date(startDate));
+    console.log("Auction start timestamp:", new Date(startDate).getTime());
+    console.log("Current timestamp:", Date.now());
+    
+    if (new Date(startDate).getTime() <= Date.now()) {
+      return res.status(400).json({ error: "invalid startDate" });
+    }
 
-    // const vehicleRows = await db
-    //   .select()
-    //   .from(vehicles)
-    //   .where(eq(vehicles.id, vehicleId));
-    // const vehicle = vehicleRows[0];x
-    // if (!vehicle) return res.status(400).json({ error: "vehicle not found" });
-    // const newAuction = {
-    //   vehicleId: parseInt(vehicleId),
-    //   title,
-    //   description,
-    //   startingPrice: parseFloat(startingPrice),
-    //   startDate: new Date(startDate),
-    //   endDate: new Date(endDate),
-    //   status: "UPCOMING" as typeof auctions.$inferInsert.status,
-    // };
+    if(new Date(endDate).getTime()<= new Date(startDate).getTime()){
+       return res.status(400).json({ error: "invalid endDate" });
+    }
 
-    // console.log(startDate);
+    const vehicleRows = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.id, vehicleId));
+    const vehicle = vehicleRows[0];
+    if (!vehicle) return res.status(400).json({ error: "Vehicle not found" });
+    
+    const newAuction = {
+      vehicleId: parseInt(vehicleId),
+      title,
+      description,
+      startingPrice: parseFloat(startingPrice),
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      status: "UPCOMING" as typeof auctions.$inferInsert.status,
+      sellerId: req.userId,
+    };
 
-    // const dbReturnData = await db
-    //   .insert(auctions)
-    //   .values(newAuction)
-    //   .returning();
-    // const savedAuctionDetails = dbReturnData[0];
-    // console.log(savedAuctionDetails.startDate);
-    // await auctionQueue.add(
-    //   "startAuction",
-    //   {
-    //     auctionId: savedAuctionDetails.id,
-    //     endTime: savedAuctionDetails.endDate,
-    //   },
-    //   {
-    //     delay: savedAuctionDetails.startDate.getTime() - Date.now(),
-    //   }
-    // );
+    console.log("Creating new auction:", newAuction);
 
-    console.log("added to the queue");
-    return res.status(200).json({ message: "Auction created successfully" });
+    const dbReturnData = await db
+      .insert(auctions)
+      .values(newAuction)
+      .returning();
+    const savedAuctionDetails = dbReturnData[0];
+    console.log("Saved auction details:", savedAuctionDetails);
+    
+    const delay = Math.max(0, savedAuctionDetails.startDate.getTime() - Date.now());
+    console.log(`Scheduling auction to start with delay of ${delay}ms`);
+    
+    // Add job with better logging
+    try {
+      const job = await auctionQueue.add(
+        "startAuction",
+        {
+          auctionId: savedAuctionDetails.id,
+          endTime: savedAuctionDetails.endDate,
+        },
+        {
+          delay: delay,
+          attempts: 3, 
+          backoff: {
+            type: 'exponential',
+            delay: 1000
+          },
+          // removeOnComplete: false, 
+          // removeOnFail: false 
+        }
+      );
+      
+      console.log(`Added job to queue with ID: ${job.id}`);
+      console.log(`Job will process in approximately ${delay}ms`);
+      console.log(`Job will process at: ${new Date(Date.now() + delay)}`);
+    } catch (error) {
+      console.error("Error scheduling auction job:", error);
+      return res.status(500).json({ error: "Failed to schedule auction" });
+    }
+
+    return res.status(200).json({ 
+      message: "Auction created successfully",
+      auctionId: savedAuctionDetails.id,
+      startTime: savedAuctionDetails.startDate,
+      scheduledAt: new Date(Date.now() + delay)
+    });
   } catch (e: any) {
-    console.log(e.message);
-    return res.status(500).json();
+    console.error("Error creating auction:", e);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
