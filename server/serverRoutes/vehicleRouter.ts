@@ -102,6 +102,63 @@ vehicleRouter.get("/", async (req, res) => {
   }
 });
 
+vehicleRouter.get("/featured", async (req, res) => {
+  try {
+    console.log(req.query);
+    const { name, page = "1", limit = "5" } = req.query;
+
+    const conditions = [];
+    console.log(name);
+
+    if (name && !/all/gi.test(name as string)) {
+      const typeValue = String(name).toLocaleLowerCase();
+      console.log(typeValue);
+      if (vehicleTypesEnum.enumValues.includes(typeValue as any)) {
+        conditions.push(
+          eq(
+            vehicles.type,
+            typeValue as any
+          )
+        );
+      }
+    }
+
+    console.log(conditions);
+
+    const pageNum = parseInt(page as string, 10);
+    const pageSize = Math.max(10, parseInt(limit as string, 10));
+    const offset = (pageNum - 1) * pageSize;
+
+    const result = await db
+      .select()
+      .from(vehicles)
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(sql`${vehicles.views} DESC`)
+      .limit(pageSize + 1)
+      .offset(offset);
+
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(vehicles)
+      .where(conditions.length ? and(...conditions) : undefined)
+      
+
+    res.status(200).json({
+      featuredVehicles: result,
+      totalCount: count,
+      totalPages: Math.ceil(count / pageSize),
+      currentPage: pageNum,
+      hasNextPage: result.length > pageSize,
+    });
+  } catch (err: any) {
+    console.error("Error fetching vehicles:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching vehicle list", error: err.message });
+  }
+});
+
 const dvsaApiKey = process.env.DVSA_API_KEY;
 
 vehicleRouter.post("/dvsa", async (req, res) => {
@@ -141,10 +198,57 @@ vehicleRouter.post("/dvsa", async (req, res) => {
   }
 });
 
+vehicleRouter.get("/seller/listings", verifyToken, async (req, res) => {
+  try {
+    if (req.userId === undefined || req.role !== "seller") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    console.log(req.query);
+    const { brand, page = "1", limit = "10", sort } = req.query;
+
+    const conditions = [];
+
+    if (brand && !/all/gi.test(brand as string))
+      conditions.push(eq(vehicles.make, String(brand)));
+
+    console.log(conditions);
+    conditions.push(eq(vehicles.sellerId, req.userId as number));
+
+    const pageNum = parseInt(page as string, 10);
+    const pageSize = parseInt(limit as string, 10);
+    const offset = (pageNum - 1) * pageSize;
+
+    const result = await db
+      .select()
+      .from(vehicles)
+      .where(conditions.length ? and(...conditions) : undefined)
+      .limit(pageSize + 1)
+      .offset(offset);
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(vehicles)
+      .where(conditions.length ? and(...conditions) : undefined);
+
+    res.status(200).json({
+      vehicles: result,
+      totalCount: count,
+      totalPages: Math.ceil(count / pageSize),
+      currentPage: pageNum,
+      hasNextPage: result.length > pageSize,
+    });
+  } catch (err: any) {
+    console.error("Error fetching vehicles:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching vehicle list", error: err.message });
+  }
+});
+
 vehicleRouter.get("/:vehicleId", async (req, res) => {
   try {
     const { vehicleId } = req.params;
-    if (!vehicleId)
+    if (!vehicleId || isNaN(parseInt(vehicleId)))
       return res.status(400).json({ error: "Vehicle ID is required" });
     const [vehicle] = await db
       .select()
@@ -229,104 +333,9 @@ vehicleRouter.post("/increase-clicks", async (req, res) => {
   }
 });
 
-vehicleRouter.get("/featured", async (req, res) => {
-  try {
-    console.log(req.query);
-    const { name, page = "1", limit = "5" } = req.query;
 
-    const conditions = [];
 
-    if (name && !/all/gi.test(name as string)) {
-      const typeValue = String(name).toLocaleLowerCase();
-      if (vehicleTypesEnum.enumValues.includes(typeValue as any)) {
-        conditions.push(
-          eq(
-            vehicles.type,
-            typeValue as (typeof vehicleTypesEnum.enumValues)[number]
-          )
-        );
-      }
-    }
 
-    console.log(conditions);
-
-    const pageNum = parseInt(page as string, 10);
-    const pageSize = parseInt(limit as string, 10);
-    const offset = (pageNum - 1) * pageSize;
-
-    const result = await db
-      .select()
-      .from(vehicles)
-      .where(conditions.length ? and(...conditions) : undefined)
-      .limit(pageSize + 1)
-      .offset(offset);
-
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(vehicles)
-      .where(conditions.length ? and(...conditions) : undefined);
-
-    res.status(200).json({
-      featuredVehicles: result,
-      totalCount: count,
-      totalPages: Math.ceil(count / pageSize),
-      currentPage: pageNum,
-      hasNextPage: result.length > pageSize,
-    });
-  } catch (err: any) {
-    console.error("Error fetching vehicles:", err);
-    res
-      .status(500)
-      .json({ message: "Error fetching vehicle list", error: err.message });
-  }
-});
-
-vehicleRouter.get("/seller/listings", verifyToken, async (req, res) => {
-  try {
-    if (req.userId === undefined || req.role !== "seller") {
-      return res.status(403).json({ error: "Unauthorized" });
-    }
-    console.log(req.query);
-    const { brand, page = "1", limit = "10", sort } = req.query;
-
-    const conditions = [];
-
-    if (brand && !/all/gi.test(brand as string))
-      conditions.push(eq(vehicles.make, String(brand)));
-
-    console.log(conditions);
-    conditions.push(eq(vehicles.sellerId, req.userId as number));
-
-    const pageNum = parseInt(page as string, 10);
-    const pageSize = parseInt(limit as string, 10);
-    const offset = (pageNum - 1) * pageSize;
-
-    const result = await db
-      .select()
-      .from(vehicles)
-      .where(conditions.length ? and(...conditions) : undefined)
-      .limit(pageSize + 1)
-      .offset(offset);
-
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(vehicles)
-      .where(conditions.length ? and(...conditions) : undefined);
-
-    res.status(200).json({
-      vehicles: result,
-      totalCount: count,
-      totalPages: Math.ceil(count / pageSize),
-      currentPage: pageNum,
-      hasNextPage: result.length > pageSize,
-    });
-  } catch (err: any) {
-    console.error("Error fetching vehicles:", err);
-    res
-      .status(500)
-      .json({ message: "Error fetching vehicle list", error: err.message });
-  }
-});
 
 vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
   if (!req.userId || req.role !== "seller") {
@@ -475,9 +484,12 @@ vehicleRouter.post("/advance-search", async (req, res) => {
             {
               "brand": "Audi",
               "color": "black",
-              "power_hp": 200,
+              "type": car | bike | van ,
+              "transmissionType":"automatic" | "manual",
+              "bodyType":"sedan" | "coupe" | "suv" | "muv",
               "model":"Q8",
               "maxBudget": 8000000,
+              "minBudget":10000
             }
             Just return the JSON object without any additional text or explanation. If the information is not available, return null for that field. Do not include any other text in your response.
             Make sure to use camelCase for the keys. For example, use "maxBudget" instead of "Max Budget".`,

@@ -1,4 +1,3 @@
-
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -31,6 +30,7 @@ export default function VehiclesList() {
     model,
     vehicleType,
     transmissionType,
+    color,
     fuelType,
     setSearch,
   } = useHeroSectionSearch();
@@ -58,20 +58,23 @@ export default function VehiclesList() {
         if (model) {
           searchParam += `model=${model}&`;
         }
-        if (minBudget && minBudget>0.0) {
+        if (minBudget && minBudget > 0.0) {
           searchParam += `minBudget=${minBudget}&`;
         }
-         if (maxBudget  && maxBudget>0.0 ) {
+        if (maxBudget && maxBudget > 0.0) {
           searchParam += `maxBudget=${maxBudget}&`;
         }
-        if(vehicleType){
-          searchParam +=  `type=${vehicleType}&`
+        if (vehicleType) {
+          searchParam += `type=${vehicleType}&`;
         }
-        if(transmissionType){
-          searchParam +=  `transmissionType=${transmissionType}&`
+         if (color) {
+          searchParam += `color=${color}&`;
         }
-        if(fuelType){
-          searchParam +=  `fuelType=${fuelType}&`
+        if (transmissionType) {
+          searchParam += `transmissionType=${transmissionType}&`;
+        }
+        if (fuelType) {
+          searchParam += `fuelType=${fuelType}&`;
         }
         const res: any = await getVehicles(searchParam);
         setVehicles(res.vehicles);
@@ -87,8 +90,17 @@ export default function VehiclesList() {
         setIsLoading(false);
       }
     })();
-  }, [page, brand, model, maxBudget, minBudget, vehicleType, transmissionType, fuelType]);
-
+  }, [
+    page,
+    brand,
+    model,
+    maxBudget,
+    minBudget,
+    vehicleType,
+    transmissionType,
+    fuelType,
+    color
+  ]);
 
   return (
     <div className="flex min-h-screen">
@@ -110,7 +122,9 @@ export default function VehiclesList() {
                   className="pl-10 border-blue-200 focus:ring-blue-500"
                   value={minBudget > 0 ? minBudget.toLocaleString() : ""}
                   onChange={(e) => {
-                    const rawValue = e.target.value.replace(/,/g, "").replace(/\D/g, "");
+                    const rawValue = e.target.value
+                      .replace(/,/g, "")
+                      .replace(/\D/g, "");
                     const numValue = Number(rawValue);
                     setSearch({
                       brand,
@@ -124,7 +138,7 @@ export default function VehiclesList() {
 
               <div>
                 <h3 className="text-blue-600">Max</h3>
-                  <Input
+                <Input
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9,]*"
@@ -132,7 +146,9 @@ export default function VehiclesList() {
                   className="pl-10 border-blue-200 focus:ring-blue-500"
                   value={maxBudget > 0 ? maxBudget.toLocaleString() : ""}
                   onChange={(e) => {
-                    const rawValue = e.target.value.replace(/,/g, "").replace(/\D/g, "");
+                    const rawValue = e.target.value
+                      .replace(/,/g, "")
+                      .replace(/\D/g, "");
                     const numValue = Number(rawValue);
                     setSearch({
                       maxBudget: rawValue === "" ? 0 : numValue,
@@ -291,6 +307,20 @@ export default function VehiclesList() {
                   ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <h3 className="font-medium mb-2 text-blue-800">Color</h3>
+            <Input
+              type="text"
+              className="pl-10 border-blue-200 focus:ring-blue-500"
+              value={color}
+              onChange={(e) => {
+                setSearch({
+                  color: e.target.value,
+                });
+              }}
+            />
           </div>
 
           <Button

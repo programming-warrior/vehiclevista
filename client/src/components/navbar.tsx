@@ -67,11 +67,13 @@ export default function Navbar() {
         setSearch({
           brand: filteredSchema.brand ?? "",
           model: filteredSchema.model ?? "",
-          variant: filteredSchema.variant ?? "",
+          vehicleType: filteredSchema.type ?? "",
+          color: filteredSchema.color ?? "",
+          transmissionType: filteredSchema.transmissionType ?? "",
           minBudget: filteredSchema.minBudget ?? 0,
           maxBudget: filteredSchema.maxBudget ?? 0
         }) 
-        setLocation('/vehicles');
+        setLocation('/vehicle');
       }
       catch(e:any){
         toast({

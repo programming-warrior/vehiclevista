@@ -48,6 +48,7 @@ type heroSectionSearchState = {
   vehicleType: string;
   transmissionType: string;
   fuelType: string;
+  color: string;
   minBudget: number ;
   maxBudget: number ;
   setSearch: (search: {
@@ -59,6 +60,7 @@ type heroSectionSearchState = {
     fuelType?: string;
     maxBudget?: number;
     minBudget?: number;
+    color? : string;
   }) => void;
 };
 
@@ -71,6 +73,7 @@ export const useHeroSectionSearch = create<heroSectionSearchState>((set) => ({
   vehicleType: "",
   transmissionType: "",
   fuelType: "",
+  color:"",
   setSearch: (newSearch) =>
     set(() => ({
       ...newSearch,
