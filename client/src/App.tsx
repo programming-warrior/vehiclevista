@@ -2,7 +2,6 @@ import { useEffect} from "react";
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
-import { AuthProvider } from "@/hooks/use-auth";
 import { BACKEND_URL } from "./lib/constants";
 import { Toaster } from "@/components/ui/toaster";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -11,12 +10,11 @@ import Home from "@/pages/home";
 import VehiclePage from "@/pages/vehicle";
 import Search from "@/pages/search";
 import Login from "@/pages/login";
-import SignIn from "@/pages/signin";
 import Navbar from "@/components/navbar";
 import NotFound from "@/pages/not-found";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminVehicles from "@/pages/admin/vehicles";
-import AdminSettings from "@/pages/admin/settings";
+// import AdminSettings from "@/pages/admin/settings";
 import AdminUsers from "@/pages/admin/users";
 import AdminAuctions from "@/pages/admin/auctions";
 import AdminEvents from "@/pages/admin/events";
@@ -136,7 +134,6 @@ export default function App() {
               <Route path="/" component={Home} />
               <Route path="/login" component={Login} />
               <Route path="/register" component={Register} />
-              <Route path="/signin" component={SignIn} />
               {/* <Route path="/classified" component={Classified} /> */}
               <Route path="/vehicle" component={VehiclesList} />
               <Route path="/vehicle/:id" component={VehiclePage} />
@@ -163,9 +160,9 @@ export default function App() {
               <Route path="/admin/users">
                 <ProtectedRoute component={AdminUsers} adminOnly />
               </Route>
-              <Route path="/admin/settings">
+              {/* <Route path="/admin/settings">
                 <ProtectedRoute component={AdminSettings} adminOnly />
-              </Route>
+              </Route> */}
               <Route path="/admin/auctions">
                 <ProtectedRoute component={AdminAuctions} adminOnly />
               </Route>

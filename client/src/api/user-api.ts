@@ -17,6 +17,22 @@ export async function registerUser(
   }
 }
 
+export async function googleAuth(credentialResponse:any){
+  try{
+    const res = await axios.post(
+      BACKEND_URL + "/api/auth/google",
+      { token: credentialResponse.credential },
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    return res.data
+  }
+  catch(e){
+    throw e
+  }  
+}
+
 export async function loginUser(username: string, password: string) {
   try {
     const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {

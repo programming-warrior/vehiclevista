@@ -1,5 +1,4 @@
-import { create } from "domain";
-import { float } from "drizzle-orm/mysql-core";
+
 import { pgTable, text, serial, boolean, real, integer, timestamp, jsonb, foreignKey, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { number, string, z } from "zod";
@@ -59,6 +58,22 @@ export const vehicles = pgTable("vehicles", {
   clicks: integer("clicks").default(0), 
   leads: integer("leads").default(0),
 });
+
+export const make = pgTable("make",{
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  logoUrl: text("logo_url"),
+  entries: integer("entries").notNull().default(0),
+  searched: integer("searched").notNull().default(0)
+})
+
+export const model = pgTable("model",{
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  makeId: integer("makeId").notNull().references(()=>make.id),
+  entries: integer("entries").notNull().default(0),
+  searched: integer("searched").notNull().default(0)
+})
 
 export const raffle = pgTable("raffle", {
   id: serial("id").primaryKey(),
@@ -121,6 +136,7 @@ export const auctionMetricsHistory = pgTable("auction_metrics_history", {
 export const blacklistStatusEnum = pgEnum("status", ["active", "blacklisted", "inactive"]);
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  authProvider: text("auth_provider").notNull().default("local"),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull(),

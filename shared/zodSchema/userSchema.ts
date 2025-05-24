@@ -13,22 +13,22 @@ export const userRegisterSchema = z
 
     email: z.string().email({ message: "Invalid email address" }),
 
-    password: z
-      .string()
-      .min(8, { message: "Password must be at least 8 characters" })
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-        {
-          message:
-            "Password must include uppercase, lowercase, number, and special character",
-        }
-      ),
+   password: z
+  .string()
+  .min(8, { message: "Password must be at least 8 characters" })
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/,
+    {
+      message:
+        "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&)",
+    }
+  ),
 
     confirmPassword: z.string(),
 
     role: z.enum(["buyer", "seller", "trader", "garage"], {
       required_error: "Please select an account type",
-    }),
+    }).optional(),
 
     businessName: z.string().optional(),
     businessAddress: z.string().optional(),
@@ -41,7 +41,7 @@ export const userRegisterSchema = z
   })
   .refine(
     (data) => {
-      if (["trader", "garage"].includes(data.role)) {
+      if (["trader", "garage"].includes(data.role as string)) {
         return data.businessName;
       }
       return true;
@@ -53,7 +53,7 @@ export const userRegisterSchema = z
   )
   .refine(
     (data) => {
-      if (["trader", "garage"].includes(data.role)) {
+      if (["trader", "garage"].includes(data.role as string)) {
         return data.businessAddress;
       }
       return true;

@@ -8,7 +8,8 @@ import {
   getUserDetails,
   changePassword, 
   getUserBids, 
-  updateUserCardInfo
+  updateUserCardInfo,
+  googleAuth
 } from "./user-api";
 import {
   getVehicles,
@@ -156,6 +157,7 @@ export {
   changePassword,
   getUserBids, 
   updateUserCardInfo, 
+  googleAuth,
 
   getRunningRaffle,
   purchaseRaffleTicket,

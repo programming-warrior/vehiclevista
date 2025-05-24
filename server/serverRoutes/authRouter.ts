@@ -8,6 +8,8 @@ import { userRegisterSchema } from "../../shared/zodSchema/userSchema";
 import RedisClientSingleton from "../utils/redis";
 import { StringRouteParams } from "wouter";
 import { userSessionSchema } from "../utils/session";
+import axios from "axios";
+import { randomBytes } from "crypto";
 
 const authRouter = Router();
 
@@ -52,11 +54,69 @@ authRouter.post("/register", async (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "none",
-
   });
 
-  return res.status(200).json({ role: savedUser.role, userId: savedUser.id, card_verified: (savedUser.card as any).paymentMethodId ? true : false , sessionId });
+  return res.status(200).json({
+    role: savedUser.role,
+    userId: savedUser.id,
+    card_verified: (savedUser.card as any).paymentMethodId ? true : false,
+    sessionId,
+  });
 });
+
+authRouter.post("/google", async (req, res) => {
+  const { token } = req.body;
+  try {
+    const response = await axios.get(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${token}`
+    );
+    console.log(response.data);
+    const { email, name, sub } = response.data;
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(or(eq(users.email, email), eq(users.username, name)))
+      .limit(1);
+
+    let user = existingUser[0];
+    if (!user) {
+      //dummy password
+      const password = await hashPassword("__google-auth-only__");
+
+      const newUser = await db
+        .insert(users)
+        .values({
+          username: name,
+          password,
+          email,
+          authProvider: "google",
+          role: "buyer",
+        })
+        .returning();
+
+      user = newUser[0];
+    }
+  
+    const sessionId = await createUserSession(user);
+    res.cookie("sessionId", sessionId, {
+      maxAge: SESSION_EXPIRY_SECONDS * 1000,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+    });
+    res
+      .status(200)
+      .json({
+        sessionId: sessionId,
+        userId: user.id,
+        role: user.role,
+        card_verified: false,
+      });
+  } catch (err) {
+    res.status(401).json({ error: "Invalid token" });
+  }
+});
+
 // Login route
 authRouter.post("/login", async (req, res) => {
   let { username, password } = req.body;
@@ -92,7 +152,12 @@ authRouter.post("/login", async (req, res) => {
       sameSite: "none",
     });
 
-    return res.status(200).json({ role: user.role, userId: user.id, card_verified: (user.card as any).paymentMethodId ? true : false , sessionId });
+    return res.status(200).json({
+      role: user.role,
+      userId: user.id,
+      card_verified: (user.card as any).paymentMethodId ? true : false,
+      sessionId,
+    });
   } catch (e) {
     console.log(e);
     return res.status(500).json({ error: "Internal Server Error" });
@@ -101,36 +166,37 @@ authRouter.post("/login", async (req, res) => {
 
 //logout route
 
-authRouter.delete('/logout',async (req,res)=>{
-  try{
-    const  sessionId = req.cookies.sessionId || req.headers.authorization?.split(" ")[1];
-    if(!sessionId) return res.status(401).json({error:"No session found"});
+authRouter.delete("/logout", async (req, res) => {
+  try {
+    const sessionId =
+      req.cookies.sessionId || req.headers.authorization?.split(" ")[1];
+    if (!sessionId) return res.status(401).json({ error: "No session found" });
     const redisClient = await RedisClientSingleton.getRedisClient();
 
     await redisClient.del(`session:${sessionId}`);
 
     res.clearCookie("sessionId");
     return res.status(201).json({});
-  }
-  catch (error) {
+  } catch (error) {
     console.error("Session validation error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
-})
+});
 
 // Add this route to your existing authRouter
 authRouter.get("/authenticate", async (req, res) => {
   try {
     // const sessionId = req.cookies.sessionId;
-    const sessionId = req.headers.authorization?.split(" ")[1] || req.cookies.sessionId;
+    const sessionId =
+      req.headers.authorization?.split(" ")[1] || req.cookies.sessionId;
     if (!sessionId) {
       return res.status(401).json({ error: "No session found" });
     }
 
     const redisClient = await RedisClientSingleton.getRedisClient();
 
-    const sessionData:string = await redisClient.get(`session:${sessionId}`);
-  
+    const sessionData: string = await redisClient.get(`session:${sessionId}`);
+
     if (!sessionData) {
       res.clearCookie("sessionId");
       return res.status(401).json({ error: "Invalid session" });
@@ -141,7 +207,7 @@ authRouter.get("/authenticate", async (req, res) => {
     return res.status(200).json({
       userId: userData.id,
       role: userData.role,
-      card_verified: userData.card_verified
+      card_verified: userData.card_verified,
     });
   } catch (error) {
     console.error("Session validation error:", error);

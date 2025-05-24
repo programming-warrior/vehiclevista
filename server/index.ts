@@ -20,6 +20,9 @@ import userRouter from "./serverRoutes/userRouter";
 import adminRouter from "./serverRoutes/adminRouter";
 import reportRouter from "./serverRoutes/reportRouter";
 import raffleRouter from "./serverRoutes/raffleRouter";
+import brandRouter from "./serverRoutes/brandRouter";
+// import { seedValueToMakeTable } from "./serverRoutes/brandRouter";
+
 
 const app = express();
 
@@ -55,6 +58,7 @@ app.use("/api/user", userRouter)
 app.use("/api/admin", adminRouter)
 app.use("/api/report", reportRouter)
 app.use("/api/raffle", raffleRouter)
+app.use('/api/brand',brandRouter);
 
 
 
@@ -179,6 +183,7 @@ app.use((req, res, next) => {
       console.error("Error flushing metrics:", error);
     }
   });
+
 
   // ALWAYS serve the app on port 5000 and bind to all interfaces
   const port = 5000;

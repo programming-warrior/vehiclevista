@@ -18,6 +18,7 @@ import Navbar from "@/components/navbar";
 import { ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import RaffleHomeSection from "@/components/raffle-home-section";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Car");
@@ -60,7 +61,7 @@ export default function Home() {
       <HeroSection />
 
       <div className="px-12 mx-auto w-full">
-        <RaffleHomeSection/>
+        <RaffleHomeSection />
       </div>
 
       {/* Featured Vehicles Section */}
@@ -79,7 +80,7 @@ export default function Home() {
         >
           <TabsList className="w-full justify-start overflow-auto">
             {vehicleCategories.map((category: string) =>
-              /all/gi.test(category) ? (
+              category.toLocaleLowerCase() == "all" ? (
                 ""
               ) : (
                 <TabsTrigger
@@ -99,10 +100,13 @@ export default function Home() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="h-[400px] rounded-lg bg-muted animate-pulse"
-              />
+              <Skeleton className="w-60 h-56 flex flex-col ">
+                <Skeleton className="ml-3 mt-3 w-44 h-20 bg-gray-300"></Skeleton>
+                <div>
+                  <Skeleton className="ml-3 mt-3 w-40 h-4 bg-gray-300"></Skeleton>
+                  <Skeleton className="ml-3 mt-3 w-44 h-4 bg-gray-300"></Skeleton>
+                </div>
+              </Skeleton>
             ))}
           </div>
         ) : (
@@ -123,10 +127,11 @@ export default function Home() {
               )}
             </div>
 
-            <div className="mt-10 text-center">
+            <div className="mt-4 text-center">
               <Button
                 size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                variant="outline"
+                className="text-center border-blue-200 bg-white  font-normal "
               >
                 View More <ChevronRight className="ml-2 h-5 w-5" />
               </Button>
