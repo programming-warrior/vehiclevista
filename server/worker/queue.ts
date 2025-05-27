@@ -11,4 +11,6 @@ export const raffleQueue = new Queue("raffle", { connection })
 
 export const cleanupQueue = new Queue("cleanup",{connection});
 
+export const notificationQueue = new Queue("notification", { connection });
+
 

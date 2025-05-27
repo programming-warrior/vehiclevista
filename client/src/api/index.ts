@@ -9,7 +9,8 @@ import {
   changePassword, 
   getUserBids, 
   updateUserCardInfo,
-  googleAuth
+  googleAuth, 
+  contactSeller
 } from "./user-api";
 import {
   getVehicles,
@@ -158,6 +159,7 @@ export {
   getUserBids, 
   updateUserCardInfo, 
   googleAuth,
+  contactSeller,
 
   getRunningRaffle,
   purchaseRaffleTicket,

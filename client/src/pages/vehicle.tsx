@@ -25,10 +25,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import ImageGallery from "@/components/image-gallery";
-import { incrementVehicleViews } from "@/api/vehicle-api";
+import { incrementVehicleViews, contactSeller } from "@/api";
 import ReportDialog from "@/components/ui/report-dialog";
 import MapComponent from "@/components/map-component";
-
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "recharts";
+import { Input } from "@/components/ui/input";
+import { useUser } from "@/hooks/use-store";
+import { toast } from "@/hooks/use-toast";
 
 export default function VehiclePage() {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +40,12 @@ export default function VehiclePage() {
   const [vehicle, setVehicle] = useState<any>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const { userId, role, card_verified } = useUser();
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    setIsOwner(userId === vehicle?.userId);
+  }, [userId, vehicle]);
 
   useEffect(() => {
     const fetchVehicle = async () => {
@@ -267,11 +277,17 @@ export default function VehiclePage() {
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-                  {
-                    vehicle.latitude && vehicle.longitude ?
-                    <MapComponent lat={vehicle.latitude}  lon={vehicle.longitude}/>
-                    : <p className="text-gray-400 text-xs font-light"> No Map Preview</p>
-                  }
+                  {vehicle.latitude && vehicle.longitude ? (
+                    <MapComponent
+                      lat={vehicle.latitude}
+                      lon={vehicle.longitude}
+                    />
+                  ) : (
+                    <p className="text-gray-400 text-xs font-light">
+                      {" "}
+                      No Map Preview
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -330,7 +346,12 @@ export default function VehiclePage() {
         </div>
       </div>
 
-      <ReportDialog isOpen={reportOpen} onOpenChange={setReportOpen} type="vehicle" targetId={id}/>
+      <ReportDialog
+        isOpen={reportOpen}
+        onOpenChange={setReportOpen}
+        type="vehicle"
+        targetId={id}
+      />
       {/* Contact Dialog */}
       <Dialog open={contactOpen} onOpenChange={setContactOpen}>
         <DialogContent className="sm:max-w-md">
@@ -340,14 +361,65 @@ export default function VehiclePage() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Your Message</label>
-              <textarea
+              <p className="text-sm text-gray-600">
+                {isOwner && <span>You are the owner of this vehicle.</span>}
+                {!userId && (
+                  <span className="text-red-500">You need to login first.</span>
+                )}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Your Message</Label>
+              <Textarea
                 className="w-full min-h-32 rounded-md border border-gray-300 p-3"
                 placeholder="I'm interested in this vehicle. Is it still available?"
               />
             </div>
 
-            <Button className="w-full">
+            <Button
+              className="w-full bg-blue-500 hover:bg-blue-600"
+              disabled={!userId || isOwner}
+              onClick={async () => {
+                if (!userId) {
+                  toast({
+                    title: "Login Required",
+                    description: "You need to login to contact the seller.",
+                    variant: "destructive",
+                  });
+                  setContactOpen(false);
+                  return;
+                }
+                if (isOwner) {
+                  toast({
+                    title: "Action Forbidden",
+                    description: "You cannot contact yourself.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                try {
+                  await contactSeller({
+                    vehicleId: vehicle.id,
+                    message: "Your message here",
+                  });
+                  toast({
+                    title: "Message Sent",
+                    description: "Your message has been sent successfully.",
+                  });
+                } catch (error) {
+                  console.error("Error sending message:", error);
+                  toast({
+                    title: "Error",
+                    description:
+                      "Failed to send your message. Please try again.",
+                    variant: "destructive",
+                  });
+                } finally {
+                  setContactOpen(false);
+                }
+              }}
+            >
               <MessageSquare className="h-4 w-4 mr-2" />
               Send Message
             </Button>

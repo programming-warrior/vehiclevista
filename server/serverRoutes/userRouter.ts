@@ -1,7 +1,13 @@
 import { Router } from "express";
 import { hashPassword, comparePasswords } from "../utils/auth";
 import { db } from "../db";
-import { users, bids, vehicles, auctions } from "../../shared/schema";
+import {
+  users,
+  bids,
+  vehicles,
+  auctions,
+  contactAttempts,
+} from "../../shared/schema";
 import { eq, or, sql } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
 import { userRegisterSchema } from "../../shared/zodSchema/userSchema";
@@ -9,6 +15,7 @@ import RedisClientSingleton from "../utils/redis";
 import { verifyToken } from "../middleware/authMiddleware";
 import { StringRouteParams } from "wouter";
 import { userSessionSchema } from "../utils/session";
+import { notificationQueue } from "server/worker/queue";
 
 const userRouter = Router();
 
@@ -114,6 +121,60 @@ userRouter.patch("/change-password", verifyToken, async (req, res) => {
     .where(eq(users.id, userId));
 
   return res.status(200).json({ message: "Password updated successfully" });
+});
+
+userRouter.post("/contact-seller", verifyToken, async (req, res) => {
+  if (!req.userId) return res.status(401).json({ error: "No user found" });
+  const userId = req.userId;
+  let { vehicleId, message } = req.body;
+  vehicleId = parseInt(vehicleId);
+  if (!vehicleId || !message || isNaN(vehicleId) || message.trim() === "")
+    return res.status(400).json({ error: "invalid input" });
+  if (message.length > 1000)
+    return res.status(400).json({ error: "Message too long" });
+  if (message.length < 10)
+    return res.status(400).json({ error: "Message too short" });
+  try {
+    const redisClient = await RedisClientSingleton.getRedisClient();
+    const redisKey = `contact-seller:${userId}:${vehicleId}`;
+    const alreadyContacted = await redisClient.get(redisKey);
+    if (alreadyContacted)
+      return res.status(400).json({
+        error: "You have already contacted the seller for this vehicle",
+      });
+
+    const vehicleRow = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.id, vehicleId))
+      .limit(1);
+    if (vehicleRow.length === 0)
+      return res.status(401).json({ error: "No vehicle found" });
+
+    const messageRow = await db
+      .insert(contactAttempts)
+      .values({
+        userId,
+        vehicleId,
+        sellerId: vehicleRow[0].sellerId,
+        message,
+      })
+      .returning();
+
+    await notificationQueue.add("contact-seller", {
+      messageId: messageRow[0].id,
+      userId,
+      vehicleId,
+      sellerId: vehicleRow[0].sellerId,
+      message,
+    });
+    //buyer can contact seller only once in 6 hours
+    redisClient.set(redisKey, "1", "EX", 6 * 60 * 60);
+    return res.status(200).json({ message: "message sent successfully" });
+  } catch (e) {
+    console.error("Error in contact-seller route:", e);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 userRouter.patch("/card-info", verifyToken, async (req, res) => {

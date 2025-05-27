@@ -17,6 +17,28 @@ export async function registerUser(
   }
 }
 
+
+export async function contactSeller({vehicleId, message}: {vehicleId: string, message: string}) {
+  if (!vehicleId || !message) {
+    throw new Error("Vehicle ID and message are required");
+  }
+  try {
+    const sessionId = localStorage.getItem("sessionId");
+    const response = await axios.post(`${BACKEND_URL}/api/user/contact-seller`, {
+      vehicleId,
+      message
+    }, {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || "Failed to contact seller");
+  }
+}
+
 export async function googleAuth(credentialResponse:any){
   try{
     const res = await axios.post(
