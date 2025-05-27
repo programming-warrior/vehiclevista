@@ -1,228 +1,297 @@
 import { WebSocketServer as WSServer } from "ws";
-import type { WebSocket } from "ws";
+import type { WebSocket as WS } from "ws";
 import { verifyWebSocketToken } from "../middleware/authMiddleware";
 import { createClient } from "redis";
-import dotevn from "dotenv";
-dotevn.config();
+import dotenv from "dotenv"; // Fixed typo
+import { randomUUID } from "crypto";
+
+interface WebSocketWithAlive extends WS {
+  isAlive?: boolean;
+}
+
+dotenv.config();
 const wss = new WSServer({ port: 5001 });
 
 const redisSubscriberClient = createClient({
   url: `redis://default:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOSTNAME}:6379`,
   socket: {
-    // tls: true,
-    // rejectUnauthorized: false,
     connectTimeout: 30000,
-    // noDelay: true,
-    // keepAlive: 5000,
     reconnectStrategy: (retries) => Math.min(retries * 100, 3000),
   },
 });
+
 async function initRedisClients() {
   try {
     await redisSubscriberClient.connect();
     console.log("Redis client connected successfully");
   } catch (err) {
     console.error("Failed to connect to Redis:", err);
-    setTimeout(initRedisClients, 5000); // Retry connection
+    setTimeout(initRedisClients, 5000);
   }
 }
 initRedisClients().catch(console.error);
 
-//global websocket clients
-const clients: { [id: string]: WebSocket } = {};
-const auctionClients: { [id: string]: string[] } = {};
-const raffleClients: { [id: string]: string[] } = {}
+const clients: { [id: string]: WebSocketWithAlive } = {};
+const auctionClients: { [auctionId: string]: string[] } = {};
+const raffleClients: { [raffleId: string]: string[] } = {};
 
+// Track which channels we've already subscribed to
+const subscribedChannels = new Set<string>();
 
-console.log("redis client connected");
-console.log("websocket server running on port 5001");
+// Global channel subscriptions (subscribe once, handle all clients)
+async function initializeGlobalSubscriptions() {
+  // Subscribe to global channels once
+  await subscribeToBidPlace();
+  await subscribeToRaffleTicketPurchase();
+  await subscribeToBidPlaceError();
+  await subscribeToReceiveNofication();
+}
 
-wss.on("connection", async (ws, req: any) => {
+// Helper function to safely send messages to clients
+const sendToClient = (userId: string, data: any) => {
+  if (clients[userId]) {
+    try {
+      clients[userId].send(JSON.stringify(data));
+    } catch (error) {
+      console.error(`Failed to send message to client ${userId}:`, error);
+      // Remove dead client
+      delete clients[userId];
+    }
+  }
+};
+
+// Helper function to subscribe to a channel only once
+async function subscribeOnce(channel: string, handler: (message: string, channel: string) => void) {
+  if (!subscribedChannels.has(channel)) {
+    try {
+      await redisSubscriberClient.subscribe(channel, handler);
+      subscribedChannels.add(channel);
+      console.log(`Subscribed to channel: ${channel}`);
+    } catch (error) {
+      console.error(`Failed to subscribe to ${channel}:`, error);
+    }
+  }
+}
+
+wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
   const secWebSocketProtocolHeaderIndex = req.rawHeaders.findIndex(
     (val: string) => /sec-websocket-protocol/i.test(val)
   );
+  
   if (secWebSocketProtocolHeaderIndex === -1) {
     ws.close();
     return;
   }
+
   const decodedValue = await verifyWebSocketToken(
     req.rawHeaders[secWebSocketProtocolHeaderIndex + 1]
   );
 
-  if (!decodedValue) {
-    ws.close();
-    return;
-  }
+  // Ensure unique client ID
+  let ws_id: string;
+  do {
+    ws_id = decodedValue ? decodedValue.id.toString() : randomUUID();
+  } while (clients[ws_id]);
 
-  console.log("connected to websocket", decodedValue);
-  clients[decodedValue.id.toString()] = ws;
+  clients[ws_id] = ws;
+  console.log("Client connected:", ws_id);
 
-  await subscribeToBidPlace();
-  await subscribeToRaffleTicketPurchase();
-  await subscribeToBidPlaceError()
+  ws.isAlive = true;
+
+  ws.on("pong", () => {
+    ws.isAlive = true;
+  });
 
   ws.on("message", async (msg) => {
-    const data = JSON.parse(msg.toString());
-    console.log(data);
-    if (data.type === "subscribe" && data.payload.auctionId) {
-      if (!auctionClients[data.payload.auctionId]) {
-        auctionClients[data.payload.auctionId] = [];
-      }
-      auctionClients[data.payload.auctionId].push(decodedValue.id.toString());
-      await subscribeToAuctionTimer(data.payload.auctionId.toString());
-      ws.send(
-        JSON.stringify({
+    try {
+      const data = JSON.parse(msg.toString());
+      console.log(data);
+      
+      if (data.type === "subscribe" && data.payload.auctionId) {
+        const auctionId = data.payload.auctionId.toString();
+        
+        // Add client to auction group
+        if (!auctionClients[auctionId]) {
+          auctionClients[auctionId] = [];
+        }
+        
+        // Only add if not already subscribed
+        if (!auctionClients[auctionId].includes(ws_id)) {
+          auctionClients[auctionId].push(ws_id);
+        }
+
+        // Subscribe to channel only once across all clients
+        await subscribeToAuctionTimer(auctionId);
+        
+        ws.send(JSON.stringify({
           event: "AUCTION_TIMER_SUBSCRIBED",
           auctionId: data.payload.auctionId,
-        })
-      );
-      // clients[decodedValue.id.toString()]
-      //   auctionClients.get(data.auctionId).add(ws);
-    }
-    else if (data.type === "subscribe" && data.payload.raffleId) {
-      
-      if (!raffleClients[data.payload.raffleId]) {
-        raffleClients[data.payload.raffleId] = [];
-      }
-      raffleClients[data.payload.raffleId].push(decodedValue.id.toString());
-      await subscribeToRaffleTimer(data.payload.raffleId.toString());
-      ws.send(
-        JSON.stringify({
+        }));
+        
+      } else if (data.type === "subscribe" && data.payload.raffleId) {
+        const raffleId = data.payload.raffleId.toString();
+        
+        // Add client to raffle group
+        if (!raffleClients[raffleId]) {
+          raffleClients[raffleId] = [];
+        }
+        
+        // Only add if not already subscribed
+        if (!raffleClients[raffleId].includes(ws_id)) {
+          raffleClients[raffleId].push(ws_id);
+        }
+
+        // Subscribe to channel only once across all clients
+        await subscribeToRaffleTimer(raffleId);
+        
+        ws.send(JSON.stringify({
           event: "RAFFLE_TIMER_SUBSCRIBED",
           raffleId: data.payload.raffleId,
-        })
-      );
-      // clients[decodedValue.id.toString()]
-      //   auctionClients.get(data.auctionId).add(ws);
+        }));
+      }
+    } catch (error) {
+      console.error("Error parsing WebSocket message:", error);
     }
   });
 
   ws.on("close", () => {
-    console.log("Client disconnected:", decodedValue.id);
+    console.log("Client disconnected:", ws_id);
+    delete clients[ws_id];
+    
+    // Remove from auction groups
+    Object.keys(auctionClients).forEach((auctionId) => {
+      auctionClients[auctionId] = auctionClients[auctionId].filter(
+        (id) => id !== ws_id
+      );
+    });
+    
+    // Remove from raffle groups
+    Object.keys(raffleClients).forEach((raffleId) => {
+      raffleClients[raffleId] = raffleClients[raffleId].filter(
+        (id) => id !== ws_id
+      );
+    });
   });
 });
 
+// Global subscription functions (called once)
 async function subscribeToBidPlace() {
-  try {
-    await redisSubscriberClient.subscribe("BID_PLACED", (message, channel) => {
-      console.log(`Message received from ${channel}: ${message}`);
-      const data = JSON.parse(message);
-      const { userId, bidId, bidAmount, auctionId } = data;
-      const wsData = {
-        event: "BID_PLACED",
-        message: data,
-      };
-      clients[userId].send(JSON.stringify(wsData));
-    });
-    console.log("Subscribed to BID_PLACED");
-  } catch (error: any) {
-    console.error("Failed to subscribe to Redis channel:", error.message);
-  }
+  const channel = "BID_PLACED";
+  await subscribeOnce(channel, (message, channel) => {
+    console.log(`Message received from ${channel}: ${message}`);
+    const data = JSON.parse(message);
+    const { userId } = data;
+    const wsData = {
+      event: "BID_PLACED",
+      message: data,
+    };
+    sendToClient(userId, wsData);
+  });
+}
+
+async function subscribeToReceiveNofication() {
+  const channel = "RECEIVE_NOTIFICATION";
+  await subscribeOnce(channel, (redis_msg, channel) => {
+    console.log(`Message received from ${channel}: ${redis_msg}`);
+    const data = JSON.parse(redis_msg);
+    const { to } = data;
+    const wsData = {
+      event: "RECEIVE_NOTIFICATION",
+      message: data,
+    };
+    sendToClient(to, wsData);
+  });
 }
 
 async function subscribeToRaffleTicketPurchase() {
-  try {
-    await redisSubscriberClient.subscribe("RAFFLE_TICKET_PURCHASED", (message, channel) => {
-      console.log(`Message received from ${channel}: ${message}`);
-      const data = JSON.parse(message);
-      const { userId, bidId, ticketQuantity, raffleId } = data;
-      const wsData = {
-        event: "RAFFLE_TICKET_PURCHASED",
-        message: data,
-      };
-      clients[userId].send(JSON.stringify(wsData));
-    });
-    console.log("Subscribed to RAFFLE_TICKET_PURCHASED");
-  } catch (error: any) {
-    console.error("Failed to subscribe to Redis channel:", error.message);
-  }
+  const channel = "RAFFLE_TICKET_PURCHASED";
+  await subscribeOnce(channel, (message, channel) => {
+    console.log(`Message received from ${channel}: ${message}`);
+    const data = JSON.parse(message);
+    const { userId } = data;
+    const wsData = {
+      event: "RAFFLE_TICKET_PURCHASED",
+      message: data,
+    };
+    sendToClient(userId, wsData);
+  });
 }
 
 async function subscribeToBidPlaceError() {
-  try {
-    await redisSubscriberClient.subscribe("BID_PLACED_ERROR", (message, channel) => {
-      console.log(`Message received from ${channel}: ${message}`);
-      const data = JSON.parse(message);
-      const { error, payload } = data;
-      const wsData = {
-        event: "BID_PLACED_ERROR",
-        message: {
-          error, 
-          payload
-        },
-      };
-      clients[payload.userId].send(JSON.stringify(wsData));
-    });
-    console.log("Subscribed to BID_PLACED");
-  } catch (error: any) {
-    console.error("Failed to subscribe to Redis channel:", error.message);
-  }
+  const channel = "BID_PLACED_ERROR";
+  await subscribeOnce(channel, (message, channel) => {
+    console.log(`Message received from ${channel}: ${message}`);
+    const data = JSON.parse(message);
+    const { payload } = data;
+    const wsData = {
+      event: "BID_PLACED_ERROR",
+      message: data,
+    };
+    sendToClient(payload.userId, wsData);
+  });
 }
 
+// Dynamic subscription functions (called per auction/raffle, but channel subscribed only once)
+async function subscribeToAuctionTimer(auctionId: string) {
+  const channel = `AUCTION_TIMER:${auctionId}`;
+  await subscribeOnce(channel, (message, channel) => {
+    const data = JSON.parse(message);
+    if (data.auctionId !== auctionId) return;
+
+    const wsData = {
+      event: "AUCTION_TIMER",
+      message: data,
+    };
+
+    // Send to all clients subscribed to this auction
+    auctionClients[auctionId]?.forEach((userId) => {
+      sendToClient(userId, wsData);
+    });
+  });
+}
 
 async function subscribeToRaffleTimer(raffleId: string) {
-  try {
-    await redisSubscriberClient.subscribe(
-      "RAFFLE_TIMER:" + raffleId,
-      (message, channel) => {
-        console.log(`Message received from ${channel}: ${message}`);
-        const data = JSON.parse(message);
-        console.log(data.raffleId===raffleId)
-        if (data.raffleId != raffleId) return;
+  const channel = `RAFFLE_TIMER:${raffleId}`;
+  await subscribeOnce(channel, (message, channel) => {
+    console.log(`Message received from ${channel}: ${message}`);
+    const data = JSON.parse(message);
+    if (data.raffleId !== raffleId) return;
 
-        const wsData = {
-          event: "RAFFLE_TIMER",
-          message: data,
-        };
-        console.log(raffleClients);
+    const wsData = {
+      event: "RAFFLE_TIMER",
+      message: data,
+    };
 
-        raffleClients[data.raffleId]?.forEach((userId) => {
-          if (clients[userId]) {
-            console.log("sending data to the client " + userId);
-            clients[userId].send(JSON.stringify(wsData));
-          } else {
-            console.warn(`No WebSocket client found for username: ${userId}`);
-          }
-        });
-      }
-    );
-    console.log("Subscribed to Raffle Timer channel:", raffleId);
-  } catch (error: any) {
-    console.error("Failed to subscribe to Redis channel:", error.message);
-  }
+    // Send to all clients subscribed to this raffle
+    raffleClients[raffleId]?.forEach((userId) => {
+      sendToClient(userId, wsData);
+    });
+  });
 }
 
-async function subscribeToAuctionTimer(auctionId: string) {
-  try {
-    await redisSubscriberClient.subscribe(
-      "AUCTION_TIMER:" + auctionId,
-      (message, channel) => {
-        // console.log(`Message received from ${channel}: ${message}`);
-        const data = JSON.parse(message);
-        if (data.auctionId !== auctionId) return;
-
-        const wsData = {
-          event: "AUCTION_TIMER",
-          message: data,
-        };
-
-        auctionClients[data.auctionId]?.forEach((userId) => {
-          if (clients[userId]) {
-            // console.log("sending data to the client " + userId);
-            clients[userId].send(JSON.stringify(wsData));
-          } else {
-            console.warn(`No WebSocket client found for username: ${userId}`);
-          }
-        });
+// Heartbeat mechanism
+setInterval(() => {
+  wss.clients.forEach((ws: WebSocketWithAlive) => {
+    if (ws.isAlive === false) {
+      console.log("Terminating dead client");
+      ws.terminate();
+      
+      const disconnectedId = Object.keys(clients).find(key => clients[key] === ws);
+      if (disconnectedId) {
+        delete clients[disconnectedId];
+        // Cleanup is handled in the 'close' event
       }
-    );
-    console.log("Subscribed to Auction Timer channel:", auctionId);
-  } catch (error: any) {
-    console.error("Failed to subscribe to Redis channel:", error.message);
-  }
-}
+      return;
+    }
 
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
 
-redisSubscriberClient.on('error', (err) => {
-  console.error('Redis Client Error', err);
+// Initialize global subscriptions when server starts
+initializeGlobalSubscriptions().catch(console.error);
+
+redisSubscriberClient.on("error", (err) => {
+  console.error("Redis Client Error", err);
 });
