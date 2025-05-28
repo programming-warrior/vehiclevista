@@ -123,6 +123,41 @@ userRouter.patch("/change-password", verifyToken, async (req, res) => {
   return res.status(200).json({ message: "Password updated successfully" });
 });
 
+userRouter.patch(
+  "/notifications/mark-read/:notificationId",
+  verifyToken,
+  async (req, res) => {
+    if (!req.userId) return res.status(401).json({ error: "No user found" });
+    const userId = req.userId;
+    const { notificationId } = req.params;
+    const notificationIdNum = parseInt(notificationId);
+    if (!notificationIdNum || isNaN(notificationIdNum))
+      return res.status(400).json({ error: "invalid input" });
+    const notificationRow = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, notificationIdNum))
+      .limit(1);
+    if (notificationRow.length === 0)
+      return res.status(404).json({ error: "Notification not found" });
+    const notification = notificationRow[0];
+    if (notification.sentTo !== userId)
+      return res
+        .status(403)
+        .json({ error: "You are not authorized to access this notification" });
+    if (notification.isRead) {
+      return res
+        .status(200)
+        .json({ message: "Notification already marked as read" });
+    }
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, notificationIdNum));
+    return res.status(200).json({ message: "Notification marked as read" });
+  }
+);
+
 userRouter.get("/notifications", verifyToken, async (req, res) => {
   if (!req.userId) return res.status(401).json({ error: "No user found" });
   const userId = req.userId;
@@ -159,7 +194,7 @@ userRouter.get("/notifications", verifyToken, async (req, res) => {
     const query = db.select().from(notifications);
 
     whereClause.push(eq(notifications.sentTo, userId));
-    if (type && type.toLowerCase()!=='all') {
+    if (type && type.toLowerCase() !== "all") {
       whereClause.push(eq(notifications.type, type));
     }
     if (is_read !== null) {

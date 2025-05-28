@@ -11,7 +11,8 @@ import {
   updateUserCardInfo,
   googleAuth, 
   contactSeller, 
-  getNotifications
+  getNotifications, 
+  markNotificationRead
 } from "./user-api";
 import {
   getVehicles,
@@ -162,6 +163,7 @@ export {
   googleAuth,
   contactSeller,
   getNotifications,
+  markNotificationRead,
 
   getRunningRaffle,
   purchaseRaffleTicket,

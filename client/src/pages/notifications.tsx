@@ -18,7 +18,7 @@ import {
   CheckCheck,
   Circle,
 } from "lucide-react";
-import { getNotifications } from "@/api";
+import { getNotifications, markNotificationRead } from "@/api";
 import { useNotification } from "@/hooks/use-store";
 import { toast } from "@/hooks/use-toast";
 import { not } from "drizzle-orm";
@@ -148,11 +148,11 @@ const NotificationsPage = () => {
     return `${days} days ago`;
   };
 
-  const handleNotificationClick = (notificationId: number) => {
+  const handleNotificationClick = async(notificationId: number) => {
     setExpandedNotification(
       expandedNotification === notificationId ? null : notificationId
     );
-
+    await markNotificationRead(notificationId);
     updateNotification(notificationId, { is_read: true });
     setUnReadCount((prev) => prev - 1);
   };

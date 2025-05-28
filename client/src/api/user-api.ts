@@ -33,6 +33,26 @@ export async function getNotifications(queryString: string){
   }
 }
 
+export async function markNotificationRead(notificationId: number){
+  try {
+    const sessionId = localStorage.getItem("sessionId");
+    const response = await axios.patch(
+      `${BACKEND_URL}/api/user/notifications/mark-read/${notificationId}`,
+      {},
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${sessionId}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.log(error)
+    // throw new Error(error.response?.data?.error || "Failed to fetch notifications");
+  }
+}
+
 
 export async function contactSeller({vehicleId, message}: {vehicleId: string, message: string}) {
   if (!vehicleId || !message) {
