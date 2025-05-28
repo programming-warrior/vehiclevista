@@ -152,7 +152,7 @@ const NotificationsPage = () => {
     setExpandedNotification(
       expandedNotification === notificationId ? null : notificationId
     );
-    await markNotificationRead(notificationId);
+    markNotificationRead(notificationId);
     updateNotification(notificationId, { is_read: true });
     setUnReadCount((prev) => prev - 1);
   };

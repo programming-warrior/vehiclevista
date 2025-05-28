@@ -243,6 +243,8 @@ userRouter.get("/notifications", verifyToken, async (req, res) => {
     const formattedNotifications = ntf.map((n) => ({
       id: n.id,
       message: n.message,
+      isRead: n.isRead,
+      type: n.type,
       createdAt: n.createdAt,
     }));
 
