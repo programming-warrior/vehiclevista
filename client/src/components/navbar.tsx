@@ -46,6 +46,7 @@ export default function Navbar() {
   const {
     notifications,
     unReadCount,
+    addNotification,
     setNotifications,
     setUnReadCount,
     setTotalNotifications,
@@ -86,10 +87,22 @@ export default function Navbar() {
       if (filter) {
         queryString += `&filter=${JSON.stringify(filter)}`;
       }
-      const { notifications, totalNotifications, unreadNotificationsCount } =
-        await getNotifications(queryString);
-      if (notifications.length > 0) {
-        setNotifications(notifications);
+      const {
+        notifications: responseNotification,
+        totalNotifications,
+        unreadNotificationsCount,
+      } = await getNotifications(queryString);
+      if (responseNotification.length > 0) {
+        for (const notification of responseNotification) {
+          if (
+            notifications.length == 0 ||
+            notifications.findIndex((n) => n.id === notification.id) === -1
+          ) {
+            console.log("Adding notification navbar:", notification.id);
+            addNotification(notification);
+          }
+        }
+        setNotifications(responseNotification);
         setUnReadCount(unreadNotificationsCount);
         setTotalNotifications(totalNotifications);
       }
@@ -107,7 +120,10 @@ export default function Navbar() {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false);
       }
-      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target)) {
+      if (
+        notificationMenuRef.current &&
+        !notificationMenuRef.current.contains(event.target)
+      ) {
         setNotificationMenuOpen(false);
       }
     };
@@ -192,15 +208,23 @@ export default function Navbar() {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-4">
           {isAdmin && (
-            <Button variant="ghost" asChild className="text-gray-700 hover:text-blue-600 hover:bg-blue-50">
+            <Button
+              variant="ghost"
+              asChild
+              className="text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+            >
               <Link href="/admin" className="flex items-center gap-1">
                 <Settings className="h-4 w-4" />
                 Admin Panel
               </Link>
             </Button>
           )}
-          <Button variant="ghost" className="flex items-center gap-1 text-gray-700 hover:text-blue-600 hover:bg-blue-50" size="sm">
-            <HelpCircle className="h-4 w-4" /> 
+          <Button
+            variant="ghost"
+            className="flex items-center gap-1 text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+            size="sm"
+          >
+            <HelpCircle className="h-4 w-4" />
             <span>Need Help</span>
           </Button>
 
@@ -217,11 +241,11 @@ export default function Navbar() {
             >
               <BellRing className="h-5 w-5" />
               {unReadCount > 0 && (
-                <Badge 
-                  variant="destructive" 
+                <Badge
+                  variant="destructive"
                   className="absolute -top-2 -right-2 h-5 w-5  flex items-center justify-center p-[1px] text-xs bg-red-500 hover:bg-red-500"
                 >
-                  {unReadCount > 9 ? '9+' : unReadCount}
+                  {unReadCount > 9 ? "9+" : unReadCount}
                 </Badge>
               )}
             </Button>
@@ -229,9 +253,14 @@ export default function Navbar() {
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 max-h-96 overflow-x-hidden overflow-y-auto">
                 <div className="px-4 py-2 border-b border-gray-100">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      Notifications
+                    </h3>
                     {unReadCount > 0 && (
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      <Badge
+                        variant="secondary"
+                        className="bg-blue-100 text-blue-800"
+                      >
                         {unReadCount} new
                       </Badge>
                     )}
@@ -240,17 +269,20 @@ export default function Navbar() {
                 {notifications.length > 0 ? (
                   <div className="py-1">
                     {notifications.map((notification, index) => {
-                      const messageData = typeof notification.message === 'string' 
-                        ? JSON.parse(notification.message) 
-                        : notification.message;
+                      const messageData =
+                        typeof notification.message === "string"
+                          ? JSON.parse(notification.message)
+                          : notification.message;
                       console.log("messageData", messageData);
                       return (
-                        <div key={notification.id}>
+                        <div key={notification.id} onClick={()=>setLocation("/notifications")}>
                           <div className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer">
                             <div className="flex   gap-3">
-                              <Info className="h-4 w-4 text-blue-500 mt-1"/>
+                              <Info className="h-4 w-4 text-blue-500 mt-1" />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-900 font-medium">{messageData.title}</p>
+                                <p className="text-sm text-gray-900 font-medium">
+                                  {messageData.title}
+                                </p>
                                 <p className="text-sm text-gray-700 font-medium">
                                   {messageData.body}
                                 </p>
@@ -258,9 +290,9 @@ export default function Navbar() {
                                   <span>
                                     {getTimeAgo(notification.createdAt)}
                                   </span>
-                                  <span >
+                                  <span>
                                     {notification.is_read ? (
-                                      <CheckCheck  className="w-5 h-5 text-blue-400" />
+                                      <CheckCheck className="w-5 h-5 text-blue-400" />
                                     ) : (
                                       <CheckCheck className="w-5 h-5 text-gray-400" />
                                     )}
@@ -318,7 +350,11 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <Button variant="outline" asChild className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white">
+            <Button
+              variant="outline"
+              asChild
+              className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+            >
               <Link href="/login">Sign In/Join</Link>
             </Button>
           )}
@@ -351,7 +387,10 @@ export default function Navbar() {
               Sell Your Car
             </Button>
             <nav className="flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium hover:text-blue-200 transition-colors">
+              <Link
+                href="/"
+                className="text-sm font-medium hover:text-blue-200 transition-colors"
+              >
                 Home
               </Link>
               <Link
@@ -420,8 +459,8 @@ export default function Navbar() {
                   Admin Panel
                 </Link>
               )}
-              <Link 
-                href="/" 
+              <Link
+                href="/"
                 className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -481,7 +520,7 @@ export default function Navbar() {
 
             {/* Mobile Action Buttons */}
             <div className="space-y-4">
-              <Button 
+              <Button
                 className="w-full bg-red-500 hover:bg-red-600 text-white"
                 onClick={() => {
                   setLocation("/seller/vehicle/upload");
@@ -490,7 +529,7 @@ export default function Navbar() {
               >
                 Sell Your Car
               </Button>
-              <Button 
+              <Button
                 className="w-full bg-pink-500 hover:bg-pink-600 text-white"
                 onClick={() => {
                   searchRef.current?.focus();
@@ -500,8 +539,14 @@ export default function Navbar() {
                 Advanced Search
               </Button>
               {!userId && (
-                <Button variant="outline" className="w-full border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white" asChild>
-                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Sign In/Join</Link>
+                <Button
+                  variant="outline"
+                  className="w-full border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                  asChild
+                >
+                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                    Sign In/Join
+                  </Link>
                 </Button>
               )}
             </div>

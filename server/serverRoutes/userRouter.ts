@@ -159,7 +159,7 @@ userRouter.get("/notifications", verifyToken, async (req, res) => {
     const query = db.select().from(notifications);
 
     whereClause.push(eq(notifications.sentTo, userId));
-    if (type) {
+    if (type && type.toLowerCase()!=='all') {
       whereClause.push(eq(notifications.type, type));
     }
     if (is_read !== null) {

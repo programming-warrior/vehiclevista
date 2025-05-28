@@ -47,6 +47,7 @@ import UserProfile from "@/pages/user-profile";
 import AdminPublicBlacklist from "./pages/admin/public-blacklist";
 import AdminRafflePage from "./pages/admin/raffle";
 import RaffleIdPage from "./pages/raffle/raffle-id";
+import NotificationsPage from "./pages/notifications";
 import { useNotification } from "./hooks/use-store";
 
 export default function App() {
@@ -147,6 +148,7 @@ export default function App() {
           <Switch>
             {/* Public Routes */}
             <Route path="/profile" component={UserProfile} />
+            <Route path="/notifications" component={NotificationsPage} />
             <Route path="/" component={Home} />
             <Route path="/login" component={Login} />
             <Route path="/register" component={Register} />

@@ -50,6 +50,7 @@ export const useNotification = create<{
   setNotifications: (notifications: any[]) => void;
   addNotification: (notification: any) => void;
   removeNotification: (notification: any) => void;
+  updateNotification: (id: number, updates: Partial<any>) => void; // <-- add this
 }>((set) => ({
   notifications: [],
   unReadCount: 0,
@@ -71,7 +72,14 @@ export const useNotification = create<{
     set((state) => ({
       notifications: state.notifications.filter((n) => n !== notification),
     })),
+  updateNotification: (id, updates) =>
+    set((state) => ({
+      notifications: state.notifications.map((notif) =>
+        notif.id === id ? { ...notif, ...updates } : notif
+      ),
+    })),
 }));
+
 
 type heroSectionSearchState = {
   brand: string;
