@@ -61,7 +61,10 @@ const sendToClient = (userId: string, data: any) => {
 };
 
 // Helper function to subscribe to a channel only once
-async function subscribeOnce(channel: string, handler: (message: string, channel: string) => void) {
+async function subscribeOnce(
+  channel: string,
+  handler: (message: string, channel: string) => void
+) {
   if (!subscribedChannels.has(channel)) {
     try {
       await redisSubscriberClient.subscribe(channel, handler);
@@ -77,15 +80,13 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
   const secWebSocketProtocolHeaderIndex = req.rawHeaders.findIndex(
     (val: string) => /sec-websocket-protocol/i.test(val)
   );
-  
-  if (secWebSocketProtocolHeaderIndex === -1) {
-    ws.close();
-    return;
-  }
 
-  const decodedValue = await verifyWebSocketToken(
-    req.rawHeaders[secWebSocketProtocolHeaderIndex + 1]
-  );
+  let decodedValue: any = null;
+  if (secWebSocketProtocolHeaderIndex > -1) {
+    decodedValue = await verifyWebSocketToken(
+      req.rawHeaders[secWebSocketProtocolHeaderIndex + 1]
+    );
+  }
 
   // Ensure unique client ID
   let ws_id: string;
@@ -106,15 +107,15 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
     try {
       const data = JSON.parse(msg.toString());
       console.log(data);
-      
+
       if (data.type === "subscribe" && data.payload.auctionId) {
         const auctionId = data.payload.auctionId.toString();
-        
+
         // Add client to auction group
         if (!auctionClients[auctionId]) {
           auctionClients[auctionId] = [];
         }
-        
+
         // Only add if not already subscribed
         if (!auctionClients[auctionId].includes(ws_id)) {
           auctionClients[auctionId].push(ws_id);
@@ -122,20 +123,21 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
 
         // Subscribe to channel only once across all clients
         await subscribeToAuctionTimer(auctionId);
-        
-        ws.send(JSON.stringify({
-          event: "AUCTION_TIMER_SUBSCRIBED",
-          auctionId: data.payload.auctionId,
-        }));
-        
+
+        ws.send(
+          JSON.stringify({
+            event: "AUCTION_TIMER_SUBSCRIBED",
+            auctionId: data.payload.auctionId,
+          })
+        );
       } else if (data.type === "subscribe" && data.payload.raffleId) {
         const raffleId = data.payload.raffleId.toString();
-        
+
         // Add client to raffle group
         if (!raffleClients[raffleId]) {
           raffleClients[raffleId] = [];
         }
-        
+
         // Only add if not already subscribed
         if (!raffleClients[raffleId].includes(ws_id)) {
           raffleClients[raffleId].push(ws_id);
@@ -143,11 +145,13 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
 
         // Subscribe to channel only once across all clients
         await subscribeToRaffleTimer(raffleId);
-        
-        ws.send(JSON.stringify({
-          event: "RAFFLE_TIMER_SUBSCRIBED",
-          raffleId: data.payload.raffleId,
-        }));
+
+        ws.send(
+          JSON.stringify({
+            event: "RAFFLE_TIMER_SUBSCRIBED",
+            raffleId: data.payload.raffleId,
+          })
+        );
       }
     } catch (error) {
       console.error("Error parsing WebSocket message:", error);
@@ -157,14 +161,14 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
   ws.on("close", () => {
     console.log("Client disconnected:", ws_id);
     delete clients[ws_id];
-    
+
     // Remove from auction groups
     Object.keys(auctionClients).forEach((auctionId) => {
       auctionClients[auctionId] = auctionClients[auctionId].filter(
         (id) => id !== ws_id
       );
     });
-    
+
     // Remove from raffle groups
     Object.keys(raffleClients).forEach((raffleId) => {
       raffleClients[raffleId] = raffleClients[raffleId].filter(
@@ -242,9 +246,12 @@ async function subscribeToAuctionTimer(auctionId: string) {
       event: "AUCTION_TIMER",
       message: data,
     };
-
+    // Create a snapshot to avoid issues with concurrent modifications
+    const clientsSnapshot = auctionClients[auctionId]
+      ? [...auctionClients[auctionId]]
+      : [];
     // Send to all clients subscribed to this auction
-    auctionClients[auctionId]?.forEach((userId) => {
+    clientsSnapshot.forEach((userId) => {
       sendToClient(userId, wsData);
     });
   });
@@ -261,9 +268,11 @@ async function subscribeToRaffleTimer(raffleId: string) {
       event: "RAFFLE_TIMER",
       message: data,
     };
-
+    const clientsSnapshot = raffleClients[raffleId]
+      ? [...raffleClients[raffleId]]
+      : [];
     // Send to all clients subscribed to this raffle
-    raffleClients[raffleId]?.forEach((userId) => {
+    clientsSnapshot.forEach((userId) => {
       sendToClient(userId, wsData);
     });
   });
@@ -275,8 +284,10 @@ setInterval(() => {
     if (ws.isAlive === false) {
       console.log("Terminating dead client");
       ws.terminate();
-      
-      const disconnectedId = Object.keys(clients).find(key => clients[key] === ws);
+
+      const disconnectedId = Object.keys(clients).find(
+        (key) => clients[key] === ws
+      );
       if (disconnectedId) {
         delete clients[disconnectedId];
         // Cleanup is handled in the 'close' event

@@ -10,7 +10,8 @@ import {
   getUserBids, 
   updateUserCardInfo,
   googleAuth, 
-  contactSeller
+  contactSeller, 
+  getNotifications
 } from "./user-api";
 import {
   getVehicles,
@@ -160,6 +161,7 @@ export {
   updateUserCardInfo, 
   googleAuth,
   contactSeller,
+  getNotifications,
 
   getRunningRaffle,
   purchaseRaffleTicket,

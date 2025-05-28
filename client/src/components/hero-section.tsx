@@ -67,7 +67,7 @@ export default function HeroSection() {
 
   return (
     <div
-      className="relative min-h-[600px] bg-cover bg-center"
+      className="relative min-h-[600px] bg-cover bg-center border-none"
       style={{
         backgroundImage:
           'url("https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=2000")',

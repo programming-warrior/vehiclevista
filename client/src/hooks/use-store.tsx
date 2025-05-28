@@ -41,6 +41,38 @@ export const useUser = create<UserState>((set) => ({
     })),
 }));
 
+export const useNotification = create<{
+  notifications: any[];
+  unReadCount: number;
+  totalNotifications: number;
+  setUnReadCount: (count: number | ((prev: number) => number)) => void;
+  setTotalNotifications: (count: number | ((prev: number) => number)) => void;
+  setNotifications: (notifications: any[]) => void;
+  addNotification: (notification: any) => void;
+  removeNotification: (notification: any) => void;
+}>((set) => ({
+  notifications: [],
+  unReadCount: 0,
+  totalNotifications: 0,
+  setTotalNotifications: (count) =>
+    set((state) => ({
+      totalNotifications: typeof count === "function" ? count(state.totalNotifications) : count,
+    })),
+  setUnReadCount: (count) =>
+    set((state) => ({
+      unReadCount: typeof count === "function" ? count(state.unReadCount) : count,
+    })),
+  setNotifications: (notifications) => set(() => ({ notifications })),
+  addNotification: (notification) =>
+    set((state) => ({
+      notifications: [...state.notifications, notification],
+    })),
+  removeNotification: (notification) =>
+    set((state) => ({
+      notifications: state.notifications.filter((n) => n !== notification),
+    })),
+}));
+
 type heroSectionSearchState = {
   brand: string;
   model: string;
@@ -49,8 +81,8 @@ type heroSectionSearchState = {
   transmissionType: string;
   fuelType: string;
   color: string;
-  minBudget: number ;
-  maxBudget: number ;
+  minBudget: number;
+  maxBudget: number;
   setSearch: (search: {
     brand?: string;
     model?: string;
@@ -60,7 +92,7 @@ type heroSectionSearchState = {
     fuelType?: string;
     maxBudget?: number;
     minBudget?: number;
-    color? : string;
+    color?: string;
   }) => void;
 };
 
@@ -73,7 +105,7 @@ export const useHeroSectionSearch = create<heroSectionSearchState>((set) => ({
   vehicleType: "",
   transmissionType: "",
   fuelType: "",
-  color:"",
+  color: "",
   setSearch: (newSearch) =>
     set(() => ({
       ...newSearch,

@@ -58,6 +58,7 @@ const notificationWorker = new Worker(
             notificationId: notification.id,
             to: seller.id,
             message: formattedMessage,
+            createdAt: notification.createdAt,
           })
         );
 

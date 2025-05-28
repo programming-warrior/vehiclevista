@@ -7,15 +7,15 @@ import {
   vehicles,
   auctions,
   contactAttempts,
+  notifications,
 } from "../../shared/schema";
-import { eq, or, sql } from "drizzle-orm";
+import { eq, or, sql, and, ilike, hasOwnEntityKind } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
 import { userRegisterSchema } from "../../shared/zodSchema/userSchema";
 import RedisClientSingleton from "../utils/redis";
 import { verifyToken } from "../middleware/authMiddleware";
-import { StringRouteParams } from "wouter";
 import { userSessionSchema } from "../utils/session";
-import { notificationQueue } from "server/worker/queue";
+import { notificationQueue } from "../worker/queue";
 
 const userRouter = Router();
 
@@ -121,6 +121,107 @@ userRouter.patch("/change-password", verifyToken, async (req, res) => {
     .where(eq(users.id, userId));
 
   return res.status(200).json({ message: "Password updated successfully" });
+});
+
+userRouter.get("/notifications", verifyToken, async (req, res) => {
+  if (!req.userId) return res.status(401).json({ error: "No user found" });
+  const userId = req.userId;
+  const { page = 1, limit = 10, filter, sortBy } = req.query;
+  const pageNumber = parseInt(page as string) || 1;
+  let limitNumber = parseInt(limit as string) || 10;
+  limitNumber = Math.min(limitNumber, 100); // Limit to a maximum of 100 notifications per request
+  const offset = (pageNumber - 1) * limitNumber;
+
+  let filterOptions: any = {};
+  let type = "";
+  let is_read: boolean | null = null;
+  let searchTerm = "";
+
+  let whereClause = [];
+  if (filter) {
+    try {
+      filterOptions = JSON.parse(filter as string);
+      type = filterOptions.type || "";
+      is_read = filterOptions.is_read || null;
+      searchTerm = filterOptions.searchTerm || "";
+    } catch (error) {
+      console.error("Error parsing filter:", error);
+    }
+  }
+
+  let sortOrder = sql`${notifications.createdAt} DESC`; // Default sort order
+
+  if (sortBy === "oldest") {
+    sortOrder = sql`${notifications.createdAt} ASC`;
+  }
+
+  try {
+    const query = db.select().from(notifications);
+
+    whereClause.push(eq(notifications.sentTo, userId));
+    if (type) {
+      whereClause.push(eq(notifications.type, type));
+    }
+    if (is_read !== null) {
+      whereClause.push(eq(notifications.isRead, is_read));
+    }
+    if (searchTerm) {
+      whereClause.push(
+        or(
+          ilike(notifications.type, `%${searchTerm}%`),
+          sql`CAST(${notifications.message} AS TEXT) ILIKE ${
+            "%" + searchTerm + "%"
+          }`
+        )
+      );
+    }
+    if (whereClause.length > 0) {
+      query.where(and(...whereClause));
+    }
+
+    query.orderBy(sortOrder);
+    query.limit(limitNumber).offset(offset);
+
+    const ntf = await query;
+
+    let countQuery = db
+      .select({
+        count: sql<number>`count(*)`,
+      })
+      .from(notifications);
+
+    if (whereClause.length > 0) {
+      countQuery.where(and(...whereClause));
+    }
+    let unReadNotificationsQuery = db
+      .select({
+        count: sql<number>`count(*)`,
+      })
+      .from(notifications)
+      .where(
+        and(eq(notifications.sentTo, userId), eq(notifications.isRead, false))
+      );
+    const [{ count: totalNotifications }] = await countQuery;
+    const [{ count: unreadNotificationsCount }] =
+      await unReadNotificationsQuery;
+
+    const formattedNotifications = ntf.map((n) => ({
+      id: n.id,
+      message: n.message,
+      createdAt: n.createdAt,
+    }));
+
+    return res.status(200).json({
+      notifications: formattedNotifications,
+      totalPages: Math.ceil(totalNotifications / limitNumber),
+      hasNextPage: offset + limitNumber < totalNotifications,
+      totalNotifications,
+      unreadNotificationsCount,
+    });
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 userRouter.post("/contact-seller", verifyToken, async (req, res) => {

@@ -42,6 +42,8 @@ export default function VehiclePage() {
   const [reportOpen, setReportOpen] = useState(false);
   const { userId, role, card_verified } = useUser();
   const [isOwner, setIsOwner] = useState(false);
+  const [contactMessage, setContactMessage] = useState("");
+
 
   useEffect(() => {
     setIsOwner(userId === vehicle?.userId);
@@ -374,6 +376,9 @@ export default function VehiclePage() {
               <Textarea
                 className="w-full min-h-32 rounded-md border border-gray-300 p-3"
                 placeholder="I'm interested in this vehicle. Is it still available?"
+                onChange={(e) => setContactMessage(e.target.value)}
+                value={contactMessage}
+                disabled={!userId || isOwner}
               />
             </div>
 
@@ -401,7 +406,7 @@ export default function VehiclePage() {
                 try {
                   await contactSeller({
                     vehicleId: vehicle.id,
-                    message: "Your message here",
+                    message: contactMessage,
                   });
                   toast({
                     title: "Message Sent",

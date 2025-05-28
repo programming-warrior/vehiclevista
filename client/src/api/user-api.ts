@@ -18,6 +18,22 @@ export async function registerUser(
 }
 
 
+export async function getNotifications(queryString: string){
+  try {
+    const sessionId = localStorage.getItem("sessionId");
+    const response = await axios.get(`${BACKEND_URL}/api/user/notifications?`+ queryString, {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || "Failed to fetch notifications");
+  }
+}
+
+
 export async function contactSeller({vehicleId, message}: {vehicleId: string, message: string}) {
   if (!vehicleId || !message) {
     throw new Error("Vehicle ID and message are required");
