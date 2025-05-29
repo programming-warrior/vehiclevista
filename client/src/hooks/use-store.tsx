@@ -57,16 +57,21 @@ export const useNotification = create<{
   totalNotifications: 0,
   setTotalNotifications: (count) =>
     set((state) => ({
-      totalNotifications: typeof count === "function" ? count(state.totalNotifications) : count,
+      totalNotifications:
+        typeof count === "function" ? count(state.totalNotifications) : count,
     })),
   setUnReadCount: (count) =>
     set((state) => ({
-      unReadCount: typeof count === "function" ? count(state.unReadCount) : count,
+      unReadCount:
+        typeof count === "function" ? count(state.unReadCount) : count,
     })),
   setNotifications: (notifications) => set(() => ({ notifications })),
   addNotification: (notification) =>
     set((state) => ({
-      notifications: [...state.notifications, notification],
+      notifications: [...state.notifications, notification].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
     })),
   removeNotification: (notification) =>
     set((state) => ({
@@ -79,7 +84,6 @@ export const useNotification = create<{
       ),
     })),
 }));
-
 
 type heroSectionSearchState = {
   brand: string;

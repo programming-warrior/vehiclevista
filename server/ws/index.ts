@@ -4,6 +4,7 @@ import { verifyWebSocketToken } from "../middleware/authMiddleware";
 import { createClient } from "redis";
 import dotenv from "dotenv"; // Fixed typo
 import { randomUUID } from "crypto";
+import { notificationQueue } from "../worker/queue";
 
 interface WebSocketWithAlive extends WS {
   isAlive?: boolean;
@@ -181,10 +182,15 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
 // Global subscription functions (called once)
 async function subscribeToBidPlace() {
   const channel = "BID_PLACED";
-  await subscribeOnce(channel, (message, channel) => {
+  await subscribeOnce(channel, async (message, channel) => {
     console.log(`Message received from ${channel}: ${message}`);
     const data = JSON.parse(message);
     const { userId } = data;
+    await notificationQueue.add("BID_PLACED", {
+      auctionId: data.auctionId,
+      userId: data.userId,
+      bidAmount: data.bidAmount,
+    });
     const wsData = {
       event: "BID_PLACED",
       message: data,

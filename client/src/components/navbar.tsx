@@ -291,7 +291,7 @@ export default function Navbar() {
                                     {getTimeAgo(notification.createdAt)}
                                   </span>
                                   <span>
-                                    {notification.is_read ? (
+                                    {notification.isRead ? (
                                       <CheckCheck className="w-5 h-5 text-blue-400" />
                                     ) : (
                                       <CheckCheck className="w-5 h-5 text-gray-400" />

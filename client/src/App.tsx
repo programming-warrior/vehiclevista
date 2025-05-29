@@ -56,6 +56,7 @@ export default function App() {
   const { setSocket, socket, closeSocket } = useWebSocket();
   const { toast } = useToast();
   const {
+    unReadCount,
     addNotification,
     setUnReadCount,
     setTotalNotifications,
@@ -112,6 +113,7 @@ export default function App() {
           const { message, type, notificationId, createdAt } = data.message;
 
           addNotification({ id: notificationId, type, message, createdAt });
+          console.log(unReadCount);
           setUnReadCount((prev: number) => prev + 1);
           setTotalNotifications((prev: number) => prev + 1);
         }

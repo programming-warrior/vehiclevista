@@ -289,6 +289,12 @@ userRouter.post("/contact-seller", verifyToken, async (req, res) => {
     if (vehicleRow.length === 0)
       return res.status(401).json({ error: "No vehicle found" });
 
+    if (vehicleRow[0].sellerId === userId)
+      return res.status(400).json({ error: "You are the owner" });
+
+    if (vehicleRow[0].listingStatus === 'BLACKLISTED')
+      return res.status(400).json({ error: "Vehicle is not active" });
+
     const messageRow = await db
       .insert(contactAttempts)
       .values({

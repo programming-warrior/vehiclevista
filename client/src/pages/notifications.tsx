@@ -387,7 +387,7 @@ const NotificationsPage = () => {
                             </div>
 
                             <div className="flex items-center gap-2 pt-1">
-                              {notification.is_read ? (
+                              {notification.isRead ? (
                                 <CheckCheck className="h-4 w-4 text-blue-500" />
                               ) : (
                                 <CheckCheck className="h-4 w-4 text-gray-300" />

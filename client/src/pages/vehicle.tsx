@@ -46,7 +46,7 @@ export default function VehiclePage() {
 
 
   useEffect(() => {
-    setIsOwner(userId === vehicle?.userId);
+    setIsOwner(userId === vehicle?.sellerId);
   }, [userId, vehicle]);
 
   useEffect(() => {
@@ -412,12 +412,12 @@ export default function VehiclePage() {
                     title: "Message Sent",
                     description: "Your message has been sent successfully.",
                   });
-                } catch (error) {
+                } catch (error:any) {
                   console.error("Error sending message:", error);
                   toast({
                     title: "Error",
                     description:
-                      "Failed to send your message. Please try again.",
+                      error.message,
                     variant: "destructive",
                   });
                 } finally {
