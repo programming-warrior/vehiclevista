@@ -1,3 +1,4 @@
+import { is } from "drizzle-orm";
 import {
   pgTable,
   text,
@@ -271,20 +272,21 @@ export const blacklist_users = pgTable("blacklist_users", {
 export const packages = pgTable("packages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  type: text("type").notNull(), // 'standard_2week', 'standard_4week', 'ultra'
-  basePrice: integer("base_price").notNull(),
-  vehicleValueThresholds: jsonb("vehicle_value_thresholds").notNull(), // Array of price tiers
-  duration: integer("duration").notNull(), // in days (14, 28, or 365 for ultra)
+  type: text("type").notNull(), // 'CLASSIFIED', 'AUCTION', 'NUMBERPLATE'
+  prices: jsonb("prices").notNull(), //[minCarValue, maxCarValue, price]
+  duration_days: integer("duration_days"), // in days (14, 28, or NULL for ultra sold)
   features: jsonb("features").array().notNull(),
-  isUltra: boolean("is_ultra").default(false),
-  relistingPeriod: integer("relisting_period"), // in days, for ultra package
+  is_until_sold: boolean("is_until_sold").default(false),
+  is_rebookable: boolean("is_rebookable").default(false), // for ultra package
+  rebookable_days: integer("rebookable_days"), // in days, for ultra package
   youtubeShowcase: boolean("youtube_showcase").default(false),
   premiumPlacement: boolean("premium_placement").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  is_active: boolean("is_active").default(true),
 });
 
 // Add user packages table
-export const userPackages = pgTable("user_packages", {
+export const userListingPackages = pgTable("user_listing_packages", {
   id: serial("id").primaryKey(),
   userId: integer("user_id")
     .notNull()
@@ -292,12 +294,12 @@ export const userPackages = pgTable("user_packages", {
   packageId: integer("package_id")
     .notNull()
     .references(() => packages.id),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  vehicleValue: integer("vehicle_value").notNull(),
-  finalPrice: integer("final_price").notNull(),
-  active: boolean("active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
+  listing_id: integer("listing_id").notNull(), //auction or classified
+  purchased_at: timestamp("purchased_at").defaultNow(),
+  expires_at: timestamp("expires_at").notNull(),
+  vehicleValue: real("vehicle_value").notNull(), // value of the vehicle for which the package was purchased
+  pricePaid: real("price_paid").notNull(), // price paid for the package
+  is_active: boolean("is_active").default(true),
 });
 
 // Auction table with proper schema
@@ -428,19 +430,28 @@ export const inventory = pgTable("inventory", {
 export const offers = pgTable("offers", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  description: text("description").notNull(),
-  offerType: text("offer_type").notNull(), // discount, bundle, seasonal
-  discount: real("discount").notNull(),
-  discountType: text("discount_type").notNull(), // percentage, fixed
+  conditions: text("conditions").notNull(),
+  discountValue: real("discount_value").notNull(),
+  discountType: text("discount_type").notNull(), // percentage, fixed, free
   minPurchase: real("min_purchase"),
-  validFrom: timestamp("valid_from").notNull(),
-  validTo: timestamp("valid_to").notNull(),
-  applicableItems: text("applicable_items").array(),
-  termsConditions: text("terms_conditions").notNull(),
-  status: text("status").notNull().default("draft"), // draft, active, expired
-  redemptions: integer("redemptions").default(0),
-  maxRedemptions: integer("max_redemptions"),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  joiningDependent: boolean("joining_dependent").default(false), // whether the offer is dependent on joining a package
+  joiningFirstMonths: integer("joining_first_months").default(0), // number of months for which the offer is valid after joining
+  status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userOffers = pgTable("user_offers", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  offerId: integer("offer_id")
+    .notNull()
+    .references(() => offers.id),
+  redeemed: boolean("redeemed").default(false),
+  redeemedAt: timestamp("redeemed_at"),
 });
 
 // Pricing Plans table with proper schema
@@ -497,9 +508,8 @@ export const insertPackageSchema = createInsertSchema(packages).omit({
   createdAt: true,
 });
 
-export const insertUserPackageSchema = createInsertSchema(userPackages).omit({
+export const insertUserPackageSchema = createInsertSchema(userListingPackages).omit({
   id: true,
-  createdAt: true,
 });
 
 // Create insert schemas for new tables
@@ -570,13 +580,11 @@ export const insertInventorySchema = createInsertSchema(inventory).omit({
 });
 
 export const insertOfferSchema = createInsertSchema(offers, {
-  offerType: z.enum(["discount", "bundle", "seasonal"]),
   discountType: z.enum(["percentage", "fixed"]),
-  validFrom: z.string().min(1, "Valid from date is required"),
-  validTo: z.string().min(1, "Valid to date is required"),
+  startDate: z.string().min(1, "Valid from date is required"),
+  endDate: z.string().min(1, "Valid to date is required"),
 }).omit({
   id: true,
-  redemptions: true,
   createdAt: true,
 });
 
@@ -646,7 +654,7 @@ export const insertBulkUploadSchema = createInsertSchema(bulkUploads).omit({
 // Add package-related types
 export type Package = typeof packages.$inferSelect;
 export type InsertPackage = z.infer<typeof insertPackageSchema>;
-export type UserPackage = typeof userPackages.$inferSelect;
+export type UserPackage = typeof userListingPackages.$inferSelect;
 export type InsertUserPackage = z.infer<typeof insertUserPackageSchema>;
 
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
