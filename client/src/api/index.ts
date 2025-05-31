@@ -12,7 +12,8 @@ import {
   googleAuth, 
   contactSeller, 
   getNotifications, 
-  markNotificationRead
+  markNotificationRead,
+  getCardInfo
 } from "./user-api";
 import {
   getVehicles,
@@ -50,6 +51,8 @@ import {
  import { uploadUserReport, uploadListingReport } from "./report-api";
  
  import { createRaffle, getRaffles } from "./admin-api/raffle-api";
+
+ import { getPackagesWithAmount, selectPackage, verifyPayment } from "./package-api";
 
 
 async function getLocationSuggestion(location:string){
@@ -164,6 +167,7 @@ export {
   contactSeller,
   getNotifications,
   markNotificationRead,
+  getCardInfo,
 
   getRunningRaffle,
   purchaseRaffleTicket,
@@ -184,4 +188,8 @@ export {
 
   uploadListingReport,
   uploadUserReport,
+
+  getPackagesWithAmount, 
+  selectPackage,
+  verifyPayment
 };

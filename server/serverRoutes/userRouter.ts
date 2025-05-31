@@ -158,6 +158,26 @@ userRouter.patch(
   }
 );
 
+userRouter.get("/card-info", verifyToken, async (req, res) => {
+  if (!req.userId) return res.status(401).json({ error: "No user found" });
+  const userId = req.userId;
+  const userRow = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (userRow.length === 0)
+    return res.status(401).json({ error: "No user found" });
+  const user = userRow[0];
+  const cardInfo : any = user.card;
+  if (!cardInfo || !cardInfo.paymentMethodId) {
+    return res.status(404).json({ error: "Card information not found" });
+  }
+  return res.status(200).json({
+    paymentMethodId: cardInfo.paymentMethodId,
+  });
+});
+
 userRouter.get("/notifications", verifyToken, async (req, res) => {
   if (!req.userId) return res.status(401).json({ error: "No user found" });
   const userId = req.userId;
@@ -292,7 +312,7 @@ userRouter.post("/contact-seller", verifyToken, async (req, res) => {
     if (vehicleRow[0].sellerId === userId)
       return res.status(400).json({ error: "You are the owner" });
 
-    if (vehicleRow[0].listingStatus === 'BLACKLISTED')
+    if (vehicleRow[0].listingStatus === "BLACKLISTED")
       return res.status(400).json({ error: "Vehicle is not active" });
 
     const messageRow = await db

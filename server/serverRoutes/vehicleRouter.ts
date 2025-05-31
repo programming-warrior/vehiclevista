@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db";
-import { Vehicle, vehicles } from "../../shared/schema";
+import { Vehicle, vehicleDrafts, vehicles } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray, ilike } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
 import axios from "axios";
@@ -338,7 +338,7 @@ vehicleRouter.post("/increase-clicks", async (req, res) => {
 
 
 vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
-  if (!req.userId || req.role !== "seller") {
+  if (!req.userId || !req.card_verified) { 
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {
@@ -385,8 +385,8 @@ vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
         error: `Vehicle with registration number: ${data.registration_num} already exists`,
       });
     }
-    await db.insert(vehicles).values(data);
-    res.status(200).json({ message: "Vehicle uploaded successfully" });
+    const [savedVehicle]= await db.insert(vehicleDrafts).values(data).returning();
+    res.status(200).json({ message: "Vehicle uploaded successfully", draftId: savedVehicle.id });
   } catch (e: any) {
     console.log(e.message);
     return res.status(500).json();

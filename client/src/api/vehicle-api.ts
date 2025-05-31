@@ -95,6 +95,8 @@ export async function uploadBulkVehicle(formData:FormData){
   }
 }
 
+
+
 export async function uploadSingleVehicle(
   data: z.infer<typeof vehicleUploadSchema>
 ) {

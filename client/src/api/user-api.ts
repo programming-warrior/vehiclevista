@@ -75,6 +75,22 @@ export async function contactSeller({vehicleId, message}: {vehicleId: string, me
   }
 }
 
+export async function getCardInfo() { 
+  
+  try {
+    const sessionId = localStorage.getItem("sessionId");
+    const response = await axios.get(`${BACKEND_URL}/api/user/card-info`, {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || "Failed to fetch card info");
+  }
+}
+
 export async function googleAuth(credentialResponse:any){
   try{
     const res = await axios.post(

@@ -21,6 +21,7 @@ import adminRouter from "./serverRoutes/adminRouter";
 import reportRouter from "./serverRoutes/reportRouter";
 import raffleRouter from "./serverRoutes/raffleRouter";
 import brandRouter from "./serverRoutes/brandRouter";
+import packageRouter from "./serverRoutes/packageRouter";
 // import { seedValueToMakeTable } from "./serverRoutes/brandRouter";
 
 
@@ -59,6 +60,7 @@ app.use("/api/admin", adminRouter)
 app.use("/api/report", reportRouter)
 app.use("/api/raffle", raffleRouter)
 app.use('/api/brand',brandRouter);
+app.use('/api/package',packageRouter);
 
 
 

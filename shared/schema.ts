@@ -92,6 +92,55 @@ export const vehicles = pgTable("vehicles", {
   leads: integer("leads").default(0),
 });
 
+export const paymentSession= pgTable("payment_session", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull(),
+  packageId: integer("package_id").references(() => packages.id),
+  draftId: integer("draft_id").references(() => vehicleDrafts.id),
+  listingId: integer('listing_id'),
+  amount: real("amount").notNull(),
+  currency: text("currency").notNull().default("gbp"),
+  status: text("status").notNull().default("PENDING"), // PENDING, SUCCEEDED
+  // , FAILED
+  paymentIntentId: text("payment_intent_id").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const vehicleDrafts = pgTable("vehicle_drafts", {
+  id: serial("id").primaryKey(),
+  type: vehicleTypesEnum().notNull().default("car"),
+  registration_num: text("registration_num").notNull().unique(),
+  title: text("title").notNull(),
+  price: integer("price").notNull(),
+  year: integer("year").notNull(),
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  mileage: integer("mileage").notNull(),
+  fuelType: text("fuel_type").notNull(),
+  transmission: text("transmission").notNull(),
+  bodyType: text("body_type").notNull(),
+  color: text("color").notNull(),
+  description: text("description").notNull(),
+  location: text("location").notNull(),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
+  images: text("images").array().notNull(),
+  category: text("category").notNull(), // 'dealer', 'classified', 'auction'
+  condition: vehicleConditionsEnum().notNull().default("clean"),
+  openToPX: boolean("open_to_px").default(false),
+  sellerId: integer("seller_id").notNull(),
+  sellerType: text("seller_type"), // private, trader, garage
+  contactPreference: text("contact_preference"), // 'phone', 'email', 'both'
+  listingStatus: vehicleListingStatusEnum().notNull().default("ACTIVE"),
+  listingType: text().default("CLASSIFIED"),
+  blacklistReason: text("reason"),
+  negotiable: boolean("negotiable").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const contactAttempts = pgTable("contact_attempts", {
   id: serial("id").primaryKey(),
   vehicleId: integer("vehicle_id")
@@ -274,7 +323,7 @@ export const packages = pgTable("packages", {
   name: text("name").notNull(),
   type: text("type").notNull(), // 'CLASSIFIED', 'AUCTION', 'NUMBERPLATE'
   prices: jsonb("prices").notNull(), //[minCarValue, maxCarValue, price]
-  duration_days: integer("duration_days"), // in days (14, 28, or NULL for ultra sold)
+  duration_days: integer("duration_days").notNull(), // in days (14, 28, or NULL for ultra sold)
   features: jsonb("features").array().notNull(),
   is_until_sold: boolean("is_until_sold").default(false),
   is_rebookable: boolean("is_rebookable").default(false), // for ultra package
@@ -436,9 +485,10 @@ export const offers = pgTable("offers", {
   minPurchase: real("min_purchase"),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
+  packageIds: integer("packages_id"),
   joiningDependent: boolean("joining_dependent").default(false), // whether the offer is dependent on joining a package
   joiningFirstMonths: integer("joining_first_months").default(0), // number of months for which the offer is valid after joining
-  status: text("status").notNull().default("active"),
+  status: text("status").notNull().default("ACTIVE"), // ACTIVE, INACTIVE, EXPIRED
   createdAt: timestamp("created_at").defaultNow(),
 });
 

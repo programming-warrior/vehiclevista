@@ -39,7 +39,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { dvsaApi, getLocationSuggestion } from "@/api";
 
 
-const VehicleUploadForm = () => {
+const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) => {
   const [selectedFiles, setSelectedFiles] = useState<any>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -188,8 +188,6 @@ const VehicleUploadForm = () => {
 
     try {
 
-      
-
       // Only proceed with image upload if there are images selected
       let imageUrls: string[] = [];
 
@@ -225,8 +223,9 @@ const VehicleUploadForm = () => {
       };
 
       const response = await uploadSingleVehicle(vehicleData);
-      console.log("Vehicle uploaded successfully:", response.data);
+      console.log("Vehicle uploaded successfully:");
 
+      vehicleData.draftId =  response.draftId;
       toast({
         title: "Success!",
         description: "Your vehicle listing has been created.",
@@ -234,7 +233,10 @@ const VehicleUploadForm = () => {
 
       form.reset();
       setSelectedFiles([]);
-      setLocation("/seller");
+      if(pullData && typeof pullData === "function") {
+        pullData(vehicleData);
+      }
+      // setLocation("/seller");
     } catch (error:any) {
       toast({
         title: "Upload failed",
