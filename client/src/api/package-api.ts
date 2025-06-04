@@ -56,6 +56,7 @@ export async function verifyPayment(
 
 export async function selectPackage(
   packageId: number,
+  type: "CLASSIFIED" | "AUCTION",
   draftId: number
 ) {
   try {
@@ -64,6 +65,7 @@ export async function selectPackage(
       `${BACKEND_URL}/api/package/select`,
       {
         package_id: packageId,
+        type: type,
         draft_id: draftId,
       },
       {

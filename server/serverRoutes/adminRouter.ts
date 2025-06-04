@@ -245,7 +245,7 @@ adminRouter.get("/analytics/top-listings", verifyToken, async (req, res) => {
     })
     .from(auctions)
     .innerJoin(users, eq(auctions.sellerId, users.id))
-    .innerJoin(vehicles, eq(auctions.vehicleId, vehicles.id))
+    .innerJoin(vehicles, eq(auctions.itemId, vehicles.id))
     .orderBy(sql`${auctions.clicks} DESC, ${auctions.views} DESC`)
     .limit(5);
 
@@ -843,7 +843,7 @@ adminRouter.get("/auctions", verifyToken, async (req, res) => {
       id: auctions.id,
       title: auctions.title,
       description: auctions.description,
-      vehicleId: auctions.vehicleId,
+      vehicleId: auctions.itemId,
       startDate: auctions.startDate,
       endDate: auctions.endDate,
       status: auctions.status,
@@ -951,7 +951,7 @@ adminRouter.get("/reports/listings", verifyToken, async (req, res) => {
     .leftJoin(vehicleSeller, eq(vehicles.sellerId, vehicleSeller.id))
     .leftJoin(auctionSeller, eq(auctions.sellerId, auctionSeller.id))
     // Join auction.vehicleId to auctionVehicle if reported_auction is present
-    .leftJoin(auctionVehicle, eq(auctions.vehicleId, auctionVehicle.id));
+    .leftJoin(auctionVehicle, eq(auctions.itemId, auctionVehicle.id));
 
   // // Apply filters if provided
   if (filter === "vehicle") {

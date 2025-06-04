@@ -67,7 +67,7 @@ userRouter.get("/bids", verifyToken, async (req, res) => {
     })
     .from(bids)
     .innerJoin(auctions, eq(auctions.id, bids.auctionId))
-    .innerJoin(vehicles, eq(vehicles.id, auctions.vehicleId))
+    .innerJoin(vehicles, eq(vehicles.id, auctions.itemId))
     .where(eq(bids.userId, userId))
     .orderBy(sql`${bids.createdAt} DESC`);
 
@@ -78,7 +78,7 @@ userRouter.get("/bids", verifyToken, async (req, res) => {
       auctionId: bids.auctionId,
       auctionTitle: auctions.title,
       auctionStatus: auctions.status,
-      vehicleId: auctions.vehicleId,
+      vehicleId: auctions.itemId,
       vehicleTitle: vehicles.title,
       vehicleMake: vehicles.make,
       vehicleModel: vehicles.model,

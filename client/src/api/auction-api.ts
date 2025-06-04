@@ -25,6 +25,31 @@ export async function createAuction(
   }
 }
 
+export async function UpdateDraftAuctionWithItemDraft(
+  auctionDraftId: number,
+  itemId:number,
+  itemType: string
+) {
+  try {
+    const response = await axios.patch(
+      `${BACKEND_URL}/api/auction/update-draft/`+auctionDraftId,
+      {
+        itemId,
+        itemType
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message);
+  }
+}
+
 export async function getActiveAuctions(searchParams: string) {
   try {
     const response = await axios.get(

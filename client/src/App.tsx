@@ -38,7 +38,6 @@ import { useValidateSession } from "./hooks/use-validatesession";
 import Loader from "./components/loader";
 import VehiclesList from "./pages/vehicles";
 import SellerVehilceBulkUpload from "./pages/seller/bulk-upload";
-import AuctionForm from "@/pages/seller/auction-create";
 import { useWebSocket } from "./hooks/use-store";
 import AuctionIdPage from "./pages/auction/auction-id";
 import { useToast } from "./hooks/use-toast";
@@ -49,6 +48,8 @@ import AdminRafflePage from "./pages/admin/raffle";
 import RaffleIdPage from "./pages/raffle/raffle-id";
 import NotificationsPage from "./pages/notifications";
 import { useNotification } from "./hooks/use-store";
+import SellerAuctionUpload from "@/pages/seller/auction-create";
+import ScrollToTop from "./components/scroll-to-top";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -147,8 +148,10 @@ export default function App() {
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <main className="flex-1">
+           <ScrollToTop/>
           <Switch>
             {/* Public Routes */}
+           
             <Route path="/profile" component={UserProfile} />
             <Route path="/notifications" component={NotificationsPage} />
             <Route path="/" component={Home} />
@@ -213,7 +216,7 @@ export default function App() {
                 />
               </Route> */}
             <Route path="/seller/auction/create">
-              <ProtectedRoute component={AuctionForm} />
+              <ProtectedRoute component={SellerAuctionUpload} />
             </Route>
             <Route path="/seller/vehicle/upload">
               <ProtectedRoute component={SellerVehicleUpload} />

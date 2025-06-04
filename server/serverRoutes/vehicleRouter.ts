@@ -4,7 +4,10 @@ import { Vehicle, vehicleDrafts, vehicles } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray, ilike } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
 import axios from "axios";
-import { vehicleFuelTypes, vehicleUploadSchema } from "../../shared/zodSchema/vehicleSchema";
+import {
+  vehicleFuelTypes,
+  vehicleUploadSchema,
+} from "../../shared/zodSchema/vehicleSchema";
 import { z } from "zod";
 import { verifyToken } from "../middleware/authMiddleware";
 import { parseCsvFile, extractVehicles } from "../utils/helper";
@@ -54,16 +57,14 @@ vehicleRouter.get("/", async (req, res) => {
       conditions.push(eq(vehicles.transmission, String(transmissionType)));
     if (fuelType && String(fuelType).toLowerCase() !== "all")
       conditions.push(eq(vehicles.fuelType, String(fuelType)));
-    if(bodyType && String(bodyType).toLowerCase() !== "all")
+    if (bodyType && String(bodyType).toLowerCase() !== "all")
       conditions.push(eq(vehicles.bodyType, String(bodyType)));
-    if(color && String(color).toLowerCase() !== "all")
+    if (color && String(color).toLowerCase() !== "all")
       conditions.push(ilike(vehicles.color, String(color)));
     if (!isNaN(Number(minBudget)) && Number(minBudget) > 0)
       conditions.push(gte(vehicles.price, Number(minBudget)));
     if (!isNaN(Number(maxBudget)) && Number(maxBudget) > 0)
       conditions.push(lte(vehicles.price, Number(maxBudget)));
-
-    
 
     const pageNum = parseInt(page as string, 10);
     const pageSize = parseInt(limit as string, 10);
@@ -114,12 +115,7 @@ vehicleRouter.get("/featured", async (req, res) => {
       const typeValue = String(name).toLocaleLowerCase();
       console.log(typeValue);
       if (vehicleTypesEnum.enumValues.includes(typeValue as any)) {
-        conditions.push(
-          eq(
-            vehicles.type,
-            typeValue as any
-          )
-        );
+        conditions.push(eq(vehicles.type, typeValue as any));
       }
     }
 
@@ -137,12 +133,10 @@ vehicleRouter.get("/featured", async (req, res) => {
       .limit(pageSize + 1)
       .offset(offset);
 
-
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(vehicles)
-      .where(conditions.length ? and(...conditions) : undefined)
-      
+      .where(conditions.length ? and(...conditions) : undefined);
 
     res.status(200).json({
       featuredVehicles: result,
@@ -190,6 +184,34 @@ vehicleRouter.post("/dvsa", async (req, res) => {
     } else {
       return res.status(400).json({ error: "invalid registration number" });
     }
+  } catch (err: any) {
+    console.error("Error fetching vehicles:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching vehicle list", error: err.message });
+  }
+});
+
+vehicleRouter.get("/seller/draft/:draftId", verifyToken, async (req, res) => {
+  try {
+    if (req.userId === undefined) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    let draftId: any = req.params.draftId;
+    draftId = draftId ? parseInt(draftId) : null;
+    if (!draftId || isNaN(draftId)) {
+      return res.status(400).json({ error: "invalid draftId" });
+    }
+    const [draftVehicle] = await db
+      .select()
+      .from(vehicleDrafts)
+      .where(eq(vehicleDrafts.id, draftId));
+
+    if (!draftVehicle) {
+      return res.status(404).json({ error: "draft vehcile not found" });
+    }
+
+    res.status(200).json(draftVehicle);
   } catch (err: any) {
     console.error("Error fetching vehicles:", err);
     res
@@ -333,12 +355,8 @@ vehicleRouter.post("/increase-clicks", async (req, res) => {
   }
 });
 
-
-
-
-
 vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
-  if (!req.userId || !req.card_verified) { 
+  if (!req.userId || !req.card_verified) {
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {
@@ -385,8 +403,16 @@ vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
         error: `Vehicle with registration number: ${data.registration_num} already exists`,
       });
     }
-    const [savedVehicle]= await db.insert(vehicleDrafts).values(data).returning();
-    res.status(200).json({ message: "Vehicle uploaded successfully", draftId: savedVehicle.id });
+    const [savedVehicle] = await db
+      .insert(vehicleDrafts)
+      .values(data)
+      .returning();
+    res
+      .status(200)
+      .json({
+        message: "Vehicle uploaded successfully",
+        draftId: savedVehicle.id,
+      });
   } catch (e: any) {
     console.log(e.message);
     return res.status(500).json();

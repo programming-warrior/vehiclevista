@@ -32,7 +32,7 @@ export async function getVehicleById(vehicleId: string) {
 export async function getFeaturedVehicles(searchParam: string) {
   try {
     const response = await axios.get(
-      `${BACKEND_URL}/api/vehicles/featured?` + searchParam,
+      `${BACKEND_URL}/api/vehicles/featured?` + searchParam
     );
     return response.data;
   } catch (error: any) {
@@ -42,6 +42,24 @@ export async function getFeaturedVehicles(searchParam: string) {
   }
 }
 
+export async function getDraftVehicle(draftId: number) {
+  try {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/vehicles/seller/draft/` + draftId,
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error fetching vehicle list"
+    );
+  }
+}
 
 export async function getSellerVehicleListings(searchParams: string) {
   try {
@@ -76,12 +94,11 @@ export async function advanceVehicleSearch(searchParam: string) {
   }
 }
 
-export async function uploadBulkVehicle(formData:FormData){
+export async function uploadBulkVehicle(formData: FormData) {
   try {
     const response = await axios.post(
       `${BACKEND_URL}/api/vehicles/upload-bulk`,
-        formData
-      ,
+      formData,
       {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -94,8 +111,6 @@ export async function uploadBulkVehicle(formData:FormData){
     throw new Error(error.response?.data?.message);
   }
 }
-
-
 
 export async function uploadSingleVehicle(
   data: z.infer<typeof vehicleUploadSchema>
@@ -120,11 +135,10 @@ export async function uploadSingleVehicle(
   }
 }
 
-
 export async function incrementVehicleClicks(vehicleId: string) {
   try {
     const response = await axios.post(
-      `${BACKEND_URL}/api/vehicles/increase-clicks/` ,
+      `${BACKEND_URL}/api/vehicles/increase-clicks/`,
       {
         vehicleId,
       },
@@ -146,7 +160,7 @@ export async function incrementVehicleClicks(vehicleId: string) {
 export async function incrementVehicleViews(vehicleId: string) {
   try {
     const response = await axios.post(
-      `${BACKEND_URL}/api/vehicles/increase-views/` ,
+      `${BACKEND_URL}/api/vehicles/increase-views/`,
       {
         vehicleId,
       },

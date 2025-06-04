@@ -25,13 +25,15 @@ import {
   getVehicleById, 
   incrementVehicleClicks,
   incrementVehicleViews,
+  getDraftVehicle
 } from "./vehicle-api";
 import { 
     createAuction, 
     getActiveAuctions, 
     getAuctionById, 
     placeLiveBid, 
-    getBidsForAuction
+    getBidsForAuction,
+    UpdateDraftAuctionWithItemDraft
 } from "./auction-api";
 
 import { getRunningRaffle, purchaseRaffleTicket, incrementRaffleViews, incrementRaffleClicks } from "./raffle-api";
@@ -148,12 +150,14 @@ export {
   getFeaturedVehicles,
   incrementVehicleClicks,
   incrementVehicleViews,
+  getDraftVehicle,
 
   createAuction,
   getActiveAuctions,
   getAuctionById,
   placeLiveBid,
   getBidsForAuction,
+  UpdateDraftAuctionWithItemDraft,
 
   registerUser,
   loginUser,

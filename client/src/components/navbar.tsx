@@ -386,6 +386,13 @@ export default function Navbar() {
             >
               Sell Your Car
             </Button>
+               <Button
+              variant="secondary"
+              className="bg-yellow-500 hover:bg-yellow-600 text-white border-0"
+              onClick={() => setLocation("/seller/auction/create")}
+            >
+              Create Auction
+            </Button>
             <nav className="flex items-center gap-6">
               <Link
                 href="/"

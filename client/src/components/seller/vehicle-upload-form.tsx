@@ -31,6 +31,7 @@ import {
   uploadSingleVehicle,
   getPresignedUrls,
   uploadToPresignedUrl,
+  UpdateDraftAuctionWithItemDraft,
 } from "@/api";
 import { X, Upload, Loader2, MapPin, Search, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -38,8 +39,13 @@ import { useLocation } from "wouter";
 import { useDebounce } from "@/hooks/use-debounce";
 import { dvsaApi, getLocationSuggestion } from "@/api";
 
-
-const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) => {
+const VehicleUploadForm = ({
+  pullData,
+  auctionDraftId,
+}: {
+  pullData?: (vehicleData: any) => void;
+  auctionDraftId: number;
+}) => {
   const [selectedFiles, setSelectedFiles] = useState<any>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -73,19 +79,20 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
       contactPreference: "phone",
       negotiable: false,
       latitude: 0,
-      longitude: 0
+      longitude: 0,
     },
   });
-  
+
   const [, setLocation] = useLocation();
-  const debouncedRegistrationNum = useDebounce(form.getValues("registration_num"));
+  const debouncedRegistrationNum = useDebounce(
+    form.getValues("registration_num")
+  );
   const debouncedLocationQuery = useDebounce(form.getValues("location"), 500);
   const [registrationNumError, setRegistrationNumError] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
-  
   useEffect(() => {
-    const handleClickOutside = (event:MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
         suggestionBoxRef.current &&
         !suggestionBoxRef.current.contains(event.target as Node) &&
@@ -102,12 +109,11 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
     };
   }, []);
 
-
   useEffect(() => {
     if (debouncedRegistrationNum) {
       setRegistrationNumError("");
       setRegistrationSuccess(false);
-      
+
       dvsaApi(debouncedRegistrationNum)
         .then((data) => {
           console.log(data);
@@ -122,10 +128,16 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
 
   // Fetch location suggestions when location input changes
   useEffect(() => {
-    if (debouncedLocationQuery && debouncedLocationQuery.length >= 2 && !locationSuggestions.some((l:any)=>l.display_name===debouncedLocationQuery)) {
+    if (
+      debouncedLocationQuery &&
+      debouncedLocationQuery.length >= 2 &&
+      !locationSuggestions.some(
+        (l: any) => l.display_name === debouncedLocationQuery
+      )
+    ) {
       setIsLoadingLocations(true);
       setShowLocationSuggestions(true);
-      
+
       getLocationSuggestion(debouncedLocationQuery)
         .then((suggestions) => {
           setLocationSuggestions(suggestions);
@@ -139,10 +151,10 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
     }
   }, [debouncedLocationQuery]);
 
-  const handleFileChange = (e:any) => {
+  const handleFileChange = (e: any) => {
     const files = e.target.files;
     if (files) {
-      const newFiles = Array.from(files).filter((file:any) =>
+      const newFiles = Array.from(files).filter((file: any) =>
         file.type.startsWith("image/")
       );
 
@@ -155,22 +167,24 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
         return;
       }
 
-      setSelectedFiles((prev:any) => [...prev, ...newFiles]);
+      setSelectedFiles((prev: any) => [...prev, ...newFiles]);
     }
     e.target.value = "";
   };
 
-  const removeFile = (index:number) => {
-    setSelectedFiles((prev: File[]) => prev.filter((_, i: number) => i !== index));
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev: File[]) =>
+      prev.filter((_, i: number) => i !== index)
+    );
   };
 
-  const handleSelectLocation = (suggestion:any) => {
+  const handleSelectLocation = (suggestion: any) => {
     console.log(suggestion.display_name);
     console.log(suggestion.lat);
-    console.log(suggestion.lon)
+    console.log(suggestion.lon);
     form.setValue("location", suggestion.display_name);
-    form.setValue('latitude', parseFloat(suggestion.lat))
-    form.setValue('longitude', parseFloat(suggestion.lon))
+    form.setValue("latitude", parseFloat(suggestion.lat));
+    form.setValue("longitude", parseFloat(suggestion.lon));
     setShowLocationSuggestions(false);
     form.trigger("location");
   };
@@ -181,33 +195,32 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
     }
   };
 
-  async function onSubmit(data:any) {
+  async function onSubmit(data: any) {
     console.log("Form submission started", data);
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
-
       // Only proceed with image upload if there are images selected
       let imageUrls: string[] = [];
 
       if (selectedFiles.length > 0) {
-        const fileKeys = selectedFiles.map((file:File) => ({
+        const fileKeys = selectedFiles.map((file: File) => ({
           fileName: `${Date.now()}-${file.name.split(" ").join("")}`,
           contentType: file.type,
         }));
-        
+
         const presignedUrlsResponse = await getPresignedUrls(fileKeys);
         const presignedUrls = presignedUrlsResponse.data.urls;
 
-        const uploadPromises = selectedFiles.map((file:File, index:number) =>
+        const uploadPromises = selectedFiles.map((file: File, index: number) =>
           uploadToPresignedUrl(file, presignedUrls[index])
         );
 
         // Track progress
         let completed = 0;
         for (const promise of uploadPromises) {
-          await promise.then((url:string) => {
+          await promise.then((url: string) => {
             imageUrls.push(url);
             completed++;
             setUploadProgress(
@@ -225,7 +238,14 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
       const response = await uploadSingleVehicle(vehicleData);
       console.log("Vehicle uploaded successfully:");
 
-      vehicleData.draftId =  response.draftId;
+      vehicleData.draftId = response.draftId;
+
+      //send the api request to update the auction draft
+      await UpdateDraftAuctionWithItemDraft(
+        auctionDraftId,
+        response.draftId,
+        "VEHICLE"
+      );
       toast({
         title: "Success!",
         description: "Your vehicle listing has been created.",
@@ -233,11 +253,11 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
 
       form.reset();
       setSelectedFiles([]);
-      if(pullData && typeof pullData === "function") {
+      if (pullData && typeof pullData === "function") {
         pullData(vehicleData);
       }
       // setLocation("/seller");
-    } catch (error:any) {
+    } catch (error: any) {
       toast({
         title: "Upload failed",
         description:
@@ -264,14 +284,13 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
   return (
     <Card className="w-full mx-auto shadow-lg border-blue-100">
       <CardHeader className="bg-blue-50 border-b border-blue-100">
-        <CardTitle className="text-xl text-blue-800">Vehicle Listing Details</CardTitle>
+        <CardTitle className="text-xl text-blue-800">
+          Vehicle Listing Details
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-6"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Registration Number Field with Status Indicators */}
             <div className="space-y-4">
               <FormField
@@ -279,15 +298,20 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                 name="registration_num"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-blue-800 font-medium">Registration Number</FormLabel>
+                    <FormLabel className="text-blue-800 font-medium">
+                      Registration Number
+                    </FormLabel>
                     <div className="relative">
                       <FormControl>
                         <Input
                           type="text"
                           placeholder="e.g. ABC-1234"
                           className={`${
-                            registrationNumError ? "border-red-500 pr-10" : 
-                            registrationSuccess ? "border-green-500 pr-10" : ""
+                            registrationNumError
+                              ? "border-red-500 pr-10"
+                              : registrationSuccess
+                              ? "border-green-500 pr-10"
+                              : ""
                           } focus:ring-blue-500 focus:border-blue-500`}
                           {...field}
                         />
@@ -301,7 +325,9 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                     </div>
                     {registrationNumError && (
                       <div className="mt-1">
-                        <p className="text-xs text-red-600">{registrationNumError}</p>
+                        <p className="text-xs text-red-600">
+                          {registrationNumError}
+                        </p>
                         <p className="text-xs text-blue-600 mt-1 cursor-pointer hover:underline">
                           Enter data manually
                         </p>
@@ -311,13 +337,15 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-blue-800 font-medium">Vehicle Title</FormLabel>
+                    <FormLabel className="text-blue-800 font-medium">
+                      Vehicle Title
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="text"
@@ -330,13 +358,15 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-blue-800 font-medium">Description</FormLabel>
+                    <FormLabel className="text-blue-800 font-medium">
+                      Description
+                    </FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Details you want to share..."
@@ -352,7 +382,9 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
 
             {/* Image Upload Section */}
             <div>
-              <h3 className="text-lg font-medium mb-3 text-blue-800">Vehicle Images</h3>
+              <h3 className="text-lg font-medium mb-3 text-blue-800">
+                Vehicle Images
+              </h3>
               <div className="space-y-4">
                 <div className="border-2 border-dashed border-blue-200 rounded-lg p-6 text-center bg-blue-50 hover:bg-blue-100 transition-colors duration-200">
                   <div className="mb-4">
@@ -386,7 +418,7 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                 {/* Preview selected images */}
                 {selectedFiles.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {selectedFiles.map((file:File, index:number) => (
+                    {selectedFiles.map((file: File, index: number) => (
                       <div
                         key={index}
                         className="relative group aspect-square border border-blue-200 rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
@@ -414,14 +446,18 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
 
             {/* Two Column Layout for Basic Info */}
             <div className="bg-white p-4 rounded-lg border border-blue-100">
-              <h3 className="text-lg font-medium mb-3 text-blue-800">Basic Information</h3>
+              <h3 className="text-lg font-medium mb-3 text-blue-800">
+                Basic Information
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-blue-800">Vehicle Type</FormLabel>
+                      <FormLabel className="text-blue-800">
+                        Vehicle Type
+                      </FormLabel>
                       <FormControl>
                         <Select
                           onValueChange={field.onChange}
@@ -465,7 +501,8 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                           <SelectContent className="border-blue-200">
                             {vehicleConditions.map((condition) => (
                               <SelectItem key={condition} value={condition}>
-                                {condition.charAt(0).toUpperCase() + condition.slice(1)}
+                                {condition.charAt(0).toUpperCase() +
+                                  condition.slice(1)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -516,7 +553,9 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
 
             {/* Two Column Layout for Specifications */}
             <div className="bg-white p-4 rounded-lg border border-blue-100">
-              <h3 className="text-lg font-medium mb-3 text-blue-800">Vehicle Specifications</h3>
+              <h3 className="text-lg font-medium mb-3 text-blue-800">
+                Vehicle Specifications
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -587,13 +626,15 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                             <SelectValue placeholder="Select fuel type" />
                           </SelectTrigger>
                           <SelectContent className="border-blue-200">
-                            {vehicleFuelTypes[form.getValues("type") as keyof typeof vehicleFuelTypes]?.map(
-                              (fuel) => (
-                                <SelectItem key={fuel} value={fuel}>
-                                  {fuel}
-                                </SelectItem>
-                              )
-                            )}
+                            {vehicleFuelTypes[
+                              form.getValues(
+                                "type"
+                              ) as keyof typeof vehicleFuelTypes
+                            ]?.map((fuel) => (
+                              <SelectItem key={fuel} value={fuel}>
+                                {fuel}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </FormControl>
@@ -606,7 +647,9 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                   name="transmission"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-blue-800">Transmission Type</FormLabel>
+                      <FormLabel className="text-blue-800">
+                        Transmission Type
+                      </FormLabel>
                       <FormControl>
                         <Select
                           onValueChange={field.onChange}
@@ -617,7 +660,9 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                           </SelectTrigger>
                           <SelectContent className="border-blue-200">
                             {vehicleTransmissionsTypes[
-                              form.getValues("type") as keyof typeof vehicleTransmissionsTypes
+                              form.getValues(
+                                "type"
+                              ) as keyof typeof vehicleTransmissionsTypes
                             ]?.map((transmission) => (
                               <SelectItem
                                 key={transmission}
@@ -640,11 +685,11 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                     <FormItem>
                       <FormLabel className="text-blue-800">Body Type</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="text" 
-                          placeholder="e.g. SUV" 
+                        <Input
+                          type="text"
+                          placeholder="e.g. SUV"
                           className="border-blue-200 focus:ring-blue-500 focus:border-blue-500"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -656,7 +701,9 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
 
             {/* Two Column Layout for Listing Details */}
             <div className="bg-white p-4 rounded-lg border border-blue-100">
-              <h3 className="text-lg font-medium mb-3 text-blue-800">Listing Details</h3>
+              <h3 className="text-lg font-medium mb-3 text-blue-800">
+                Listing Details
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -665,7 +712,9 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                     <FormItem>
                       <FormLabel className="text-blue-800">Price</FormLabel>
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                          £
+                        </span>
                         <FormControl>
                           <Input
                             type="number"
@@ -699,25 +748,31 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
                           />
                         </FormControl>
                         {showLocationSuggestions && (
-                          <div 
+                          <div
                             ref={suggestionBoxRef}
                             className="absolute z-20 w-full mt-1 bg-white border border-blue-200 rounded-md shadow-lg max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-400 scrollbar-track-blue-50"
                           >
                             {isLoadingLocations ? (
                               <LocationSkeleton />
                             ) : locationSuggestions.length > 0 ? (
-                              locationSuggestions.map((suggestion:any, index:number) => (
-                                <div
-                                  key={index}
-                                  className="px-4 py-2 hover:bg-blue-50 cursor-pointer flex items-center space-x-2 text-sm border-b border-blue-50 last:border-0"
-                                  onClick={() => handleSelectLocation(suggestion)}
-                                >
-                                  <MapPin className="h-4 w-4 text-blue-500" />
-                                  <span>{suggestion.display_name}</span>
-                                </div>
-                              ))
+                              locationSuggestions.map(
+                                (suggestion: any, index: number) => (
+                                  <div
+                                    key={index}
+                                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer flex items-center space-x-2 text-sm border-b border-blue-50 last:border-0"
+                                    onClick={() =>
+                                      handleSelectLocation(suggestion)
+                                    }
+                                  >
+                                    <MapPin className="h-4 w-4 text-blue-500" />
+                                    <span>{suggestion.display_name}</span>
+                                  </div>
+                                )
+                              )
                             ) : (
-                              <div className="px-4 py-2 text-sm text-gray-500">No locations found</div>
+                              <div className="px-4 py-2 text-sm text-gray-500">
+                                No locations found
+                              </div>
                             )}
                           </div>
                         )}
@@ -731,7 +786,9 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
 
             {/* Options as Two Column Grid */}
             <div className="bg-white p-4 rounded-lg border border-blue-100">
-              <h3 className="text-lg font-medium mb-3 text-blue-800">Listing Options</h3>
+              <h3 className="text-lg font-medium mb-3 text-blue-800">
+                Listing Options
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -777,8 +834,8 @@ const VehicleUploadForm = ({pullData}: {pullData?: (vehicleData:any) => void}) =
             {/* Upload Progress Bar */}
             {isUploading && uploadProgress > 0 && (
               <div className="w-full bg-blue-100 rounded-full h-2.5 mb-4">
-                <div 
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out" 
+                <div
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out"
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>

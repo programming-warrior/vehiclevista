@@ -5,6 +5,7 @@ import {
   offers,
   vehicleDrafts,
   paymentSession,
+  auctionDrafts,
 } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray, ilike } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
@@ -76,8 +77,8 @@ packageRouter.post("/evaluate-price", verifyToken, async (req, res) => {
 packageRouter.post("/select", verifyToken, async (req, res) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
-    let { package_id, draft_id } = req.body;
-    if (!package_id || !draft_id) {
+    let { package_id, draft_id, type } = req.body;
+    if (!package_id || !draft_id || !["CLASSIFIED", "AUCTION"].includes(type)) {
       return res
         .status(400)
         .json({ message: "Package ID and Draft ID are required" });
@@ -93,20 +94,44 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
     if (!res_pkg) {
       return res.status(404).json({ message: "Package not found" });
     }
-    const [draft_vehicle] = await db
-      .select()
-      .from(vehicleDrafts)
-      .where(eq(vehicleDrafts.id, draft_id as number));
-    if (!draft_vehicle || draft_vehicle.sellerId !== req.userId) {
-      return res.status(404).json({ message: "Draft vehicle not found" });
+    let vehiclePrice: number;
+
+    if (type === "CLASSIFIED") {
+      const [draft_vehicle] = await db
+        .select()
+        .from(vehicleDrafts)
+        .where(eq(vehicleDrafts.id, draft_id as number));
+      if (!draft_vehicle || draft_vehicle.sellerId !== req.userId) {
+        return res.status(404).json({ message: "Draft vehicle not found" });
+      }
+      vehiclePrice = draft_vehicle.price;
+    } else if (type === "AUCTION") {
+      const [draft_auction] = await db
+        .select()
+        .from(auctionDrafts)
+        .where(eq(auctionDrafts.id, draft_id as number));
+      if (!draft_auction || draft_auction.sellerId !== req.userId) {
+        return res.status(404).json({ message: "Draft auction not found" });
+      }
+      console.log(draft_auction);
+      const [draft_vehicle] = await db
+        .select()
+        .from(vehicleDrafts)
+        .where(eq(vehicleDrafts.id, draft_auction.itemId as number));
+      if (!draft_vehicle) {
+        return res
+          .status(404)
+          .json({ message: "Related vehicle draft not found" });
+      }
+      vehiclePrice = draft_vehicle.price;
     }
-    console.log(draft_vehicle.price);
+
     const prices = res_pkg.prices as [number, number, number][];
     console.log(prices);
     const amount = prices.reduce((acc: number, price: any) => {
-      if (price[0] <= draft_vehicle.price) {
-        if (price[1] > -1 && price[1] >= draft_vehicle.price) {
-          acc = price[2] ?? draft_vehicle.price;
+      if (price[0] <= vehiclePrice) {
+        if (price[1] > -1 && price[1] >= vehiclePrice) {
+          acc = price[2] ?? vehiclePrice;
         }
       }
       return acc;

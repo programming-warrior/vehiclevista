@@ -97,7 +97,7 @@ export const paymentSession= pgTable("payment_session", {
   userId: integer("user_id")
     .notNull(),
   packageId: integer("package_id").references(() => packages.id),
-  draftId: integer("draft_id").references(() => vehicleDrafts.id),
+  draftId: integer("draft_id"),
   listingId: integer('listing_id'),
   amount: real("amount").notNull(),
   currency: text("currency").notNull().default("gbp"),
@@ -107,6 +107,20 @@ export const paymentSession= pgTable("payment_session", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const auctionDrafts = pgTable("auction_drafts", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  auctionItem: text("auction_item").notNull().default('VEHICLE'), // VEHICLE, NUMBER_PLATE
+  startingPrice: real("starting_price").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  itemId: integer("item_id"),
+  itemType: text("item_type").notNull().default("VEHICLE"),
+  sellerId: integer("seller_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const vehicleDrafts = pgTable("vehicle_drafts", {
@@ -356,10 +370,11 @@ export const auctions = pgTable("auctions", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull(),
+  itemType: text("item_type").notNull().default('VEHICLE'), // VEHICLE, NUMBER_PLATE
+  itemId: integer("item_id"),
   startingPrice: real("starting_price").notNull(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
-  vehicleId: integer("vehicle_id").notNull(),
   status: auctinStatusEnum().notNull().default("UPCOMING"), // upcoming, active, ended
   currentBid: real("current_bid").default(0),
   totalBids: integer("total_bids").default(0),
