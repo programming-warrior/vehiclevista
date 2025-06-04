@@ -34,6 +34,7 @@ const paymentWorker = new Worker(
           .where(eq(paymentSession.paymentIntentId, paymentIntentId))
           .limit(1);
 
+        console.log("Payment session status " + session[0].status);
         if (!session || session[0].status !== "PENDING") return;
 
         await db.transaction(async (tx) => {
@@ -49,8 +50,10 @@ const paymentWorker = new Worker(
             )
             .returning();
 
+          console.log("updating the payment session");
           if (updated.length === 0) return;
 
+          console.log("Fetching Package details");
           const [packageDetails] = await tx
             .select()
             .from(packages)
@@ -60,7 +63,9 @@ const paymentWorker = new Worker(
             let listing_id;
             let globalDraftData: any;
             if (packageDetails.type == "CLASSIFIED") {
+              console.log("Processing classified");
               //move draft to listing
+              console.log("moving vehicle draft to listing");
               const [draftData] = await tx
                 .select()
                 .from(vehicleDrafts)
@@ -93,7 +98,10 @@ const paymentWorker = new Worker(
                 .returning();
               listing_id = savedValue.id;
             } else if (packageDetails.type === "AUCTION") {
+              console.log("processing auction");
               //move auction and vehicle draftdata
+
+              console.log("Auction Draft Data");
               const [draftData] = await tx
                 .select()
                 .from(auctionDrafts)
@@ -103,6 +111,9 @@ const paymentWorker = new Worker(
               let savedItemId: any;
               //move items from draft table to the listing table
               if (draftData.itemType === "VEHICLE") {
+                console.log(
+                  "Moving Vehicle Auction Item from draft to Listing"
+                );
                 const [row] = await tx
                   .select()
                   .from(vehicleDrafts)
@@ -141,6 +152,7 @@ const paymentWorker = new Worker(
                   .returning();
                 savedItemId = savedValue.id;
               }
+              console.log("Moving Auction from draft to listing");
               const [savedAuction] = await tx
                 .insert(auctions)
                 .values({
@@ -159,6 +171,7 @@ const paymentWorker = new Worker(
                 0,
                 savedAuction.startDate.getTime() - Date.now()
               );
+              console.log("Pushing auction to auctionQueue");
               await auctionQueue.add(
                 "startAuction",
                 {
@@ -182,6 +195,7 @@ const paymentWorker = new Worker(
             const expires_at = new Date(
               Date.now() + packageDetails.duration_days * 24 * 60 * 60 * 1000
             );
+            console.log("adding userlisting");
             //create userlistingpackage
             await tx.insert(userListingPackages).values({
               userId: userId,
@@ -192,16 +206,19 @@ const paymentWorker = new Worker(
               purchased_at: new Date(),
               expires_at: expires_at,
             });
+            console.log("updating payment session with listingId");
             await tx
               .update(paymentSession)
               .set({ listingId: listing_id })
               .where(and(eq(paymentSession.paymentIntentId, paymentIntentId)));
 
             if (packageDetails.type === "CLASSIFIED") {
+              console.log("cleaning up vehicle draft");
               await tx
                 .delete(vehicleDrafts)
                 .where(eq(vehicleDrafts.id, draftId));
             } else if (packageDetails.type === "AUCTION") {
+              console.log("cleaning up auction draft");
               await tx
                 .delete(auctionDrafts)
                 .where(eq(auctionDrafts.id, draftId));

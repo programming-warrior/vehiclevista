@@ -1,3 +1,4 @@
+import { time } from "console";
 import { is } from "drizzle-orm";
 import {
   pgTable,
@@ -385,6 +386,15 @@ export const auctions = pgTable("auctions", {
   clicks: integer("clicks").default(0),
   leads: integer("leads").default(0),
 });
+
+
+export const numberPlate = pgTable("number_plate",{
+  id: serial("id").primaryKey(),
+  plate_number: text().notNull(),
+  docuemnt_url: text().array().notNull(),
+  sellerId: integer("seller_id").references(()=>users.id),
+  created_at: timestamp().defaultNow()
+})
 
 export const auctionWinner = pgTable("auction_winner", {
   id: serial("id").primaryKey(),

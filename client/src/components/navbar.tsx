@@ -176,7 +176,7 @@ export default function Navbar() {
   }
 
   return (
-    <div className="border-b border-gray-200 bg-white shadow-sm relative border-none">
+    <div className="border-b border-gray-200 bg-white shadow-sm  border-none sticky top-0 z-50">
       {/* Top Navigation */}
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">

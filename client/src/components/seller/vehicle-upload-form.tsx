@@ -41,10 +41,12 @@ import { dvsaApi, getLocationSuggestion } from "@/api";
 
 const VehicleUploadForm = ({
   pullData,
+  prefetchedData,
   auctionDraftId,
 }: {
+  prefetchedData?: any;
   pullData?: (vehicleData: any) => void;
-  auctionDraftId: number;
+  auctionDraftId?: number;
 }) => {
   const [selectedFiles, setSelectedFiles] = useState<any>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -241,11 +243,12 @@ const VehicleUploadForm = ({
       vehicleData.draftId = response.draftId;
 
       //send the api request to update the auction draft
-      await UpdateDraftAuctionWithItemDraft(
-        auctionDraftId,
-        response.draftId,
-        "VEHICLE"
-      );
+      if(auctionDraftId)
+        await UpdateDraftAuctionWithItemDraft(
+          auctionDraftId,
+          response.draftId,
+          "VEHICLE"
+        );
       toast({
         title: "Success!",
         description: "Your vehicle listing has been created.",

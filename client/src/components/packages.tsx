@@ -45,7 +45,7 @@ export default function Packages({
         setIsLoading(false);
       }
     };
-
+    window.scrollTo(0,0);
     fetchPackages();
   }, []);
 
