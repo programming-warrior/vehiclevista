@@ -41,6 +41,7 @@ import Packages from "@/components/packages";
 import PaymentFormWrapper from "@/components/payment-form";
 import FindVehicleCard from "@/components/find-vehicle";
 import NumberPlateForm from "@/components/numberplate-create-form";
+import { verifyPayment } from "@/api";
 
 export default function SellerAuctionUpload() {
   const [auctionData, setAuctionData] = useState<any | null>(null);
@@ -182,7 +183,10 @@ export default function SellerAuctionUpload() {
 
           {paymentData && stage === 4 && (
             <div className="mt-8">
-              <PaymentFormWrapper clientSecret={paymentData.clientSecret} />
+              <PaymentFormWrapper
+                verifyPayment={verifyPayment}
+                clientSecret={paymentData.clientSecret}
+              />
             </div>
           )}
 

@@ -76,7 +76,7 @@ export async function UpdateDraftAuctionWithItemDraft(
 export async function getActiveAuctions(searchParams: string) {
   try {
     const response = await axios.get(
-      `${BACKEND_URL}/api/auction/get` + searchParams
+      `${BACKEND_URL}/api/auction/get?` + searchParams
     );
     return response.data;
   } catch (error: any) {
@@ -111,6 +111,31 @@ export async function getBidsForAuction(auctionId: string) {
     );
   }
 }
+
+export async function verifyBidPayment(
+    paymentIntentId: any
+  ) {
+    try {
+      const sessionId = localStorage.getItem("sessionId");
+      const response = await axios.post(
+        `${BACKEND_URL}/api/auction/bids/verify-payment`,
+        {
+          paymentIntentId
+        },
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${sessionId}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.error || "Failed to fetch notifications"
+      );
+    }
+  }
 
 export async function placeLiveBid(auctionId: string, bidAmount: string) {
   try {

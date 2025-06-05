@@ -12,6 +12,7 @@ import {
   userListingPackages,
   vehicleDrafts,
   auctionDrafts,
+  numberPlate,
 } from "../../../shared/schema";
 import { eq, and } from "drizzle-orm";
 import { auctionQueue } from "../queue";
@@ -151,6 +152,27 @@ const paymentWorker = new Worker(
                   })
                   .returning();
                 savedItemId = savedValue.id;
+              } else if (draftData.itemType === "NUMBERPLATE") {
+                console.log(
+                  "Moving NumberPlate Auction Item from draft to Listing"
+                );
+                const [numberPlateRow] = await tx
+                  .select()
+                  .from(numberPlate)
+                  .where(eq(numberPlate.id, draftData.itemId as number));
+                if (!numberPlateRow)
+                  throw new Error(
+                    "Draft NumberPlate Data not found for draft Auction : " +
+                      draftData.id
+                  );
+
+                await tx
+                  .update(numberPlate)
+                  .set({
+                    status: "ACTIVE",
+                  })
+                  .returning();
+                savedItemId = numberPlateRow.id;
               }
               console.log("Moving Auction from draft to listing");
               const [savedAuction] = await tx

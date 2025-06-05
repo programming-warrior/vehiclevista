@@ -34,7 +34,8 @@ import {
     placeLiveBid, 
     getBidsForAuction,
     UpdateDraftAuctionWithItemDraft,
-    createNumberPlate
+    createNumberPlate,
+    verifyBidPayment
 } from "./auction-api";
 
 import { getRunningRaffle, purchaseRaffleTicket, incrementRaffleViews, incrementRaffleClicks } from "./raffle-api";
@@ -66,6 +67,27 @@ async function getLocationSuggestion(location:string){
     catch(e){
       throw e
     }
+}
+
+export async function vehicleLookUp(registration_num:string, current_mileage: number){
+  try{
+    const res= await axios.post(BACKEND_URL + '/api/vehicles/look-up',
+      {
+        registration_num,
+        current_mileage
+      },
+      {
+        withCredentials: true,
+        headers:{
+          'Authorization':`Bearer ${localStorage.getItem('token')}`
+        }
+      }
+    )
+    return res.data;
+  }
+  catch(e){
+    throw e;
+  }
 }
 
 async function dvsaApi(registration_num:string){
@@ -160,6 +182,7 @@ export {
   getBidsForAuction,
   UpdateDraftAuctionWithItemDraft,
   createNumberPlate,
+  verifyBidPayment,
 
   registerUser,
   loginUser,

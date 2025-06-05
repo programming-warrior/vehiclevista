@@ -6,6 +6,7 @@ import {
   vehicleDrafts,
   paymentSession,
   auctionDrafts,
+  numberPlate,
 } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray, ilike } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
@@ -94,7 +95,8 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
     if (!res_pkg) {
       return res.status(404).json({ message: "Package not found" });
     }
-    let vehiclePrice: number;
+    let vehiclePrice: number | undefined;
+    let plateNumber: number | undefined;
 
     if (type === "CLASSIFIED") {
       const [draft_vehicle] = await db
@@ -114,24 +116,42 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
         return res.status(404).json({ message: "Draft auction not found" });
       }
       console.log(draft_auction);
-      const [draft_vehicle] = await db
-        .select()
-        .from(vehicleDrafts)
-        .where(eq(vehicleDrafts.id, draft_auction.itemId as number));
-      if (!draft_vehicle) {
-        return res
-          .status(404)
-          .json({ message: "Related vehicle draft not found" });
+      if (draft_auction.itemType === "VEHICLE") {
+        const [draft_vehicle] = await db
+          .select()
+          .from(vehicleDrafts)
+          .where(eq(vehicleDrafts.id, draft_auction.itemId as number));
+        if (!draft_vehicle) {
+          return res
+            .status(404)
+            .json({ message: "Related vehicle draft not found" });
+        }
+        vehiclePrice = draft_vehicle.price;
+      } else if (draft_auction.itemType === "NUMBERPLATE") {
+        const [draft_numberPlate] = await db
+          .select()
+          .from(numberPlate)
+          .where(eq(numberPlate.id, draft_auction.itemId as number));
+        if (!draft_numberPlate) {
+          return res
+            .status(404)
+            .json({ message: "Related numberplate draft not found" });
+        }
+        plateNumber = parseInt(draft_numberPlate.plate_number);
       }
-      vehiclePrice = draft_vehicle.price;
     }
 
     const prices = res_pkg.prices as [number, number, number][];
     console.log(prices);
+
+    let compareFeature: number = vehiclePrice
+      ? (vehiclePrice as number)
+      : (plateNumber as number);
+
     const amount = prices.reduce((acc: number, price: any) => {
-      if (price[0] <= vehiclePrice) {
-        if (price[1] > -1 && price[1] >= vehiclePrice) {
-          acc = price[2] ?? vehiclePrice;
+      if (price[0] <= compareFeature) {
+        if (price[1] > -1 && price[1] >= compareFeature) {
+          acc = price[2] ?? compareFeature;
         }
       }
       return acc;

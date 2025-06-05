@@ -153,33 +153,73 @@ vehicleRouter.get("/featured", async (req, res) => {
   }
 });
 
-const dvsaApiKey = process.env.DVSA_API_KEY;
+// const dvsaApiKey = process.env.DVSA_API_KEY;
 
-vehicleRouter.post("/dvsa", async (req, res) => {
+// vehicleRouter.post("/dvsa", async (req, res) => {
+//   try {
+//     const { registration_num } = req.body;
+//     if (!dvsaApiKey)
+//       return res.status(500).json({ error: "dvsa key not found" });
+//     if (
+//       registration_num &&
+//       typeof registration_num == "string" &&
+//       registration_num.length > 0
+//     ) {
+//       try {
+//         const dvsaResponse = await axios.get(
+//           "https://sandbox.oneautoapi.com/autotrader/vehiclelookupfromvrm/v2?vehicle_registration_mark=" +
+//             registration_num,
+//           {
+//             headers: {
+//               "x-api": dvsaApiKey,
+//               Accept: "application/json+v6",
+//             },
+//           }
+//         );
+//         return res.status(200).json(dvsaResponse.data);
+//       } catch (e) {
+//         console.log(e);
+//         return res.status(500).json({ error: "dvsa api call failed" });
+//       }
+//     } else {
+//       return res.status(400).json({ error: "invalid registration number" });
+//     }
+//   } catch (err: any) {
+//     console.error("Error fetching vehicles:", err);
+//     res
+//       .status(500)
+//       .json({ message: "Error fetching vehicle list", error: err.message });
+//   }
+// });
+
+const oneAutoApiKey = process.env.ONE_AUTO_API_KEY;
+
+vehicleRouter.post("/look-up", async (req, res) => {
   try {
-    const { registration_num } = req.body;
-    if (!dvsaApiKey)
+    const { registration_num, current_mileage } = req.body;
+    if (!oneAutoApiKey)
       return res.status(500).json({ error: "dvsa key not found" });
     if (
       registration_num &&
       typeof registration_num == "string" &&
-      registration_num.length > 0
+      registration_num.length > 0 &&
+      current_mileage
     ) {
       try {
-        const dvsaResponse = await axios.get(
-          " https://beta.check-mot.service.gov.uk/trade/vehicles/mot-tests?registration=" +
+        const apiResponse = await axios.get(
+          "https://sandbox.oneautoapi.com/autotrader/vehiclelookupfromvrm/v2?vehicle_registration_mark=" +
             registration_num,
           {
             headers: {
-              "x-api": dvsaApiKey,
-              Accept: "application/json+v6",
+              "x-api-key": oneAutoApiKey,
             },
           }
         );
-        return res.status(200).json(dvsaResponse.data);
+        console.log(apiResponse.data);
+        return res.status(200).json(apiResponse.data);
       } catch (e) {
         console.log(e);
-        return res.status(500).json({ error: "dvsa api call failed" });
+        return res.status(500).json({ error: "oneauto api call failed" });
       }
     } else {
       return res.status(400).json({ error: "invalid registration number" });
@@ -407,12 +447,10 @@ vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
       .insert(vehicleDrafts)
       .values(data)
       .returning();
-    res
-      .status(200)
-      .json({
-        message: "Vehicle uploaded successfully",
-        draftId: savedVehicle.id,
-      });
+    res.status(200).json({
+      message: "Vehicle uploaded successfully",
+      draftId: savedVehicle.id,
+    });
   } catch (e: any) {
     console.log(e.message);
     return res.status(500).json();

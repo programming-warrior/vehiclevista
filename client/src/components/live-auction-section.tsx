@@ -44,7 +44,7 @@ type AuctionResponse = {
   hasNextPage: boolean;
 };
 
-export default function LiveAuctionSection({ auctionVehicleType = "" }:any) {
+export default function LiveAuctionSection({itemType= "" ,auctionVehicleType = "" }:any) {
   const { socket } = useWebSocket();
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +57,7 @@ export default function LiveAuctionSection({ auctionVehicleType = "" }:any) {
     const fetchAuctions = async () => {
       try {
         setLoading(true);
-        const data: AuctionResponse = await getActiveAuctions("?type="+auctionVehicleType);
+        const data: AuctionResponse = await getActiveAuctions(`itemType=${itemType}&type=${auctionVehicleType}`);
 
         setAuctions(data.auctions);
 
@@ -171,7 +171,7 @@ export default function LiveAuctionSection({ auctionVehicleType = "" }:any) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {auctions.map((auction, idx) => (
-            <Link key={auction.id} href={`/auctions/${auction.id}`}>
+            <Link key={auction.id} href={`/auction/${auction.id}`}>
               <Card className="group relative overflow-hidden hover:shadow-lg transition-shadow duration-300">
                 <div className="relative aspect-[4/3]">
                   {auction.vehicle.images &&

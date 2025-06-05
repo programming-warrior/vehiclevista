@@ -6,6 +6,8 @@ import {
   vehicles,
   contactAttempts,
   notifications,
+  auctions,
+  bids,
 } from "../../../shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -45,7 +47,7 @@ const notificationWorker = new Worker(
         const [notification] = await db
           .insert(notifications)
           .values({
-            type: 'CONTACT_SELLER',
+            type: "CONTACT_SELLER",
             sentTo: seller.id,
             message: formattedMessage,
           })
@@ -73,10 +75,113 @@ const notificationWorker = new Worker(
           .where(eq(messageId, contactAttempts.id));
         console.log(e);
       }
+    } else if (job.name === "auctionBid-placed-success") {
+      const { bidId, userId, auctionId } = job.data;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(userId, users.id));
+
+        const [auction] = await db
+          .select()
+          .from(auctions)
+          .where(eq(auctionId, auctions.id));
+
+        const [bid] = await db.select().from(bids).where(eq(bids.id, bidId));
+
+        if (!auction || !user || !bid) throw new Error("Invalid data");
+
+        const formattedMessage = {
+          title: `Auction Bid ${bid.bidAmount} placed successfully`,
+          from: {
+            name: `system-generated`,
+            email: `system-generated`,
+          },
+          body: `Your bid for auction | ${auction.title} for amount ${bid.bidAmount} is successfull`,
+        };
+        console.log(formattedMessage);
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "AUCTION-BID",
+            sentTo: user.id,
+            message: formattedMessage,
+          })
+          .returning();
+        console.log('notificaton saved to the database');
+        await connection.publish(
+          `RECEIVE_NOTIFICATION`,
+          JSON.stringify({
+            type: "AUCTION-BID",
+            notificationId: notification.id,
+            to: userId,
+            message: formattedMessage,
+            createdAt: notification.createdAt,
+          })
+        );
+        console.log("notification published");
+      } catch (e) {
+        console.log(e);
+      }
+    } else if (job.name === "auctionBid-placed-failed") {
+      const {  userId, auctionId, bidAmount, refund } = job.data;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId));
+
+        const [auction] = await db
+          .select()
+          .from(auctions)
+          .where(eq(auctions.id, parseInt(auctionId)));
+
+        // const [bid] = await db.select().from(bids).where(eq(bids.id, bidId));
+
+        if (!auction || !user ) throw new Error("Invalid data");
+
+        const formattedMessage = {
+          title: `Auction Bid for ${bidAmount} Failed `,
+          from: {
+            name: `system-generated`,
+            email: `system-generated`,
+          },
+          body: `Your bid for auction | ${auction.title} for amount ${bidAmount} has failed. Refund has been initiated!`,
+        };
+        console.log(formattedMessage);
+
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "AUCTION-BID",
+            sentTo: user.id,
+            message: formattedMessage,
+          })
+          .returning();
+
+          console.log("notification saved");
+        await connection.publish(
+          `RECEIVE_NOTIFICATION`,
+          JSON.stringify({
+            type: "AUCTION-BID",
+            notificationId: notification.id,
+            to: userId,
+            message: formattedMessage,
+            createdAt: notification.createdAt,
+          })
+        );
+          console.log("notification published");
+
+      } catch (e) {
+        console.log(e);
+      }
     }
   },
   {
-    connection
+    connection,
   }
 );
 

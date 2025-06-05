@@ -376,7 +376,7 @@ export const auctions = pgTable("auctions", {
   startingPrice: real("starting_price").notNull(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
-  status: auctinStatusEnum().notNull().default("UPCOMING"), // upcoming, active, ended
+  status: auctinStatusEnum().notNull().default("UPCOMING"), // UPCOMING, RUNNING, ENDED
   currentBid: real("current_bid").default(0),
   totalBids: integer("total_bids").default(0),
   createdAt: timestamp("created_at").defaultNow(),

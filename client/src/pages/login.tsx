@@ -95,7 +95,7 @@ export default function LoginPage() {
       });
 
       if (res.sessionId) {
-        localStorage.setItem("sessionId", res.data.sessionId);
+        localStorage.setItem("sessionId", res.sessionId);
       }
 
       toast({

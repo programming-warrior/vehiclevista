@@ -8,25 +8,27 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
-import { verifyPayment } from "@/api";
+// import { verifyPayment } from "@/api";
 import { toast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
 
 export default function PaymentFormWrapper({
+  verifyPayment,
   clientSecret,
 }: {
+  verifyPayment: (paymentIntentId:string)=>void
   clientSecret: string;
 }) {
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>
-      <PaymentForm clientSecret={clientSecret} />
+      <PaymentForm clientSecret={clientSecret} verifyPayment={verifyPayment} />
     </Elements>
   );
 }
 
-function PaymentForm({ clientSecret }: { clientSecret: string }) {
+function PaymentForm({ clientSecret, verifyPayment }: { clientSecret: string, verifyPayment: (paymentIntentId:string)=>void }) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -61,10 +63,11 @@ function PaymentForm({ clientSecret }: { clientSecret: string }) {
       } else if (paymentIntent?.status === "succeeded") {
         try {
           console.log("Payment succeeded", paymentIntent);
+          
           await verifyPayment(paymentIntent.id);
           toast({
             title: "Payment verified",
-            description: "You will be notified when your listing is live",
+            description: "You will be notified",
           });
           setLocation("/")
         } catch (e) {

@@ -6,6 +6,7 @@ import Packages from "@/components/packages";
 import VehicleCard from "@/components/vehicle-card";
 import PaymentFormWrapper from "@/components/payment-form";
 import FindVehicleCard from "@/components/find-vehicle";
+import { verifyPayment } from "@/api";
 
 export default function SellerVehicleUpload() {
   const [vehicleData, setVehicleData] = useState<any | null>(null);
@@ -117,7 +118,7 @@ export default function SellerVehicleUpload() {
           />
         )}
         {paymentData && stage == 4 ? (
-          <PaymentFormWrapper clientSecret={paymentData.clientSecret} />
+          <PaymentFormWrapper verifyPayment={verifyPayment} clientSecret={paymentData.clientSecret} />
         ) : null}
       </main>
     </div>

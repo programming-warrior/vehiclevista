@@ -20,7 +20,9 @@ import { parseCsvFile, extractVehicles } from "../utils/helper";
 import multer from "multer";
 import { auctionQueue, bidQueue } from "../worker/queue";
 import { vehicleTypesEnum } from "../../shared/schema";
-
+import { stripe } from "../utils/stripe";
+import { CURRENCY } from "../utils/constants";
+import { paymentQueue } from "../worker/queue";
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 
 const upload = multer();
@@ -29,16 +31,37 @@ const auctionRouter = Router();
 
 auctionRouter.get("/get", async (req, res) => {
   try {
-    const { brand, model, page = "1", limit = "10", type } = req.query;
+    const {
+      brand,
+      model,
+      itemType,
+      page = "1",
+      limit = "10",
+      type,
+    } = req.query;
 
     const conditions = [eq(auctions.status, "RUNNING")];
 
-    if (brand && !/all/gi.test(brand as string))
-      conditions.push(eq(vehicles.make, String(brand)));
-    if (model && !/all/gi.test(model as string))
-      conditions.push(eq(vehicles.model, String(model)));
-    // Only filter by type if provided and valid
+    if (!itemType || ["VEHICLES", "NUMBERPLATE"].includes(String(itemType)))
+      return res.status(400).json({ error: "itemType not specified" });
+
+    conditions.push(eq(auctions.itemType, String(itemType).toUpperCase()));
+
     if (
+      String(itemType).toUpperCase() === "VEHICLE" &&
+      brand &&
+      String(brand).toLowerCase() !== "all"
+    )
+      conditions.push(eq(vehicles.make, String(brand)));
+    if (
+      String(itemType).toUpperCase() === "VEHICLE" &&
+      model &&
+      String(brand).toLowerCase() !== "all"
+    )
+      conditions.push(eq(vehicles.model, String(model)));
+
+    if (
+      String(itemType).toUpperCase() === "VEHICLE" &&
       type &&
       vehicleTypesEnum.enumValues.includes(
         String(
@@ -55,55 +78,99 @@ auctionRouter.get("/get", async (req, res) => {
         )
       );
     }
-
+    const MAXLIMIT = 50;
     const pageNum = parseInt(page as string, 10);
-    const pageSize = parseInt(limit as string, 10);
+    const pageSize =
+      parseInt(limit as string, 10) <= MAXLIMIT
+        ? parseInt(limit as string, 10)
+        : MAXLIMIT;
     const offset = (pageNum - 1) * pageSize;
 
-    const result = await db
-      .select({
-        auction: auctions,
-        vehicle: vehicles,
-      })
-      .from(auctions)
-      .innerJoin(vehicles, eq(auctions.itemId, vehicles.id))
-      .where(conditions.length ? and(...conditions) : undefined)
-      .limit(pageSize + 1)
-      .offset(offset);
+    let result: any;
+    let auctionsWithItemDetails: any;
 
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(auctions)
-      .innerJoin(vehicles, eq(auctions.itemId, vehicles.id))
-      .where(conditions.length ? and(...conditions) : undefined);
+    if (itemType === "VEHICLE") {
+      result = await db
+        .select({
+          auction: auctions,
+          vehicle: vehicles,
+        })
+        .from(auctions)
+        .innerJoin(vehicles, eq(auctions.itemId, vehicles.id))
+        .where(conditions.length ? and(...conditions) : undefined)
+        .limit(pageSize + 1)
+        .offset(offset);
 
-    const auctionsWithVehicleDetails = result.map((row) => {
-      const auction = row.auction as any;
-      const vehicle = row.vehicle as Vehicle;
-      return {
-        ...auction,
-        remainingTime: new Date(auction.endDate).getTime() - Date.now(),
-        vehicle: {
-          id: vehicle.id,
-          make: vehicle.make,
-          model: vehicle.model,
-          year: vehicle.year,
-          color: vehicle.color,
-          registration_num: vehicle.registration_num,
-          bodyType: vehicle.bodyType,
-          mileage: vehicle.mileage,
-          fuelType: vehicle.fuelType,
-          transmission: vehicle.transmission,
-          price: vehicle.price,
-          images: vehicle.images,
-        },
-      };
-    });
+      auctionsWithItemDetails = result.map((row: any) => {
+        const auction = row.auction as any;
+        const vehicle = row.vehicle as Vehicle;
+        return {
+          ...auction,
+          remainingTime: new Date(auction.endDate).getTime() - Date.now(),
+          vehicle: {
+            id: vehicle.id,
+            make: vehicle.make,
+            model: vehicle.model,
+            year: vehicle.year,
+            color: vehicle.color,
+            registration_num: vehicle.registration_num,
+            bodyType: vehicle.bodyType,
+            mileage: vehicle.mileage,
+            fuelType: vehicle.fuelType,
+            transmission: vehicle.transmission,
+            price: vehicle.price,
+            images: vehicle.images,
+          },
+        };
+      });
+    } else if (itemType === "NUMBERPLATE") {
+      result = await db
+        .select({
+          auction: auctions,
+          numberPlate: numberPlate,
+        })
+        .from(auctions)
+        .innerJoin(numberPlate, eq(auctions.itemId, numberPlate.id))
+        .where(conditions.length ? and(...conditions) : undefined)
+        .limit(pageSize + 1)
+        .offset(offset);
+
+      auctionsWithItemDetails = result.map((row: any) => {
+        const auction = row.auction as any;
+        const numberPlate = row.numberPlate as any;
+        return {
+          ...auction,
+          remainingTime: new Date(auction.endDate).getTime() - Date.now(),
+          numberPlate: {
+            id: numberPlate.id,
+            document_urls: numberPlate.docuemnt_url,
+          },
+        };
+      });
+    }
+
+    let totalCount: number = 0;
+
+    if (itemType === "VEHICLE") {
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(auctions)
+        .innerJoin(vehicles, eq(auctions.itemId, vehicles.id))
+        .where(conditions.length ? and(...conditions) : undefined);
+      totalCount = count;
+    } else if (itemType === "NUMBERPLATE") {
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(auctions)
+        .innerJoin(numberPlate, eq(auctions.itemId, numberPlate.id))
+        .where(conditions.length ? and(...conditions) : undefined);
+      totalCount = count;
+    }
 
     res.status(200).json({
-      auctions: auctionsWithVehicleDetails,
-      totalCount: count,
-      totalPages: Math.ceil(count / pageSize),
+      auctions: auctionsWithItemDetails,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
       currentPage: pageNum,
       hasNextPage: result.length > pageSize,
     });
@@ -167,12 +234,56 @@ auctionRouter.get("/get/:id", async (req, res) => {
   }
 });
 
+auctionRouter.post("/bids/verify-payment", verifyToken, async (req, res) => {
+  if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+  const { paymentIntentId } = req.body;
+
+  if (!paymentIntentId) {
+    return res.status(400).json({ error: "Missing paymentIntentId" });
+  }
+
+  try {
+    const redis = await RedisClientSingleton.getRedisClient();
+    const payment_session_redis = await redis.get(
+      `paymentSession:${paymentIntentId}`
+    );
+    // if (!payment_session_redis) {
+    //   return res.status(400).json({ error: "Payment Portal Expired" });
+    // }
+    // const parsedPaymentSession = JSON.parse(payment_session_redis);
+    // if (parsedPaymentSession.userId != req.userId) {
+    //   return res.status(401).json({
+    //     error: "You are not authorized to validate this payment",
+    //   });
+    // }
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (paymentIntent.metadata.userId != req.userId.toString())
+      return res.status(403).json({ error: "unauthorized" });
+
+    if (paymentIntent.status === "succeeded") {
+      const { auctionId, userId, bidAmount } = paymentIntent.metadata;
+      await redis.del(`paymentSession:${paymentIntentId}`);
+      await bidQueue.add("processBid", {
+        userId: req.userId,
+        paymentIntentId,
+        auctionId,
+        bidAmount,
+      });
+      return res.status(200).json({ success: true });
+    } else {
+      return res.status(400).json({ error: "Payment not successful yet" });
+    }
+  } catch (err) {
+    console.error("Stripe verification error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 auctionRouter.post(
   "/place/live-bid/:auctionId",
   verifyToken,
   async (req, res) => {
-    if (!req.userId || !req.card_verified)
-      return res.status(403).json({ error: "Unauthorized" });
+    if (!req.userId) return res.status(403).json({ error: "Unauthorized" });
     try {
       const auctionId = parseInt(req.params.auctionId, 10);
       if (isNaN(auctionId)) {
@@ -183,14 +294,63 @@ auctionRouter.post(
       if (!bidAmount || isNaN(bidAmount) || bidAmount < 0) {
         return res.status(400).json({ error: "invalid bidAmount" });
       }
+      // const result = await db
+      //   .select({
+      //     auction: auctions,
+      //   })
+      //   .from(auctions)
+      //   .where(eq(auctions.id, auctionId))
 
-      await bidQueue.add("processBid", {
-        auctionId,
-        userId: req.userId,
-        bidAmount,
+      // const row = result[0] ?? null;
+      // if (!row) return res.status(404).json({error:"Auction not found"});
+
+      // const now = new Date();
+      // if (now < row.auction.startDate || now > row.auction.endDate) {
+      //   return res.status(400).json({error:"Auction not started yet"});
+      // }
+
+      // if ((row.auction.currentBid ?? 0) >= bidAmount) {
+      //    return res.status(400).json({error:"Bid amount needs to be greater than the currentBid"});
+      // }
+      const BID_REQUEST_CHARGE_AMOUNT = 2;
+      const amountInPence = Math.round(BID_REQUEST_CHARGE_AMOUNT * 100);
+      //create payment session
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInPence,
+        currency: CURRENCY,
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          auctionId: auctionId.toString(),
+          userId: req.userId.toString(),
+          bidAmount: bidAmount
+        },
       });
-
-      return res.status(202).json({ message: "Bid queued" });
+      const redis = await RedisClientSingleton.getRedisClient();
+      await redis.set(
+        `paymentSession:${paymentIntent.id}`,
+        JSON.stringify({
+          userId: req.userId,
+          status: "PENDING",
+          auctionId: auctionId,
+          bidAmount: bidAmount,
+          chargedAmount: BID_REQUEST_CHARGE_AMOUNT,
+        }),
+        { EX: 60 * 2 } // 2 minutes
+      );
+      // await bidQueue.add("processBid", {
+      //   auctionId,
+      //   userId: req.userId,
+      //   bidAmount,
+      // });
+      return res.status(202).json({
+        message: "success",
+        clientSecret: paymentIntent.client_secret,
+        timeout: "2 mintues",
+        chargedAmount: BID_REQUEST_CHARGE_AMOUNT,
+        currency: CURRENCY,
+      });
     } catch (e: any) {
       if (e.message === "auction not found") {
         return res.status(404).json({ error: e.message });

@@ -35,10 +35,10 @@ export default function HeroSection() {
       model: z.string(),
       type: z.string(),
       transmissionType: z.string(),
-      minBudget: z.coerce.number().min(0, "Minimum budget cannot be negative"),
-      maxBudget: z.coerce.number().min(0, "Maximum budget cannot be negative"),
+      minBudget: z.coerce.number(),
+      maxBudget: z.coerce.number(),
     })
-    .refine((data) => data.minBudget < data.maxBudget, {
+    .refine((data) => data.minBudget <= data.maxBudget, {
       message: "Minimum budget must be less than maximum budget",
       path: ["minBudget"],
     });

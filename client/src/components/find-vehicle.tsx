@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { dvsaApi } from "@/api";
+import { dvsaApi, vehicleLookUp } from "@/api";
 
 // Simple schema for registration and mileage
 const formSchema = z.object({
@@ -42,7 +42,7 @@ const FindVehicleCard = ({
   async function onSubmit(data: any) {
     setIsLoading(true);
     try {
-      const vehicleInfo = await dvsaApi(data.registration_num);
+      const vehicleInfo = await vehicleLookUp(data.registration_num, data.mileage);
 
       const vehicleData = {
         ...vehicleInfo,

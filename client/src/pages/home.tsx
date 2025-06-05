@@ -145,13 +145,13 @@ export default function Home() {
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">Live Auctions</h2>
           <Link
-            href="/auctions"
+            href="/auction"
             className="text-sm bg-gray-100 px-4 py-1 rounded-full hover:bg-gray-200"
           >
             View All
           </Link>
         </div>
-        <LiveAuctionSection auctionVehicleType="" />
+        <LiveAuctionSection itemType="VEHICLE" auctionVehicleType="" />
       </section>
 
       {/* Explore Categories Section */}
