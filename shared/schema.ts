@@ -393,6 +393,7 @@ export const numberPlate = pgTable("number_plate",{
   plate_number: text().notNull(),
   docuemnt_url: text().array().notNull(),
   sellerId: integer("seller_id").references(()=>users.id),
+  status: text().notNull().default('PENDING'), //PENDING, ACTIVE, EXPIRED
   created_at: timestamp().defaultNow()
 })
 

@@ -39,12 +39,16 @@ import VehicleUploadForm from "@/components/seller/vehicle-upload-form";
 import { useState } from "react";
 import Packages from "@/components/packages";
 import PaymentFormWrapper from "@/components/payment-form";
-import { auctionDrafts } from "@shared/schema";
+import FindVehicleCard from "@/components/find-vehicle";
+import NumberPlateForm from "@/components/numberplate-create-form";
 
 export default function SellerAuctionUpload() {
   const [auctionData, setAuctionData] = useState<any | null>(null);
+  const [preVehicleData, setPreVehicleData] = useState<any | null>(null);
   const [itemData, setItemData] = useState<any | null>(null);
   const [paymentData, setPaymentData] = useState<any | null>(null);
+  const [numberplateData, setNumberplateData] = useState<any | null>(null);
+
   const [stage, setStage] = useState<number>(1);
 
   const stages = [
@@ -134,27 +138,32 @@ export default function SellerAuctionUpload() {
 
           {stage === 2 && auctionData && (
             <div>
-              {auctionData.itemType === "VEHICLE" && (
-                <VehicleUploadForm
+              {auctionData.itemType === "VEHICLE" &&
+                (!preVehicleData ? (
+                  <FindVehicleCard
+                    pullData={(data) => {
+                      setPreVehicleData(data);
+                    }}
+                  />
+                ) : (
+                  <VehicleUploadForm
+                    prefetchedData={preVehicleData}
+                    auctionDraftId={auctionData.draftId}
+                    pullData={(data) => {
+                      setItemData(data);
+                      setStage(3);
+                    }}
+                  />
+                ))}
+
+              {auctionData.itemType === "REGISTRATION_PLATE" && (
+                <NumberPlateForm
                   auctionDraftId={auctionData.draftId}
                   pullData={(data) => {
                     setItemData(data);
                     setStage(3);
                   }}
                 />
-              )}
-
-              {auctionData.itemType === "REGISTRATION_PLATE" && (
-                <div className="bg-white rounded-xl shadow-lg p-8">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      Registration Plate Form
-                    </h2>
-                    <p className="text-gray-600">
-                      Registration plate form will be implemented here
-                    </p>
-                  </div>
-                </div>
               )}
             </div>
           )}

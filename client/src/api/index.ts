@@ -33,7 +33,8 @@ import {
     getAuctionById, 
     placeLiveBid, 
     getBidsForAuction,
-    UpdateDraftAuctionWithItemDraft
+    UpdateDraftAuctionWithItemDraft,
+    createNumberPlate
 } from "./auction-api";
 
 import { getRunningRaffle, purchaseRaffleTicket, incrementRaffleViews, incrementRaffleClicks } from "./raffle-api";
@@ -158,6 +159,7 @@ export {
   placeLiveBid,
   getBidsForAuction,
   UpdateDraftAuctionWithItemDraft,
+  createNumberPlate,
 
   registerUser,
   loginUser,

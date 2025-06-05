@@ -8,6 +8,7 @@ import {
   users,
   auctionDrafts,
   vehicleDrafts,
+  numberPlate,
 } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
@@ -315,14 +316,54 @@ auctionRouter.patch("/update-draft/:draftId", verifyToken, async (req, res) => {
         .from(vehicleDrafts)
         .where(eq(vehicleDrafts.id, parseInt(itemId)));
       fetchedItem = row;
+    } else if (itemType === "NUMBERPLATE") {
+      const [row] = await db
+        .select()
+        .from(numberPlate)
+        .where(eq(numberPlate.id, parseInt(itemId)));
+      fetchedItem = row;
     }
-    if (!fetchedItem) return res.status(404).json({ error: "draft Item not found" });
+    if (!fetchedItem)
+      return res.status(404).json({ error: "draft Item not found" });
     await db.update(auctionDrafts).set({ itemId: fetchedItem.id });
 
     console.log("Auction Draft updated");
 
     return res.status(200).json({
       message: "Auction updated successfully",
+    });
+  } catch (e: any) {
+    console.error("Error creating auction:", e);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+auctionRouter.post("/numberplate/create", verifyToken, async (req, res) => {
+  if (!req.userId || !req.card_verified) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+  try {
+    const { plate_number, document_url } = req.body;
+    console.log(req.body);
+    if (!plate_number || !plate_number.trim() || !document_url) {
+      return res.status(400).json({ error: "Invalid input" });
+    }
+
+    const newNumberPlate = {
+      plate_number: plate_number,
+      docuemnt_url: document_url,
+      sellerId: req.userId,
+    };
+    const dbReturnData = await db
+      .insert(numberPlate)
+      .values(newNumberPlate)
+      .returning();
+
+    const savedNumberPlateDetails = dbReturnData[0];
+
+    return res.status(200).json({
+      message: "NumberPlate created successfully",
+      draftId: savedNumberPlateDetails.id,
     });
   } catch (e: any) {
     console.error("Error creating auction:", e);

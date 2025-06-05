@@ -25,6 +25,29 @@ export async function createAuction(
   }
 }
 
+export async function createNumberPlate(
+  data:any
+) {
+  try {
+    const response = await axios.post(
+      `${BACKEND_URL}/api/auction/numberplate/create`,
+      {
+        ...data,
+      },
+      {
+        withCredentials:true,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message);
+  }
+}
+
 export async function UpdateDraftAuctionWithItemDraft(
   auctionDraftId: number,
   itemId:number,

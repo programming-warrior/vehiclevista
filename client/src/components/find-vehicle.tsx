@@ -60,7 +60,10 @@ const FindVehicleCard = ({
       });
     } catch (error: any) {
       if (pullData && typeof pullData === "function") {
-        pullData(null);
+        pullData({
+          mileage: data.mileage,
+          registration_num: data.registration_num,
+        });
       }
       toast({
         title: "Error",
