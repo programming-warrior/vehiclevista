@@ -139,16 +139,16 @@ export default function AuctionIdPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-8 flex items-center justify-center min-h-[50vh] bg-gradient-to-br from-blue-50 to-white">
-        <div className="text-xl font-medium text-blue-900">Loading vehicle details...</div>
+      <div className="container mx-auto p-8 flex items-center justify-center min-h-[50vh]">
+        <div className="text-xl font-medium">Loading vehicle details...</div>
       </div>
     );
   }
 
   if (!auction) {
     return (
-      <div className="container mx-auto p-8 text-center min-h-[50vh] bg-gradient-to-br from-blue-50 to-white">
-        <div className="text-xl font-medium text-blue-900">Auction not found</div>
+      <div className="container mx-auto p-8 text-center min-h-[50vh]">
+        <div className="text-xl font-medium">Auction not found</div>
       </div>
     );
   }
@@ -156,393 +156,354 @@ export default function AuctionIdPage() {
   
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
-      <div className="container mx-auto p-4 md:p-6">
-        {!auction ? (
-          <div className="text-center py-16">Auction not found</div>
-        ) : (
-          <div className="bg-white shadow-2xl rounded-2xl overflow-hidden border border-blue-100">
-            {/* Auction Status Bar */}
-            <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white p-6">
-              <div className="flex flex-wrap items-center justify-between gap-6">
-                <div className="flex items-center gap-8">
-                  <div className="flex flex-col bg-blue-800 bg-opacity-50 rounded-lg p-4 backdrop-blur-sm">
-                    <span className="text-xs uppercase tracking-wide text-blue-200 mb-1">
-                      Current Bid
-                    </span>
-                    <span className="text-3xl font-bold flex items-center text-white">
-                      <DollarSign size={24} className="mr-1 text-yellow-400" />
-                      {auction.currentBid}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col bg-blue-800 bg-opacity-50 rounded-lg p-4 backdrop-blur-sm">
-                    <span className="text-xs uppercase tracking-wide text-blue-200 mb-1">
-                      Time Left
-                    </span>
-                    <span className="text-xl font-medium flex items-center text-white">
-                      <Clock size={20} className="mr-2 text-red-400" />
-                      <CountdownTimer auction={auction} setAuction={setAuction} />
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col bg-blue-800 bg-opacity-50 rounded-lg p-4 backdrop-blur-sm">
-                    <span className="text-xs uppercase tracking-wide text-blue-200 mb-1">
-                      Total Bids
-                    </span>
-                    <span className="text-xl font-medium flex items-center text-white">
-                      <Users size={20} className="mr-2 text-green-400" />
-                      {bids.length}
-                    </span>
-                  </div>
+    <div className="container mx-auto p-4 md:p-6 bg-gray-50">
+      {!auction ? (
+        <div className="text-center py-16">Auction not found</div>
+      ) : (
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          {/* Auction Status Bar */}
+          <div className="bg-gray-800 text-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-6">
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col">
+                  <span className="text-sm uppercase tracking-wide">
+                    Current Bid
+                  </span>
+                  <span className="text-2xl font-bold flex items-center">
+                    <DollarSign size={20} className="mr-1" />
+                    {auction.currentBid}
+                  </span>
                 </div>
 
-                <Button
-                  onClick={() => setBidOpen(true)}
-                  className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-4 px-10 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-semibold text-lg"
-                >
-                  Place Bid
-                </Button>
+                <div className="flex flex-col">
+                  <span className="text-sm uppercase tracking-wide">
+                    Time Left
+                  </span>
+                  <span className="text-2xl font-medium flex items-center">
+                    <Clock size={20} className="mr-1" />
+                    <CountdownTimer auction={auction} setAuction={setAuction} />
+                  </span>
+                </div>
+
+                <div className="flex flex-col">
+                  <span className="text-sm uppercase tracking-wide">
+                    Total Bids
+                  </span>
+                  <span className="text-2xl font-medium flex items-center">
+                    <Users size={20} className="mr-1" />
+                    {bids.length}
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => setBidOpen(true)}
+                className="bg-green-600 hover:bg-green-700 text-white py-3 px-8 rounded-md"
+              >
+                Place Bid
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-6">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold mb-2">
+                {auction.title ||
+                  `${auction.vehicle?.make} ${auction.vehicle?.model} ${auction.vehicle?.year}`}
+              </h1>
+              <div className="flex items-center gap-2 text-gray-600">
+                <MapPin size={16} />
+                <span>{auction.location || "Location not specified"}</span>
               </div>
             </div>
 
-            <div className="p-8">
-              <div className="mb-10">
-                <h1 className="text-4xl font-bold mb-4 text-gray-900 bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent">
-                  {auction.title ||
-                    `${auction.vehicle?.make} ${auction.vehicle?.model} ${auction.vehicle?.year}`}
-                </h1>
-                <div className="flex items-center gap-3 text-blue-600 bg-blue-50 rounded-lg p-3 w-fit">
-                  <MapPin size={18} className="text-blue-500" />
-                  <span className="font-medium">{auction.location || "Location not specified"}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Left column - Gallery */}
+              <div className="lg:col-span-2">
+                {auction.vehicle?.images &&
+                auction.vehicle.images.length > 0 ? (
+                  <ImageGallery images={auction.vehicle.images} />
+                ) : (
+                  <div className="aspect-[4/3] bg-gray-200 flex items-center justify-center rounded-md mb-6">
+                    <p>No images available</p>
+                  </div>
+                )}
+
+                {/* Description with ReactQuill */}
+                <div className="mt-8">
+                  <h2 className="text-xl font-bold mb-4 flex items-center">
+                    <Info size={20} className="mr-2" />
+                    Vehicle Description
+                  </h2>
+                  <div className="border rounded-md p-4 bg-gray-50">
+                    <ReactQuill
+                      value={auction.description || "No description available."}
+                      readOnly={true}
+                      theme="bubble"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                {/* Left column - Gallery */}
-                <div className="lg:col-span-2">
-                  <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-6 shadow-lg border border-blue-100">
-                    {auction.vehicle?.images &&
-                    auction.vehicle.images.length > 0 ? (
-                      <ImageGallery images={auction.vehicle.images} />
-                    ) : (
-                      <div className="aspect-[4/3] bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center rounded-xl mb-6 border-2 border-dashed border-blue-200">
-                        <p className="text-blue-600 font-medium">No images available</p>
-                      </div>
-                    )}
-                  </div>
+              {/* Right column - Vehicle details & Bid history */}
+              <div className="lg:col-span-1 space-y-6">
+                {/* Vehicle details card */}
+                <div className="bg-gray-50 border rounded-lg p-5 shadow-sm">
+                  <h2 className="text-xl font-bold mb-4 border-b pb-2">
+                    Vehicle Details
+                  </h2>
 
-                  {/* Description with ReactQuill */}
-                  <div className="mt-8">
-                    <h2 className="text-2xl font-bold mb-6 flex items-center text-gray-900">
-                      <div className="bg-blue-100 rounded-lg p-2 mr-3">
-                        <Info size={24} className="text-blue-600" />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <Tag size={18} className="mr-2" />
+                        <span>Make</span>
                       </div>
-                      Vehicle Description
-                    </h2>
-                    <div className="border border-blue-200 rounded-xl p-6 bg-gradient-to-br from-blue-50 to-white shadow-lg">
-                      <ReactQuill
-                        value={auction.description || "No description available."}
-                        readOnly={true}
-                        theme="bubble"
-                      />
+                      <span className="font-medium">
+                        {auction.vehicle?.make || "N/A"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <Tag size={18} className="mr-2" />
+                        <span>Model</span>
+                      </div>
+                      <span className="font-medium">
+                        {auction.vehicle?.model || "N/A"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <Calendar size={18} className="mr-2" />
+                        <span>Year</span>
+                      </div>
+                      <span className="font-medium">
+                        {auction.vehicle?.year || "N/A"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <Gauge size={18} className="mr-2" />
+                        <span>Mileage</span>
+                      </div>
+                      <span className="font-medium">
+                        {auction.vehicle?.mileage || "N/A"} km
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <Palette size={18} className="mr-2" />
+                        <span>Color</span>
+                      </div>
+                      <span className="font-medium">
+                        {auction.vehicle?.color || "N/A"}
+                      </span>
                     </div>
                   </div>
+                  <Button
+                    variant="destructive"
+                    className="mt-2 w-full"
+                    size="lg"
+                    onClick={() => setReportOpen(true)}
+                  >
+                    <Info className="h-4 w-4 mr-2" />
+                    Report Auction
+                  </Button>
                 </div>
 
-                {/* Right column - Vehicle details & Bid history */}
-                <div className="lg:col-span-1 space-y-8">
-                  {/* Vehicle details card */}
-                  <div className="bg-gradient-to-br from-white to-blue-50 border border-blue-200 rounded-2xl p-6 shadow-xl">
-                    <h2 className="text-xl font-bold mb-6 border-b border-blue-200 pb-3 text-gray-900 flex items-center">
-                      <div className="bg-blue-100 rounded-lg p-2 mr-3">
-                        <Tag size={20} className="text-blue-600" />
-                      </div>
-                      Vehicle Details
-                    </h2>
+                {/* Bid history card */}
+                <div className="bg-gray-50 border rounded-lg p-5 shadow-sm">
+                  <h2 className="text-xl font-bold mb-4 border-b pb-2 flex items-center">
+                    <Users size={20} className="mr-2" />
+                    Bid History
+                  </h2>
 
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between py-2">
-                        <div className="flex items-center text-blue-700">
-                          <div className="bg-blue-100 rounded-lg p-1.5 mr-3">
-                            <Tag size={16} className="text-blue-600" />
-                          </div>
-                          <span className="font-medium">Make</span>
-                        </div>
-                        <span className="font-semibold text-gray-900">
-                          {auction.vehicle?.make || "N/A"}
-                        </span>
+                  <div className="max-h-80 overflow-y-auto">
+                    {bids.length === 0 ? (
+                      <div className="text-center py-6 text-gray-500">
+                        No bids placed yet
                       </div>
-
-                      <div className="flex items-center justify-between py-2">
-                        <div className="flex items-center text-blue-700">
-                          <div className="bg-blue-100 rounded-lg p-1.5 mr-3">
-                            <Tag size={16} className="text-blue-600" />
-                          </div>
-                          <span className="font-medium">Model</span>
-                        </div>
-                        <span className="font-semibold text-gray-900">
-                          {auction.vehicle?.model || "N/A"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between py-2">
-                        <div className="flex items-center text-blue-700">
-                          <div className="bg-blue-100 rounded-lg p-1.5 mr-3">
-                            <Calendar size={16} className="text-blue-600" />
-                          </div>
-                          <span className="font-medium">Year</span>
-                        </div>
-                        <span className="font-semibold text-gray-900">
-                          {auction.vehicle?.year || "N/A"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between py-2">
-                        <div className="flex items-center text-blue-700">
-                          <div className="bg-blue-100 rounded-lg p-1.5 mr-3">
-                            <Gauge size={16} className="text-blue-600" />
-                          </div>
-                          <span className="font-medium">Mileage</span>
-                        </div>
-                        <span className="font-semibold text-gray-900">
-                          {auction.vehicle?.mileage || "N/A"} km
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between py-2">
-                        <div className="flex items-center text-blue-700">
-                          <div className="bg-blue-100 rounded-lg p-1.5 mr-3">
-                            <Palette size={16} className="text-blue-600" />
-                          </div>
-                          <span className="font-medium">Color</span>
-                        </div>
-                        <span className="font-semibold text-gray-900">
-                          {auction.vehicle?.color || "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      className="mt-6 w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl py-3 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                      size="lg"
-                      onClick={() => setReportOpen(true)}
-                    >
-                      <Info className="h-4 w-4 mr-2" />
-                      Report Auction
-                    </Button>
-                  </div>
-
-                  {/* Bid history card */}
-                  <div className="bg-gradient-to-br from-white to-blue-50 border border-blue-200 rounded-2xl p-6 shadow-xl">
-                    <h2 className="text-xl font-bold mb-6 border-b border-blue-200 pb-3 flex items-center text-gray-900">
-                      <div className="bg-blue-100 rounded-lg p-2 mr-3">
-                        <Users size={20} className="text-blue-600" />
-                      </div>
-                      Bid History
-                    </h2>
-
-                    <div className="max-h-80 overflow-y-auto rounded-lg">
-                      {bids.length === 0 ? (
-                        <div className="text-center py-8 text-blue-600 bg-blue-50 rounded-lg">
-                          <Users size={48} className="mx-auto mb-3 text-blue-400" />
-                          <p className="font-medium">No bids placed yet</p>
-                        </div>
-                      ) : (
-                        <div className="bg-white rounded-lg border border-blue-100 overflow-hidden">
-                          <table className="w-full text-sm">
-                            <thead className="bg-gradient-to-r from-blue-50 to-blue-100">
-                              <tr className="text-left text-blue-800">
-                                <th className="pb-3 pt-3 px-3 font-semibold">User</th>
-                                <th className="pb-3 pt-3 px-3 font-semibold">Amount</th>
-                                <th className="pb-3 pt-3 px-3 font-semibold">Time</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {bids.map((bid: any, idx: number) => (
-                                <tr key={idx} className="border-t border-blue-100 hover:bg-blue-50 transition-colors duration-150">
-                                  <td className="py-3 px-3 font-medium text-gray-900">
-                                    {bid.user.username}
-                                  </td>
-                                  <td className="py-3 px-3 font-semibold text-blue-600">${bid.bidAmount}</td>
-                                  <td className="py-3 px-3 text-gray-500 text-xs">
-                                    {new Date(bid.createdAt).toLocaleString(
-                                      "en-US",
-                                      {
-                                        month: "short",
-                                        day: "numeric",
-                                        hour: "numeric",
-                                        minute: "2-digit",
-                                        hour12: true,
-                                      }
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-gray-600">
+                            <th className="pb-2">User</th>
+                            <th className="pb-2">Amount</th>
+                            <th className="pb-2">Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bids.map((bid: any, idx: number) => (
+                            <tr key={idx} className="border-t">
+                              <td className="py-2 font-medium">
+                                {bid.user.username}
+                              </td>
+                              <td className="py-2">${bid.bidAmount}</td>
+                              <td className="py-2 text-gray-500">
+                                {new Date(bid.createdAt).toLocaleString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  }
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        )}
-        
-        {/* Payment Dialog */}
-        <Dialog open={paymentformOpen} onOpenChange={setPaymentformOpen}>
-          <DialogContent className="sm:max-w-3xl bg-gradient-to-br from-white to-blue-50 border border-blue-200">
-            <DialogHeader>
-              <DialogTitle className="text-2xl text-blue-900">Pay the fee</DialogTitle>
-              <DialogDescription className="text-blue-700">
-                {paymentInfo.timeout && (
-                  <h1 className="font-semibold">Payment Expires in {paymentInfo.timeout}</h1>
-                )}
-                {paymentInfo.chargedAmount && (
-                  <h1 className="font-semibold">
-                    Amount of {paymentInfo.chargedAmount}{" "}
-                    {paymentInfo.chargedAmount} would be deducted
-                  </h1>
-                )}
-              </DialogDescription>
-            </DialogHeader>
-            <PaymentFormWrapper verifyPayment={verifyBidPayment} clientSecret={paymentInfo.clientSecret} />
-          </DialogContent>
-        </Dialog>
-        
-        {/* Bid Dialog */}
-        <Dialog open={bidOpen} onOpenChange={setBidOpen}>
-          <DialogContent className="sm:max-w-4xl bg-gradient-to-br from-white to-blue-50 border border-blue-200">
-            <DialogHeader>
-              <DialogTitle className="text-3xl font-bold text-blue-900">Place Your Bid</DialogTitle>
-              <DialogDescription className="text-blue-700">
-                Enter your bid amount and confirm to place a live bid.
-              </DialogDescription>
-            </DialogHeader>
+        </div>
+      )}
+      <Dialog open={paymentformOpen} onOpenChange={setPaymentformOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Pay the fee</DialogTitle>
+            <DialogDescription>
+              {paymentInfo.timeout && (
+                <h1>Payment Expires in {paymentInfo.timeout}</h1>
+              )}
+              {paymentInfo.chargedAmount && (
+                <h1>
+                  Amount of {paymentInfo.chargedAmount}{" "}
+                  {paymentInfo.chargedAmount} would be deducted
+                </h1>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <PaymentFormWrapper verifyPayment={verifyBidPayment} clientSecret={paymentInfo.clientSecret} />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={bidOpen} onOpenChange={setBidOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Place Your Bid</DialogTitle>
+            <DialogDescription>
+              Enter your bid amount and confirm to place a live bid.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-6">
-              <div className="space-y-6">
-                <div className="rounded-xl overflow-hidden shadow-lg border border-blue-200">
-                  <img
-                    src={auction.vehicle?.images?.[0]}
-                    alt="Vehicle"
-                    className="w-full aspect-video object-cover"
-                  />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-4">
+            <div className="space-y-4">
+              <div className="rounded-md overflow-hidden">
+                <img
+                  src={auction.vehicle?.images?.[0]}
+                  alt="Vehicle"
+                  className="w-full aspect-video object-cover"
+                />
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-md space-y-3">
+                <div className="flex items-center">
+                  <DollarSign size={18} className="mr-2 text-gray-600" />
+                  <span className="font-semibold">Current Bid:</span>
+                  <span className="ml-2">${currentBid}</span>
                 </div>
 
-                <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl space-y-4 border border-blue-200 shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-blue-700">
-                      <DollarSign size={20} className="mr-3 text-yellow-500" />
-                      <span className="font-semibold">Current Bid:</span>
-                    </div>
-                    <span className="font-bold text-xl text-gray-900">${currentBid}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-blue-700">
-                      <Users size={20} className="mr-3 text-green-500" />
-                      <span className="font-semibold">Total Bids:</span>
-                    </div>
-                    <span className="font-bold text-xl text-gray-900">{totalBids}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-blue-700">
-                      <Clock size={20} className="mr-3 text-red-500" />
-                      <span className="font-semibold">Time Left:</span>
-                    </div>
-                    <span className="font-bold text-xl text-gray-900">
-                      <CountdownTimer auction={auction} setAuction={setAuction} />
-                    </span>
-                  </div>
+                <div className="flex items-center">
+                  <Users size={18} className="mr-2 text-gray-600" />
+                  <span className="font-semibold">Total Bids:</span>
+                  <span className="ml-2">{totalBids}</span>
                 </div>
 
-                <div className="bg-gradient-to-br from-white to-blue-50 p-6 border border-blue-200 rounded-xl shadow-lg">
-                  <div className="font-bold mb-4 text-blue-900 text-lg">Enter Bid Amount</div>
-                  <input
-                    type="number"
-                    className={`w-full border-2 rounded-xl px-4 py-3 text-lg font-semibold transition-all duration-200 ${
-                      bidError ? "border-red-500 bg-red-50 focus:border-red-600" : "border-blue-300 bg-white focus:border-blue-500"
-                    } focus:outline-none focus:ring-4 focus:ring-blue-100`}
-                    placeholder={`Min bid: $${currentBid}`}
-                    value={bidAmount}
-                    onChange={handleBidInput}
-                  />
-                  {bidError && (
-                    <div className="text-red-500 text-sm mt-2 font-medium">{bidError}</div>
-                  )}
-
-                  <Button
-                    className="mt-6 w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 rounded-xl py-4 text-lg font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                    disabled={!!bidError || !bidAmount}
-                    onClick={handlePlaceBid}
-                  >
-                    Place Bid Now
-                  </Button>
+                <div className="flex items-center">
+                  <Clock size={18} className="mr-2 text-gray-600" />
+                  <span className="font-semibold">Time Left:</span>
+                  <span className="ml-2">
+                    <CountdownTimer auction={auction} setAuction={setAuction} />
+                  </span>
                 </div>
               </div>
 
-              <div>
-                <div className="mb-4 font-bold flex items-center text-blue-900 text-lg">
-                  <div className="bg-blue-100 rounded-lg p-2 mr-3">
-                    <Users size={20} className="text-blue-600" />
-                  </div>
-                  Bid History
-                </div>
+              <div className="p-4 border rounded-md">
+                <div className="font-semibold mb-2">Enter Bid Amount</div>
+                <input
+                  type="number"
+                  className={`w-full border rounded-md px-3 py-2 ${
+                    bidError ? "border-red-500 bg-red-50" : "border-gray-300"
+                  }`}
+                  placeholder={`Min bid: $${currentBid}`}
+                  value={bidAmount}
+                  onChange={handleBidInput}
+                />
+                {bidError && (
+                  <div className="text-red-500 text-xs mt-1">{bidError}</div>
+                )}
 
-                <div className="border-2 border-blue-200 rounded-xl h-[450px] overflow-y-auto bg-white shadow-lg">
-                  {bids.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-blue-600 p-6">
-                      <Users size={64} className="mb-4 text-blue-400" />
-                      <p className="font-semibold text-lg">No bids placed yet</p>
-                      <p className="text-sm text-blue-500 mt-2">Be the first to bid!</p>
-                    </div>
-                  ) : (
-                    <table className="w-full text-sm">
-                      <thead className="bg-gradient-to-r from-blue-100 to-blue-200 sticky top-0">
-                        <tr>
-                          <th className="text-left py-4 px-4 font-bold text-blue-800">
-                            Bidder
-                          </th>
-                          <th className="text-left py-4 px-4 font-bold text-blue-800">
-                            Amount
-                          </th>
-                          <th className="text-left py-4 px-4 font-bold text-blue-800">
-                            Time
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {bids.map((bid: any, idx: number) => (
-                          <tr key={idx} className="border-t border-blue-100 hover:bg-blue-50 transition-colors duration-150">
-                            <td className="py-4 px-4 font-semibold text-gray-900">{bid.user.username}</td>
-                            <td className="py-4 px-4 font-bold text-blue-600">
-                              ${bid.bidAmount}
-                            </td>
-                            <td className="py-4 px-4 text-gray-500 text-xs">
-                              {bid.createdAt}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
+                <Button
+                  className="mt-4 w-full bg-green-600 hover:bg-green-700"
+                  disabled={!!bidError || !bidAmount}
+                  onClick={handlePlaceBid}
+                >
+                  Place Bid Now
+                </Button>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-        
-        <ReportDialog
-          isOpen={reportOpen}
-          onOpenChange={setReportOpen}
-          type="auction"
-          targetId={id}
-        />
-      </div>
+
+            <div>
+              <div className="mb-3 font-semibold flex items-center">
+                <Users size={18} className="mr-2" />
+                Bid History
+              </div>
+
+              <div className="border rounded-md h-[400px] overflow-y-auto bg-white">
+                {bids.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    No bids placed yet
+                  </div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-semibold">
+                          Bidder
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold">
+                          Amount
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold">
+                          Time
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bids.map((bid: any, idx: number) => (
+                        <tr key={idx} className="border-t hover:bg-gray-50">
+                          <td className="py-3 px-4">{bid.user.username}</td>
+                          <td className="py-3 px-4 font-medium">
+                            ${bid.bidAmount}
+                          </td>
+                          <td className="py-3 px-4 text-gray-500">
+                            {bid.createdAt}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <ReportDialog
+        isOpen={reportOpen}
+        onOpenChange={setReportOpen}
+        type="auction"
+        targetId={id}
+      />
     </div>
   );
 }

@@ -43,6 +43,31 @@ export async function getBidsForRaffle(auctionId: string) {
   }
 }
 
+export async function verifyTicketPayment(
+    paymentIntentId: any
+  ) {
+    try {
+      const sessionId = localStorage.getItem("sessionId");
+      const response = await axios.post(
+        `${BACKEND_URL}/api/raffle/purchase/verify-payment`,
+        {
+          paymentIntentId
+        },
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${sessionId}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.error || "Failed to fetch notifications"
+      );
+    }
+  }
+
 export async function purchaseRaffleTicket(raffleId: string, ticketQuantity: string) {
   try {
     const response = await axios.post(

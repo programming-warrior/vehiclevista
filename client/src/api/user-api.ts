@@ -17,23 +17,27 @@ export async function registerUser(
   }
 }
 
-
-export async function getNotifications(queryString: string){
+export async function getNotifications(queryString: string) {
   try {
     const sessionId = localStorage.getItem("sessionId");
-    const response = await axios.get(`${BACKEND_URL}/api/user/notifications?`+ queryString, {
-      withCredentials: true,
-      headers: {
-        Authorization: `Bearer ${sessionId}`,
-      },
-    });
+    const response = await axios.get(
+      `${BACKEND_URL}/api/user/notifications?` + queryString,
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${sessionId}`,
+        },
+      }
+    );
     return response.data;
   } catch (error: any) {
-    throw new Error(error.response?.data?.error || "Failed to fetch notifications");
+    throw new Error(
+      error.response?.data?.error || "Failed to fetch notifications"
+    );
   }
 }
 
-export async function markNotificationRead(notificationId: number){
+export async function markNotificationRead(notificationId: number) {
   try {
     const sessionId = localStorage.getItem("sessionId");
     const response = await axios.patch(
@@ -48,35 +52,43 @@ export async function markNotificationRead(notificationId: number){
     );
     return response.data;
   } catch (error: any) {
-    console.log(error)
+    console.log(error);
     // throw new Error(error.response?.data?.error || "Failed to fetch notifications");
   }
 }
 
-
-export async function contactSeller({vehicleId, message}: {vehicleId: string, message: string}) {
+export async function contactSeller({
+  vehicleId,
+  message,
+}: {
+  vehicleId: string;
+  message: string;
+}) {
   if (!vehicleId || !message) {
     throw new Error("Vehicle ID and message are required");
   }
   try {
     const sessionId = localStorage.getItem("sessionId");
-    const response = await axios.post(`${BACKEND_URL}/api/user/contact-seller`, {
-      vehicleId,
-      message
-    }, {
-      withCredentials: true,
-      headers: {
-        Authorization: `Bearer ${sessionId}`,
+    const response = await axios.post(
+      `${BACKEND_URL}/api/user/contact-seller`,
+      {
+        vehicleId,
+        message,
       },
-    });
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${sessionId}`,
+        },
+      }
+    );
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.error || "Failed to contact seller");
   }
 }
 
-export async function getCardInfo() { 
-  
+export async function getCardInfo() {
   try {
     const sessionId = localStorage.getItem("sessionId");
     const response = await axios.get(`${BACKEND_URL}/api/user/card-info`, {
@@ -91,8 +103,8 @@ export async function getCardInfo() {
   }
 }
 
-export async function googleAuth(credentialResponse:any){
-  try{
+export async function googleAuth(credentialResponse: any) {
+  try {
     const res = await axios.post(
       BACKEND_URL + "/api/auth/google",
       { token: credentialResponse.credential },
@@ -100,11 +112,10 @@ export async function googleAuth(credentialResponse:any){
         headers: { "Content-Type": "application/json" },
       }
     );
-    return res.data
+    return res.data;
+  } catch (e) {
+    throw e;
   }
-  catch(e){
-    throw e
-  }  
 }
 
 export async function loginUser(username: string, password: string) {
@@ -121,19 +132,18 @@ export async function loginUser(username: string, password: string) {
 
 export async function logoutUser() {
   try {
-    const sessionId= localStorage.getItem('sessionId');
+    const sessionId = localStorage.getItem("sessionId");
     const response = await axios.delete(`${BACKEND_URL}/api/auth/logout`, {
       withCredentials: true,
       headers: {
         Authorization: `Bearer ${sessionId}`,
-      }
+      },
     });
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || "Logout failed");
   }
 }
-
 
 export async function getUserDetails() {
   try {
@@ -146,10 +156,11 @@ export async function getUserDetails() {
     });
     return response.data;
   } catch (error: any) {
-    throw new Error(error.response?.data?.error || "Failed to fetch user details");
+    throw new Error(
+      error.response?.data?.error || "Failed to fetch user details"
+    );
   }
 }
-
 
 //change password
 export async function changePassword(oldPassword: string, newPassword: string) {
@@ -171,8 +182,8 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   }
 }
 
-export async function getUserBids(){
-  try{
+export async function getUserBids() {
+  try {
     const sessionId = localStorage.getItem("sessionId");
     const response = await axios.get(`${BACKEND_URL}/api/user/bids`, {
       withCredentials: true,
@@ -181,14 +192,72 @@ export async function getUserBids(){
       },
     });
     return response.data;
-  }
-  catch(e:any){
-    throw new Error(e.response?.data?.error || "Failed to fetch user bids")
+  } catch (e: any) {
+    throw new Error(e.response?.data?.error || "Failed to fetch user bids");
   }
 }
 
-export async function updateUserCardInfo(paymentMethodId:string){
-  try{
+export async function getUsersClassifiedListings(
+  options: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    filter?: string;
+  } = {}
+) {
+  const { page = 1, limit = 10, sortBy = "newest", filter } = options;
+
+  const queryParams = new URLSearchParams();
+  queryParams.append("page", page.toString());
+  queryParams.append("limit", limit.toString());
+
+  if (sortBy) {
+    queryParams.append("sortBy", sortBy);
+  }
+
+  if (filter) {
+    queryParams.append("filter", filter);
+  }
+
+  try {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/user/listings/classified?` + queryParams.toString(),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.error || "Error fetching classified list"
+    );
+  }
+}
+
+export async function getUsersAuctionListings(searchParams: string) {
+  try {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/user/listings/auction?` + searchParams,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.error || "Error fetching classified list"
+    );
+  }
+}
+
+export async function updateUserCardInfo(paymentMethodId: string) {
+  try {
     const sessionId = localStorage.getItem("sessionId");
     const response = await axios.patch(
       `${BACKEND_URL}/api/user/card-info`,
@@ -201,9 +270,8 @@ export async function updateUserCardInfo(paymentMethodId:string){
       }
     );
     return response.data;
-  }
-  catch(e:any){
-    throw new Error(e.response?.data?.error || "Failed to fetch user bids")
+  } catch (e: any) {
+    throw new Error(e.response?.data?.error || "Failed to fetch user bids");
   }
 }
 

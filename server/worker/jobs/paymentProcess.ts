@@ -15,7 +15,7 @@ import {
   numberPlate,
 } from "../../../shared/schema";
 import { eq, and } from "drizzle-orm";
-import { auctionQueue } from "../queue";
+import { auctionQueue, packageQueue } from "../queue";
 
 const paymentWorker = new Worker(
   "payment",
@@ -61,6 +61,9 @@ const paymentWorker = new Worker(
             .where(eq(packages.id, packageId));
 
           if (packageDetails) {
+            const expires_at = new Date(
+              Date.now() + packageDetails.duration_days * 24 * 60 * 60 * 1000
+            );
             let listing_id;
             let globalDraftData: any;
             if (packageDetails.type == "CLASSIFIED") {
@@ -95,6 +98,7 @@ const paymentWorker = new Worker(
                   openToPX: draftData.openToPX,
                   sellerId: draftData.sellerId,
                   color: draftData.color,
+                  expiresAt: expires_at,
                 })
                 .returning();
               listing_id = savedValue.id;
@@ -149,6 +153,7 @@ const paymentWorker = new Worker(
                     openToPX: row.openToPX,
                     sellerId: row.sellerId,
                     color: row.color,
+                    expiresAt: expires_at,
                   })
                   .returning();
                 savedItemId = savedValue.id;
@@ -214,20 +219,38 @@ const paymentWorker = new Worker(
 
             if (!listing_id) throw new Error("listing_id is null");
 
-            const expires_at = new Date(
-              Date.now() + packageDetails.duration_days * 24 * 60 * 60 * 1000
-            );
             console.log("adding userlisting");
             //create userlistingpackage
-            await tx.insert(userListingPackages).values({
-              userId: userId,
-              packageId: packageId,
-              listing_id: listing_id as number,
-              pricePaid: session[0].amount,
-              vehicleValue: 0,
-              purchased_at: new Date(),
-              expires_at: expires_at,
-            });
+            const [userPackageListingDetail] = await tx
+              .insert(userListingPackages)
+              .values({
+                userId: userId,
+                packageId: packageId,
+                listing_id: listing_id as number,
+                pricePaid: session[0].amount,
+                vehicleValue: 0,
+                purchased_at: new Date(),
+                expires_at: expires_at,
+              })
+              .returning();
+
+            //add auto package expiry logic 
+            await packageQueue.add(
+              "expire-package",
+              {
+                userPackageListingId: userPackageListingDetail.id,
+                listingId: listing_id,
+              },
+              {
+                jobId: `user-listing-package:${userPackageListingDetail.id}`,
+                delay: expires_at.getTime() - Date.now(),
+                attempts: 3,
+                backoff: {
+                  type: "exponential",
+                  delay: 1000,
+                },
+              }
+            );
             console.log("updating payment session with listingId");
             await tx
               .update(paymentSession)

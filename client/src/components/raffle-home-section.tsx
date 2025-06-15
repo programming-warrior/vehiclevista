@@ -9,13 +9,17 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, DollarSign, Users, Clock, ArrowRight, Trophy } from "lucide-react";
+import { Car, DollarSign, Users, Clock, ArrowRight, Trophy, PoundSterling } from "lucide-react";
 import { getRunningRaffle } from "@/api";
 import RaffleCountDownTimer from "./rafflecountdown-timer";
+import { useLocation } from "wouter";
 
 export default function RaffleHomeSection() {
-  const [raffle, setRaffle] = useState<any>(null);
+  const [raffle, setRaffle] = useState<any>({
+    remainingTime: "0:0:0"
+  });
   const [loading, setLoading] = useState(true);
+  const [location,setLocation] = useLocation();
 
   useEffect(() => {
     const fetch = async () => {
@@ -48,7 +52,7 @@ export default function RaffleHomeSection() {
 
   const progressPercentage = Math.min(
     100,
-    ((raffle.leads || 0) / raffle.ticketQuantity) * 100
+    (raffle.soldTicket / raffle.ticketQuantity) * 100
   );
 
   return (
@@ -87,9 +91,9 @@ export default function RaffleHomeSection() {
             <CardContent className="space-y-6">
               <div className="flex justify-between items-center bg-blue-50 p-4 rounded-lg">
                 <div className="flex items-center">
-                  <DollarSign className="h-6 w-6 mr-2 text-blue-600" />
+                  <PoundSterling className="h-6 w-6 mr-2 text-blue-600" />
                   <div>
-                    <span className="font-bold text-xl text-blue-800">${raffle.ticketPrice}</span>
+                    <span className="font-bold text-xl text-blue-800">{raffle.ticketPrice}</span>
                     <span className="text-sm text-blue-600 ml-1">per ticket</span>
                   </div>
                 </div>
@@ -119,7 +123,7 @@ export default function RaffleHomeSection() {
                     </div>
                     <div className="text-right">
                       <span className="text-xs font-semibold inline-block text-blue-700">
-                        {raffle.leads || 0}/{raffle.ticketQuantity} tickets
+                        {raffle.soldTicket}/{raffle.ticketQuantity} tickets
                       </span>
                     </div>
                   </div>
@@ -137,7 +141,7 @@ export default function RaffleHomeSection() {
           <CardFooter className="pt-2 pb-6 px-6">
             <Button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 py-6 text-lg rounded-lg"
-              onClick={() => window.open(`/raffles/${raffle.id}`, "_blank")}
+              onClick={() => setLocation(`/raffle/${raffle.id}`)}
             >
               Enter Raffle Now <ArrowRight className="h-5 w-5" />
             </Button>

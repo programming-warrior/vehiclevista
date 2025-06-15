@@ -7,6 +7,7 @@ import {
   contactAttempts,
   notifications,
   auctions,
+  raffle,
   bids,
 } from "../../../shared/schema";
 import { eq } from "drizzle-orm";
@@ -110,7 +111,7 @@ const notificationWorker = new Worker(
             message: formattedMessage,
           })
           .returning();
-        console.log('notificaton saved to the database');
+        console.log("notificaton saved to the database");
         await connection.publish(
           `RECEIVE_NOTIFICATION`,
           JSON.stringify({
@@ -126,7 +127,7 @@ const notificationWorker = new Worker(
         console.log(e);
       }
     } else if (job.name === "auctionBid-placed-failed") {
-      const {  userId, auctionId, bidAmount, refund } = job.data;
+      const { userId, auctionId, bidAmount, refund } = job.data;
 
       try {
         const [user] = await db
@@ -141,7 +142,7 @@ const notificationWorker = new Worker(
 
         // const [bid] = await db.select().from(bids).where(eq(bids.id, bidId));
 
-        if (!auction || !user ) throw new Error("Invalid data");
+        if (!auction || !user) throw new Error("Invalid data");
 
         const formattedMessage = {
           title: `Auction Bid for ${bidAmount} Failed `,
@@ -162,7 +163,7 @@ const notificationWorker = new Worker(
           })
           .returning();
 
-          console.log("notification saved");
+        console.log("notification saved");
         await connection.publish(
           `RECEIVE_NOTIFICATION`,
           JSON.stringify({
@@ -173,8 +174,161 @@ const notificationWorker = new Worker(
             createdAt: notification.createdAt,
           })
         );
-          console.log("notification published");
+        console.log("notification published");
+      } catch (e) {
+        console.log(e);
+      }
+    } else if (job.name === "auctionBid-placed-success") {
+      const { bidId, userId, auctionId } = job.data;
 
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(userId, users.id));
+
+        const [auction] = await db
+          .select()
+          .from(auctions)
+          .where(eq(auctionId, auctions.id));
+
+        const [bid] = await db.select().from(bids).where(eq(bids.id, bidId));
+
+        if (!auction || !user || !bid) throw new Error("Invalid data");
+
+        const formattedMessage = {
+          title: `Auction Bid ${bid.bidAmount} placed successfully`,
+          from: {
+            name: `system-generated`,
+            email: `system-generated`,
+          },
+          body: `Your bid for auction | ${auction.title} for amount ${bid.bidAmount} is successfull`,
+        };
+        console.log(formattedMessage);
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "AUCTION-BID",
+            sentTo: user.id,
+            message: formattedMessage,
+          })
+          .returning();
+        console.log("notificaton saved to the database");
+        await connection.publish(
+          `RECEIVE_NOTIFICATION`,
+          JSON.stringify({
+            type: "AUCTION-BID",
+            notificationId: notification.id,
+            to: userId,
+            message: formattedMessage,
+            createdAt: notification.createdAt,
+          })
+        );
+        console.log("notification published");
+      } catch (e) {
+        console.log(e);
+      }
+    } else if (job.name === "raffle-ticketpurchase-success") {
+      const { userId, raffleId, ticketQuantity } = job.data;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId));
+
+        const [_raffle] = await db
+          .select()
+          .from(raffle)
+          .where(eq(raffle.id, parseInt(raffleId)));
+
+        // const [bid] = await db.select().from(bids).where(eq(bids.id, bidId));
+
+        if (!_raffle || !user) throw new Error("Invalid data");
+
+        const formattedMessage = {
+          title: `Raffle ${ticketQuantity} tickets purchased successfully `,
+          from: {
+            name: `system-generated`,
+            email: `system-generated`,
+          },
+          body: `Your ticket purchase for raffle | ${_raffle.title} of quantity ${ticketQuantity} has been successfull!`,
+        };
+        console.log(formattedMessage);
+
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "RAFFLE-TICKET-PURCHASE",
+            sentTo: user.id,
+            message: formattedMessage,
+          })
+          .returning();
+
+        console.log("notification saved");
+        await connection.publish(
+          `RECEIVE_NOTIFICATION`,
+          JSON.stringify({
+            type: "RAFFLE-TICKET-PURCHASE",
+            notificationId: notification.id,
+            to: userId,
+            message: formattedMessage,
+            createdAt: notification.createdAt,
+          })
+        );
+        console.log("notification published");
+      } catch (e) {
+        console.log(e);
+      }
+    } else if (job.name === "raffle-ticketpurchase-failed") {
+      const { userId, raffleId, ticketQuantity, refund } = job.data;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId));
+
+        const [_raffle] = await db
+          .select()
+          .from(raffle)
+          .where(eq(raffle.id, parseInt(raffleId)));
+
+        // const [bid] = await db.select().from(bids).where(eq(bids.id, bidId));
+
+        if (!_raffle || !user) throw new Error("Invalid data");
+
+        const formattedMessage = {
+          title: `Raffle ${ticketQuantity} tickets purchase failed `,
+          from: {
+            name: `system-generated`,
+            email: `system-generated`,
+          },
+          body: `Your ticket purchase for raffle | ${_raffle.title} of quantity ${ticketQuantity} has failed. Refund has been initiated!`,
+        };
+        console.log(formattedMessage);
+
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "RAFFLE-TICKET-PURCHASE",
+            sentTo: user.id,
+            message: formattedMessage,
+          })
+          .returning();
+
+        console.log("notification saved");
+        await connection.publish(
+          `RECEIVE_NOTIFICATION`,
+          JSON.stringify({
+            type: "RAFFLE-TICKET-PURCHASE",
+            notificationId: notification.id,
+            to: userId,
+            message: formattedMessage,
+            createdAt: notification.createdAt,
+          })
+        );
+        console.log("notification published");
       } catch (e) {
         console.log(e);
       }

@@ -10,6 +10,8 @@ import {
   Check,
   DollarSign,
   MapPin,
+  CheckCircle2,
+  PoundSterling,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -58,7 +60,7 @@ import {
 import { getPresignedUrls, uploadToPresignedUrl } from "@/api";
 import { createRaffle } from "@/api";
 import { useDebounce } from "@/hooks/use-debounce";
-import { getLocationSuggestion } from "@/api";
+import { getLocationSuggestion, vehicleLookUp } from "@/api";
 
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
   message: "Please provide a valid time in 24-hour format (HH:MM)",
@@ -206,8 +208,8 @@ export default function RaffleForm() {
   const [locationSuggestions, setLocationSuggestions] = useState<any>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
-
-  
+  const [registrationNumError, setRegistrationNumError] = useState("");
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   const handleLocationFocus = () => {
     if (vehicleForm.getValues("location").length >= 2) {
@@ -260,7 +262,15 @@ export default function RaffleForm() {
     },
   });
 
-  const debouncedLocationQuery = useDebounce(vehicleForm.getValues("location"), 500);
+  const debouncedLocationQuery = useDebounce(
+    vehicleForm.getValues("location"),
+    500
+  );
+  const debouncedRegistrationNum = useDebounce(
+    vehicleForm.getValues("registration_num"),
+    500
+  );
+
   const vehiclePrice = vehicleForm.watch("price");
   const ticketPrice = form.watch("ticketPrice");
   const ticketQuantity = form.watch("ticketQuantity");
@@ -274,24 +284,49 @@ export default function RaffleForm() {
     setTicketRevenue(ticketPrice * ticketQuantity);
   }, [vehiclePrice, ticketPrice, ticketQuantity]);
 
+  useEffect(() => {
+    if (
+      debouncedLocationQuery &&
+      debouncedLocationQuery.length >= 2 &&
+      !locationSuggestions.some(
+        (l: any) => l.display_name === debouncedLocationQuery
+      )
+    ) {
+      setIsLoadingLocations(true);
+      setShowLocationSuggestions(true);
 
-   useEffect(() => {
-      if (debouncedLocationQuery && debouncedLocationQuery.length >= 2 && !locationSuggestions.some((l:any)=>l.display_name===debouncedLocationQuery)) {
-        setIsLoadingLocations(true);
-        setShowLocationSuggestions(true);
-        
-        getLocationSuggestion(debouncedLocationQuery)
-          .then((suggestions) => {
-            setLocationSuggestions(suggestions);
-          })
-          .finally(() => {
-            setIsLoadingLocations(false);
-          });
-      } else {
-        setLocationSuggestions([]);
-        setShowLocationSuggestions(false);
-      }
-    }, [debouncedLocationQuery]);
+      getLocationSuggestion(debouncedLocationQuery)
+        .then((suggestions) => {
+          setLocationSuggestions(suggestions);
+        })
+        .finally(() => {
+          setIsLoadingLocations(false);
+        });
+    } else {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+    }
+  }, [debouncedLocationQuery]);
+
+  useEffect(() => {
+    if (debouncedRegistrationNum) {
+      setRegistrationNumError("");
+      setRegistrationSuccess(false);
+      vehicleLookUp(debouncedRegistrationNum, 10)
+        .then((suggestions) => {
+          setRegistrationSuccess(true);
+        })
+        .catch((e) => {
+          setRegistrationNumError("Vehicle not found");
+        })
+        .finally(() => {
+          setIsLoadingLocations(false);
+        });
+    } else {
+      // setLocationSuggestions([]);
+      // setShowLocationSuggestions(false);
+    }
+  }, [debouncedRegistrationNum]);
 
   useEffect(() => {
     // const fetchVehicles = async () => {
@@ -362,7 +397,7 @@ export default function RaffleForm() {
 
       // Gather vehicle data from the vehicle form
       const vehicleData = vehicleForm.getValues();
-
+      console.log(vehicleData.price);
       let imageUrls: string[] = [];
 
       if (selectedFiles.length > 0) {
@@ -412,6 +447,7 @@ export default function RaffleForm() {
         description: "Raffle created successfully",
       });
       form.reset();
+      vehicleForm.reset();
       setSelectedVehicle(null);
     } catch (error) {
       console.error("Error creating raffle:", error);
@@ -425,7 +461,7 @@ export default function RaffleForm() {
     }
   };
 
-   const LocationSkeleton = () => (
+  const LocationSkeleton = () => (
     <div className="animate-pulse flex flex-col space-y-2 p-2">
       {[1, 2, 3].map((i) => (
         <div key={i} className="h-6 bg-blue-100 rounded w-full"></div>
@@ -490,6 +526,7 @@ export default function RaffleForm() {
                             <FormLabel className="text-blue-800">
                               Registration Number
                             </FormLabel>
+                            <div className="relative">
                             <FormControl>
                               <Input
                                 type="text"
@@ -497,7 +534,25 @@ export default function RaffleForm() {
                                 className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
                                 {...field}
                               />
+                             
                             </FormControl>
+                             {registrationNumError && (
+                                <X className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-red-500" />
+                              )}
+                              {registrationSuccess && (
+                                <CheckCircle2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-500" />
+                              )}
+                            </div>
+                            {registrationNumError && (
+                              <div className="mt-1">
+                                <p className="text-xs text-red-600">
+                                  {registrationNumError}
+                                </p>
+                                <p className="text-xs text-blue-600 mt-1 cursor-pointer hover:underline">
+                                  Enter data manually
+                                </p>
+                              </div>
+                            )}
                             <FormMessage className="text-red-500" />
                           </FormItem>
                         )}
@@ -563,7 +618,7 @@ export default function RaffleForm() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="relative bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                            className="relative bg-blue-600 text-white hover:bg-blue-700 border-blue-600 hover:text-white"
                           >
                             <span>Select Images</span>
                             <Input
@@ -878,17 +933,14 @@ export default function RaffleForm() {
                               </FormLabel>
                               <FormControl>
                                 <div className="relative">
-                                  <DollarSign className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                                  <PoundSterling className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                                   <Input
                                     type="number"
                                     min="0"
-                                    step="0.01"
+                                    step="0.1"
                                     placeholder="0.00"
                                     className="pl-10 border-blue-200 focus:ring-blue-500"
                                     {...field}
-                                    onChange={(e) =>
-                                      field.onChange(parseFloat(e.target.value))
-                                    }
                                   />
                                 </div>
                               </FormControl>

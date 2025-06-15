@@ -7,7 +7,9 @@ import {
   vehicles,
   auctions,
   contactAttempts,
+  numberPlate,
   notifications,
+  vehicleListingStatus,
 } from "../../shared/schema";
 import { eq, or, sql, and, ilike, hasOwnEntityKind } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
@@ -52,6 +54,353 @@ userRouter.get("/", verifyToken, async (req, res) => {
   };
 
   return res.status(200).json(dashboardData);
+});
+
+userRouter.get("/listings/classified", verifyToken, async (req, res) => {
+  if (!req.userId)
+    return res.status(401).json({ error: "unauthorized access" });
+
+  const { page, limit, sortBy, filter } = req.query;
+  const pageNumber = parseInt(page as string) || 1;
+  const limitNumber = parseInt(limit as string) || 10;
+  const offset = (pageNumber - 1) * limitNumber;
+
+  let filterOptions: any = {};
+  let searchTerm = "";
+  let statusFilter = null;
+  let whereClause = [];
+
+  if (filter) {
+    try {
+      filterOptions = JSON.parse(filter as string);
+      searchTerm = filterOptions.search || "";
+      statusFilter = filterOptions.status || null;
+    } catch (error) {
+      console.error("Error parsing filter:", error);
+    }
+  }
+
+  // Determine sort order
+  let orderByClause = sql`${vehicles.createdAt} DESC`;
+
+  console.log(sortBy);
+  console.log(searchTerm);
+  console.log(statusFilter);
+
+  if (sortBy === "oldest") {
+    orderByClause = sql`${vehicles.createdAt} ASC`;
+  } else if (sortBy === "views") {
+    orderByClause = sql`${vehicles.views} DESC`;
+  } else if (sortBy === "clicks") {
+    orderByClause = sql`${vehicles.clicks} DESC`;
+  } else if (sortBy === "leads") {
+    orderByClause = sql`${vehicles.leads} DESC`;
+  }
+
+  // Base query
+  let query = db
+    .select({
+      id: vehicles.id,
+      type: vehicles.type,
+      title: vehicles.title,
+      price: vehicles.price,
+      expiresAt: vehicles.expiresAt,
+      negotiable: vehicles.negotiable,
+      description: vehicles.description,
+      createdAt: vehicles.createdAt,
+      mileage: vehicles.mileage,
+      status: vehicles.listingStatus,
+      blacklistReason: vehicles.blacklistReason,
+      fuelType: vehicles.fuelType,
+      transmissionType: vehicles.transmission,
+      condition: vehicles.condition,
+      bodyType: vehicles.bodyType,
+      make: vehicles.make,
+      model: vehicles.model,
+      images: vehicles.images,
+      color: vehicles.color,
+      location: vehicles.location,
+      latitude: vehicles.latitude,
+      views: vehicles.views,
+      leads: vehicles.leads,
+      clicks: vehicles.clicks,
+    })
+    .from(vehicles);
+
+  whereClause.push(eq(vehicles.sellerId, req.userId));
+
+  if (searchTerm) {
+    whereClause.push(
+      or(
+        ilike(vehicles.title, `%${searchTerm}%`),
+        ilike(vehicles.description, `%${searchTerm}%`)
+      )
+    );
+  }
+
+  if (statusFilter) {
+    whereClause.push(eq(vehicles.listingStatus, statusFilter));
+  }
+
+  console.log(whereClause);
+
+  if (whereClause.length > 0) {
+    query.where(and(...whereClause));
+  }
+
+  const result = await query
+    .groupBy(
+      vehicles.id,
+      vehicles.createdAt,
+      vehicles.listingStatus,
+      vehicles.blacklistReason,
+      vehicles.make,
+      vehicles.model,
+      vehicles.images,
+      vehicles.color,
+      vehicles.location,
+      vehicles.latitude,
+      vehicles.views,
+      vehicles.leads,
+      vehicles.clicks
+    )
+    .orderBy(orderByClause)
+    .limit(limitNumber + 1)
+    .offset(offset);
+
+  let countQuery = db
+    .select({
+      count: sql<number>`count(*)`,
+    })
+    .from(vehicles);
+
+  if (whereClause.length > 0) {
+    countQuery.where(and(...whereClause));
+  }
+
+  const [{ count: totalVehicles }] = await countQuery;
+
+  return res.status(200).json({
+    listings: result.splice(0, limitNumber),
+    totalListings: totalVehicles,
+    totalPages: Math.ceil(totalVehicles / limitNumber),
+    page: pageNumber,
+    hasNextPage: result.length > limitNumber,
+  });
+});
+
+userRouter.get("/listings/auction", verifyToken, async (req, res) => {
+  if (!req.userId)
+    return res.status(401).json({ error: "unauthorized access" });
+
+  const { page, limit, sortBy, filter } = req.query;
+  const pageNumber = parseInt(page as string) || 1;
+  const limitNumber = parseInt(limit as string) || 10;
+  const offset = (pageNumber - 1) * limitNumber;
+
+  let filterOptions: any = {};
+  let searchTerm = "";
+  let statusFilter = null;
+  let whereClause = [];
+
+  if (filter) {
+    try {
+      filterOptions = JSON.parse(filter as string);
+      searchTerm = filterOptions.search || "";
+      statusFilter = filterOptions.status || null;
+    } catch (error) {
+      console.error("Error parsing filter:", error);
+    }
+  }
+
+  // Determine sort order
+  let orderByClause = sql`${auctions.createdAt} DESC`;
+
+  console.log(sortBy);
+  console.log(searchTerm);
+  console.log(statusFilter);
+
+  if (sortBy === "oldest") {
+    orderByClause = sql`${auctions.createdAt} ASC`;
+  } else if (sortBy === "views") {
+    orderByClause = sql`${auctions.views} DESC`;
+  } else if (sortBy === "clicks") {
+    orderByClause = sql`${auctions.clicks} DESC`;
+  } else if (sortBy === "leads") {
+    orderByClause = sql`${auctions.leads} DESC`;
+  }
+
+  // Base query
+  const query = db
+    .select()
+    .from(auctions)
+
+  whereClause.push(eq(auctions.sellerId, req.userId));
+
+  if (searchTerm) {
+    whereClause.push(
+      or(
+        ilike(auctions.title, `%${searchTerm}%`),
+        ilike(auctions.description, `%${searchTerm}%`)
+      )
+    );
+  }
+
+  if (statusFilter) {
+    whereClause.push(eq(auctions.status, statusFilter));
+  }
+
+  console.log(whereClause);
+
+  if (whereClause.length > 0) {
+    query.where(and(...whereClause));
+  }
+
+  const result = await query
+    .orderBy(orderByClause)
+    .limit(limitNumber + 1)
+    .offset(offset);
+
+  let countQuery = db
+    .select({
+      count: sql<number>`count(*)`,
+    })
+    .from(auctions);
+
+  if (whereClause.length > 0) {
+    countQuery.where(and(...whereClause));
+  }
+
+  const [{ count: totalAuctions }] = await countQuery;
+
+      const enhancedListings = await Promise.all(
+      result.map(async (auction) => {
+        if (auction.itemType === "VEHICLE" && auction.itemId) {
+          // Fetch vehicle details
+          const [vehicle] = await db
+            .select()
+            .from(vehicles)
+            .where(eq(vehicles.id, auction.itemId));
+
+          return {
+            ...auction,
+            item: vehicle
+              ? {
+                  type: "VEHICLE",
+                  registration_num: vehicle.registration_num,
+                  make: vehicle.make,
+                  model: vehicle.model,
+                  year: vehicle.year,
+                  images: vehicle.images,
+                  location: vehicle.location,
+                  listingStatus: vehicle.listingStatus,
+                }
+              : null,
+          };
+        } else if (auction.itemType === "NUMBERPLATE" && auction.itemId) {
+          // Fetch number plate details
+          const [plate] = await db
+            .select()
+            .from(numberPlate)
+            .where(eq(numberPlate.id, auction.itemId));
+
+          return {
+            ...auction,
+            item: plate
+              ? {
+                  type: "NUMBERPLATE",
+                  plate_number: plate.plate_number,
+                  document_url: plate.docuemnt_url,
+                }
+              : null,
+          };
+        }
+
+        // Return auction without item if itemId is null or type is invalid
+        return {
+          ...auction,
+          item: null,
+        };
+      })
+    );
+
+  return res.status(200).json({
+    auctions: result.splice(0, limitNumber),
+    totalAuctions: totalAuctions,
+    totalPages: Math.ceil(totalAuctions / limitNumber),
+    page: pageNumber,
+    hasNextPage: result.length > limitNumber,
+  });
+});
+
+userRouter.get("/listings/auction", verifyToken, async (req, res) => {
+  if (!req.userId) return res.status(401).json({ error: "No user found" });
+  const userId = req.userId;
+
+  try {
+    const auctionListings = await db
+      .select()
+      .from(auctions)
+      .where(eq(auctions.sellerId, userId))
+      .orderBy(sql`${auctions.createdAt} DESC`);
+
+    // Fetch corresponding items for each auction
+    const enhancedListings = await Promise.all(
+      auctionListings.map(async (auction) => {
+        if (auction.itemType === "VEHICLE" && auction.itemId) {
+          // Fetch vehicle details
+          const [vehicle] = await db
+            .select()
+            .from(vehicles)
+            .where(eq(vehicles.id, auction.itemId));
+
+          return {
+            ...auction,
+            item: vehicle
+              ? {
+                  type: "VEHICLE",
+                  registration_num: vehicle.registration_num,
+                  make: vehicle.make,
+                  model: vehicle.model,
+                  year: vehicle.year,
+                  images: vehicle.images,
+                  location: vehicle.location,
+                  listingStatus: vehicle.listingStatus,
+                }
+              : null,
+          };
+        } else if (auction.itemType === "NUMBERPLATE" && auction.itemId) {
+          // Fetch number plate details
+          const [plate] = await db
+            .select()
+            .from(numberPlate)
+            .where(eq(numberPlate.id, auction.itemId));
+
+          return {
+            ...auction,
+            item: plate
+              ? {
+                  type: "NUMBERPLATE",
+                  plate_number: plate.plate_number,
+                  document_url: plate.docuemnt_url,
+                }
+              : null,
+          };
+        }
+
+        // Return auction without item if itemId is null or type is invalid
+        return {
+          ...auction,
+          item: null,
+        };
+      })
+    );
+
+    return res.status(200).json(enhancedListings);
+  } catch (error) {
+    console.error("Error fetching auction listings:", error);
+    return res.status(500).json({ error: "Failed to fetch auction listings" });
+  }
 });
 
 userRouter.get("/bids", verifyToken, async (req, res) => {
@@ -169,7 +518,7 @@ userRouter.get("/card-info", verifyToken, async (req, res) => {
   if (userRow.length === 0)
     return res.status(401).json({ error: "No user found" });
   const user = userRow[0];
-  const cardInfo : any = user.card;
+  const cardInfo: any = user.card;
   if (!cardInfo || !cardInfo.paymentMethodId) {
     return res.status(404).json({ error: "Card information not found" });
   }

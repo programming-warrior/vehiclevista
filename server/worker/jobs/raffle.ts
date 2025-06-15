@@ -18,18 +18,19 @@ const raffleWorker = new Worker(
         .from(raffle)
         .where(eq(raffle.id, raffleId));
       const raffleData = raffleRow[0];
+
       console.log(raffleData);
       if (!raffleData) {
         console.error(`Raffle with ID ${raffleId} not found`);
         return;
       }
-      if (raffleData.status === "running" || raffleData.status === "ended") {
+      if (raffleData.status === "RUNNING" || raffleData.status === "ENDED") {
         console.log(`Raffle ${raffleId} is already ${raffleData.status}`);
         return;
       }
       await db
         .update(raffle)
-        .set({ status: "running" })
+        .set({ status: "RUNNING" })
         .where(eq(raffle.id, raffleId));
 
       startCountdown(raffleId, endTime);
@@ -46,13 +47,13 @@ const raffleWorker = new Worker(
         console.error(`raffle with ID ${raffleId} not found`);
         return;
       }
-      if (raffleData.status === "ended") {
+      if (raffleData.status === "ENDED") {
         console.log(`raffle ${raffleId} is already ${raffleData.status}`);
         return;
       }
       await db
         .update(raffle)
-        .set({ status: "ended" })
+        .set({ status: "ENDED" })
         .where(eq(raffle.id, raffleId));
     }
   },
@@ -105,29 +106,29 @@ async function initActiverafflesCountdowns() {
     const runningRaffle = await db
       .select()
       .from(raffle)
-      .where(eq(raffle.status, "running"));
+      .where(eq(raffle.status, "RUNNING"));
 
-    console.log(runningRaffle);
+      //there will only be on raffle running at a time 
+    if (runningRaffle[0]) {
+      const remainingTime =
+        new Date(runningRaffle[0].endDate).getTime() - Date.now();
+      console.log(remainingTime);
+      if (remainingTime > 0) {
+        console.log("startcountdown called for running raffles");
+        startCountdown(
+          runningRaffle[0].id.toString(),
+          runningRaffle[0].endDate.toISOString()
+        );
+      } else {
+        console.log("updating raffle status to ended");
+        await db
+          .update(raffle)
+          .set({ status: "ENDED" })
+          .where(eq(raffle.id, runningRaffle[0].id));
 
-    const remainingTime =
-      new Date(runningRaffle[0].endDate).getTime() - Date.now();
-    console.log(remainingTime);
-    if (remainingTime > 0) {
-      console.log("startcountdown called for running raffles");
-      startCountdown(
-        runningRaffle[0].id.toString(),
-        runningRaffle[0].endDate.toISOString()
-      );
-    } else {
-      console.log("updating raffle status to ended");
-      await db
-        .update(raffle)
-        .set({ status: "ended" })
-        .where(eq(raffle.id, runningRaffle[0].id));
-      
-      console.log(runningRaffle[0].id + " status updated to ended")
+        console.log(runningRaffle[0].id + " status updated to ended");
+      }
     }
-
     raffleWorker.on("ready", () => {
       console.log("raffle Worker is ready and connected to Redis");
     });

@@ -61,8 +61,8 @@ const vehicleFormSchema = z.object({
   color: z.string().min(1, { message: "Color is required" }),
   // description: z.string().min(1, { message: "Description is required" }),
   location: z.string().min(1, { message: "Location is required" }),
-  // latitude: z.number().min(-90).max(90).optional(),
-  // longitude: z.number().min(-180).max(180).optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
   images: z.array(z.string()),
   // condition: z.enum(vehicleConditions, {
   //   required_error: "Condition is required",
@@ -503,7 +503,6 @@ adminRouter.put(
   }
 );
 
-
 adminRouter.get("/users", verifyToken, async (req, res) => {
   if (!req.userId || req.role !== "admin")
     return res.status(401).json({ error: "unauthorized access" });
@@ -852,22 +851,20 @@ adminRouter.get("/auctions", verifyToken, async (req, res) => {
       views: auctions.views,
       leads: auctions.leads,
       clicks: auctions.clicks,
-      total_bids: sql<number>`COUNT(DISTINCT ${bids.id})`.as(
-        "total_bids"
-      ),
-      reports_count: sql<number>`COALESCE(COUNT(DISTINCT ${lisitngReport.id}),0)`.as(
-        "reports_count"
-      ),
+      total_bids: sql<number>`COUNT(DISTINCT ${bids.id})`.as("total_bids"),
+      reports_count:
+        sql<number>`COALESCE(COUNT(DISTINCT ${lisitngReport.id}),0)`.as(
+          "reports_count"
+        ),
       winner_email: auctionWinner.userEmail ?? null,
       winner_username: auctionWinner.username ?? null,
     })
     .from(auctions)
     .leftJoin(lisitngReport, eq(auctions.id, lisitngReport.reported_auction))
     .leftJoin(bids, eq(bids.auctionId, auctions.id))
-    .leftJoin(auctionWinner, eq(auctionWinner.auctionId, auctions.id))
+    .leftJoin(auctionWinner, eq(auctionWinner.auctionId, auctions.id));
 
   if (searchTerm) {
-
     whereClause.push(
       or(
         ilike(auctions.title, `%${searchTerm}%`),
@@ -880,17 +877,12 @@ adminRouter.get("/auctions", verifyToken, async (req, res) => {
     whereClause.push(eq(auctions.status, statusFilter));
   }
 
-
   if (whereClause.length > 0) {
     query.where(and(...whereClause));
   }
 
   const result = await query
-    .groupBy(
-      auctions.id,
-      auctionWinner.userEmail,
-      auctionWinner.username
-    )
+    .groupBy(auctions.id, auctionWinner.userEmail, auctionWinner.username)
     .orderBy(orderByClause)
     .limit(limitNumber + 1)
     .offset(offset);

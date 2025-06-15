@@ -51,6 +51,7 @@ export default function Navbar() {
     setUnReadCount,
     setTotalNotifications,
   } = useNotification();
+  const [filteredNotification, setFilteredNotification] = useState<any>([]);
 
   const handleLogout = async () => {
     try {
@@ -110,6 +111,17 @@ export default function Navbar() {
       console.error("Failed to fetch notifications:", error);
     }
   }
+
+  useEffect(()=>{
+    console.log(notifications);
+    setFilteredNotification(
+      notifications
+      .filter(n => !n.isRead)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    );
+  },[notifications, unReadCount])
+
+  console.log(filteredNotification);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -268,14 +280,17 @@ export default function Navbar() {
                 </div>
                 {notifications.length > 0 ? (
                   <div className="py-1">
-                    {notifications.map((notification, index) => {
+                    {filteredNotification.map((notification:any, index:number) => {
                       const messageData =
                         typeof notification.message === "string"
                           ? JSON.parse(notification.message)
                           : notification.message;
                       console.log("messageData", messageData);
                       return (
-                        <div key={notification.id} onClick={()=>setLocation("/notifications")}>
+                        <div
+                          key={notification.id}
+                          onClick={() => setLocation("/notifications")}
+                        >
                           <div className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer">
                             <div className="flex   gap-3">
                               <Info className="h-4 w-4 text-blue-500 mt-1" />
@@ -386,7 +401,7 @@ export default function Navbar() {
             >
               Sell Your Car
             </Button>
-               <Button
+            <Button
               variant="secondary"
               className="bg-yellow-500 hover:bg-yellow-600 text-white border-0"
               onClick={() => setLocation("/seller/auction/create")}

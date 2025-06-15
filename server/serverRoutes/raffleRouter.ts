@@ -1,6 +1,13 @@
 import { Router } from "express";
 import { db } from "../db";
-import { auctions, Vehicle, vehicles, bids,users, raffle } from "../../shared/schema";
+import {
+  auctions,
+  Vehicle,
+  vehicles,
+  bids,
+  users,
+  raffle,
+} from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
 import axios from "axios";
@@ -11,7 +18,8 @@ import { parseCsvFile, extractVehicles } from "../utils/helper";
 import multer from "multer";
 import { auctionQueue, bidQueue } from "../worker/queue";
 import { vehicleTypesEnum } from "../../shared/schema";
-import { error } from "console";
+import { stripe } from "../utils/stripe";
+import { CURRENCY } from "../utils/constants";
 
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 
@@ -21,12 +29,11 @@ const raffleRouter = Router();
 
 raffleRouter.get("/get", async (req, res) => {
   try {
-
     const [result] = await db
       .select()
       .from(raffle)
-      .where(eq(raffle.status, "running"))
-      .limit(1)
+      .where(eq(raffle.status, "RUNNING"))
+      .limit(1);
 
     res.status(200).json(result);
   } catch (err: any) {
@@ -37,12 +44,12 @@ raffleRouter.get("/get", async (req, res) => {
   }
 });
 
-
 raffleRouter.post(
   "/purchase-ticket/:raffleId",
   verifyToken,
   async (req, res) => {
-    if (!req.userId || !req.card_verified) return res.status(403).json({ error: "Unauthorized" });
+    if (!req.userId )
+      return res.status(403).json({ error: "Unauthorized" });
     try {
       const raffleId = parseInt(req.params.raffleId, 10);
       if (isNaN(raffleId)) {
@@ -50,21 +57,68 @@ raffleRouter.post(
       }
       let { ticketQuantity } = req.body;
       ticketQuantity = parseInt(ticketQuantity);
-      if (!ticketQuantity || isNaN(ticketQuantity) || ticketQuantity< 0) {
+      if (!ticketQuantity || isNaN(ticketQuantity) || ticketQuantity < 0) {
         return res.status(400).json({ error: "invalid ticket quantity" });
       }
+      
+      const result = await db.select().from(raffle).where(eq(raffle.id, raffleId));
+      console.log(result);
+      if (result.length == 0)
+        return res.status(404).json({ error: "Invalid RaffleID" });
 
-      const result = await db.select().from(raffle);
+      console.log(result[0].status);
+      if (result[0].status !== "RUNNING")
+        return res.status(404).json({ error: "raffle is not running" });
 
-      if(result.length == 0) return res.status(404).json({error:"Invalid RaffleID"})
-    
-      if(result[0].status!=='running') return res.status(404).json({error:"raffle is not running"})
+      const RAFFLE_TICKET_CHARGE_PERCENTAGE = 0.03;
 
-        
-    //    await bidQueue.add('processBid', { auctionId, userId: req.userId, bidAmount })
-      await bidQueue.add('processRaffleTicket', { raffleId, userId: req.userId, ticketQuantity })
-        console.log('added to the bid queue')
-      return res.status(202).json({ message: "Purchase queued" });
+      let totalChargedAmount =
+        RAFFLE_TICKET_CHARGE_PERCENTAGE *
+        ticketQuantity *
+        result[0].ticketPrice;
+      totalChargedAmount= Math.ceil(totalChargedAmount);
+      totalChargedAmount= Math.max(2,totalChargedAmount);
+      const amountInPence = Math.round(totalChargedAmount * 100);
+      //create payment session
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInPence,
+        currency: CURRENCY,
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          raffleId: result[0].id.toString(),
+          ticketQuantity: ticketQuantity,
+          userId: req.userId.toString(),
+          chargedAmount: totalChargedAmount,
+        },
+      });
+      const redis = await RedisClientSingleton.getRedisClient();
+      await redis.set(
+        `paymentSession:${paymentIntent.id}`,
+        JSON.stringify({
+          raffleId: result[0].id.toString(),
+          ticketQuantity: ticketQuantity,
+          userId: req.userId.toString(),
+          chargedAmount: totalChargedAmount,
+          status: "PENDING",
+        }),
+        { EX: 60 * 2 } // 2 minutes
+      );
+
+      return res.status(202).json({
+        message: "success",
+        clientSecret: paymentIntent.client_secret,
+        timeout: "2 mintues",
+        chargedAmount: totalChargedAmount,
+        currency: CURRENCY,
+      });
+      // await bidQueue.add("processRaffleTicket", {
+      //   raffleId,
+      //   userId: req.userId,
+      //   ticketQuantity,
+      // });
+      // console.log("added to the bid queue");
     } catch (e: any) {
       if (e.message === "raffle not found") {
         return res.status(404).json({ error: e.message });
@@ -78,42 +132,83 @@ raffleRouter.post(
   }
 );
 
-raffleRouter.get(
-  "/bids/:auctionId",
-  async (req, res) => {
-    try {
-      const auctionId = parseInt(req.params.auctionId, 10);
-      if (isNaN(auctionId)) {
-        return res.status(400).json({ error: "Invalid auction ID" });
-      }
+raffleRouter.post("/purchase/verify-payment", verifyToken, async (req, res) => {
+  if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+  const { paymentIntentId } = req.body;
 
-      const result = await db
-        .select({
-          bid: bids,
-          user: {
-            id: users.id,
-            username: users.username,
-          }
-        })
-        .from(bids)
-        .innerJoin(users, eq(bids.userId, users.id))
-        .where(eq(bids.auctionId, auctionId))
-        .orderBy(sql`${bids.createdAt} DESC`);
-
-      const bidsWithUser = result.map(row => ({
-        ...row.bid,
-        user: row.user
-      }));
-
-      return res.status(200).json({ bids: bidsWithUser });
-    } catch (e: any) {
-      return res.status(500).json({ error: e.message });
-    }
+  if (!paymentIntentId) {
+    return res.status(400).json({ error: "Missing paymentIntentId" });
   }
-);
 
+  try {
+    const redis = await RedisClientSingleton.getRedisClient();
+    const payment_session_redis = await redis.get(
+      `paymentSession:${paymentIntentId}`
+    );
+    // if (!payment_session_redis) {
+    //   return res.status(400).json({ error: "Payment Portal Expired" });
+    // }
+    // const parsedPaymentSession = JSON.parse(payment_session_redis);
+    // if (parsedPaymentSession.userId != req.userId) {
+    //   return res.status(401).json({
+    //     error: "You are not authorized to validate this payment",
+    //   });
+    // }
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (paymentIntent.metadata.userId != req.userId.toString())
+      return res.status(403).json({ error: "unauthorized" });
 
-raffleRouter.post('/increase-views', async (req, res) => {
+    if (paymentIntent.status === "succeeded") {
+      const { raffleId, userId, ticketQuantity, chargedAmount } = paymentIntent.metadata;
+      await redis.del(`paymentSession:${paymentIntentId}`);
+      await bidQueue.add("processRaffleTicket", {
+        userId: req.userId,
+        paymentIntentId,
+        raffleId,
+        ticketQuantity,
+      });
+      return res.status(200).json({ success: true });
+    } else {
+      return res.status(400).json({ error: "Payment not successful yet" });
+    }
+  } catch (err) {
+    console.error("Stripe verification error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+raffleRouter.get("/bids/:auctionId", async (req, res) => {
+  try {
+    const auctionId = parseInt(req.params.auctionId, 10);
+    if (isNaN(auctionId)) {
+      return res.status(400).json({ error: "Invalid auction ID" });
+    }
+
+    const result = await db
+      .select({
+        bid: bids,
+        user: {
+          id: users.id,
+          username: users.username,
+        },
+      })
+      .from(bids)
+      .innerJoin(users, eq(bids.userId, users.id))
+      .where(eq(bids.auctionId, auctionId))
+      .orderBy(sql`${bids.createdAt} DESC`);
+
+    const bidsWithUser = result.map((row) => ({
+      ...row.bid,
+      user: row.user,
+    }));
+
+    return res.status(200).json({ bids: bidsWithUser });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+raffleRouter.post("/increase-views", async (req, res) => {
   try {
     const { raffleId } = req.body;
     if (!raffleId) {
@@ -121,33 +216,31 @@ raffleRouter.post('/increase-views', async (req, res) => {
     }
     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
     const userAgent = req.headers["user-agent"];
-  
+
     console.log("IP:", ip);
     console.log("User Agent:", userAgent);
-    if(!ip || !userAgent) {
+    if (!ip || !userAgent) {
       return res.status(400).json({ error: "IP or User Agent is missing" });
     }
-    const redisClient = await RedisClientSingleton.getRedisClient()
-    const alreadyViewed= await redisClient.get(`raffle:${raffleId}:views:${ip}`);
-    if(alreadyViewed){
+    const redisClient = await RedisClientSingleton.getRedisClient();
+    const alreadyViewed = await redisClient.get(
+      `raffle:${raffleId}:views:${ip}`
+    );
+    if (alreadyViewed) {
       return res.status(200).json({ message: "Already viewed recently" });
     }
     await Promise.all([
       redisClient.incr(`raffle:${raffleId}:views`),
-      redisClient.set(`raffle:${raffleId}:views:${ip}`, "1", "EX", 1 * 60) 
+      redisClient.set(`raffle:${raffleId}:views:${ip}`, "1", "EX", 1 * 60),
     ]);
     res.status(201).json({ message: "success" });
-  }
-  catch (err: any) {
+  } catch (err: any) {
     console.error("Error updating views count:", err);
-    res
-      .status(500)
-      .json({ message: "Error updating views count" });
+    res.status(500).json({ message: "Error updating views count" });
   }
 });
 
-
-raffleRouter.post('/increase-clicks', async (req, res) => {
+raffleRouter.post("/increase-clicks", async (req, res) => {
   try {
     const { raffleId } = req.body;
     if (!raffleId) {
@@ -155,31 +248,29 @@ raffleRouter.post('/increase-clicks', async (req, res) => {
     }
     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
     const userAgent = req.headers["user-agent"];
-  
+
     console.log("IP:", ip);
     console.log("User Agent:", userAgent);
-    if(!ip || !userAgent) {
+    if (!ip || !userAgent) {
       return res.status(400).json({ error: "IP or User Agent is missing" });
     }
-    const redisClient = await RedisClientSingleton.getRedisClient()
-    const alreadyClicked = await redisClient.get(`raffleId:${raffleId}:clicks:${ip}`);
-    if(alreadyClicked){
+    const redisClient = await RedisClientSingleton.getRedisClient();
+    const alreadyClicked = await redisClient.get(
+      `raffleId:${raffleId}:clicks:${ip}`
+    );
+    if (alreadyClicked) {
       return res.status(200).json({ message: "Already clicked recently" });
     }
     await Promise.all([
       redisClient.incr(`vehicle:${raffleId}:clicks`),
-      redisClient.set(`vehicle:${raffleId}:clicks:${ip}`, "1", "EX", 1 * 60) 
+      redisClient.set(`vehicle:${raffleId}:clicks:${ip}`, "1", "EX", 1 * 60),
     ]);
     res.status(201).json({ message: "success" });
-  }
-  catch (err: any) {
+  } catch (err: any) {
     console.error("Error updating clicks count:", err);
-    res
-      .status(500)
-      .json({ message: "Error updating clicks count" });
+    res.status(500).json({ message: "Error updating clicks count" });
   }
 });
-
 
 // Export the router
 export default raffleRouter;

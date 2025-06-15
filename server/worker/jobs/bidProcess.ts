@@ -34,13 +34,16 @@ const bidWorker = new Worker(
 
         console.log("Auction found");
         if ((row.auction.currentBid ?? 0) >= bidAmount) {
-          const refund = await createRefund(paymentIntentId, "requested_by_customer");
+          const refund = await createRefund(
+            paymentIntentId,
+            "requested_by_customer"
+          );
           console.log(refund);
           await notificationQueue.add("auctionBid-placed-failed", {
             userId,
             auctionId,
             bidAmount,
-            refund
+            refund,
           });
           throw new Error(
             JSON.stringify("Bid amount needs to be greater than the currentBid")
@@ -76,9 +79,10 @@ const bidWorker = new Worker(
 
       console.log("bid published to redis");
     } else if (job.name == "processRaffleTicket") {
-      const { raffleId, userId, ticketQuantity } = job.data;
+      const { raffleId, userId, ticketQuantity, paymentIntentId } = job.data;
       let insertedBids: any;
       console.log("received raffle ticket request");
+      if (!paymentIntentId) throw new Error("paymentIntentId invalid");
       await db.transaction(async (trx) => {
         const result = await trx
           .select()
@@ -91,7 +95,7 @@ const bidWorker = new Worker(
         const now = new Date();
 
         if (
-          row.status !== "running" ||
+          row.status !== "RUNNING" ||
           now < row.startDate ||
           now > row.endDate
         ) {
@@ -99,6 +103,16 @@ const bidWorker = new Worker(
         }
 
         if (row.ticketQuantity - row.soldTicket < ticketQuantity) {
+          const refund = await createRefund(
+            paymentIntentId,
+            "requested_by_customer"
+          );
+          await notificationQueue.add("raffle-ticketpurchase-failed", {
+            userId,
+            raffleId,
+            ticketQuantity,
+            refund
+          });
           throw new Error(
             JSON.stringify("Ticket quantity exceeds issued remaining tickets")
           );
@@ -121,17 +135,13 @@ const bidWorker = new Worker(
           })
           .where(eq(raffle.id, raffleId));
       });
-      console.log("bid added to the db and auction upadted");
+      console.log("ticket added to the db and raffle upadted");
       const bidId = insertedBids[0]?.id;
-      await connection.publish(
-        `RAFFLE_TICKET_PURCHASED`,
-        JSON.stringify({
-          raffleId,
-          userId,
-          ticketQuantity,
-          bidId,
-        })
-      );
+      await notificationQueue.add("p", {
+        userId,
+        raffleId,
+        ticketQuantity,
+      });
       console.log("bid published to redis");
     }
   },

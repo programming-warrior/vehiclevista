@@ -115,7 +115,7 @@ export default function App() {
 
           addNotification({ id: notificationId, type, message, createdAt });
           console.log(unReadCount);
-          setUnReadCount((prev: number) => prev + 1);
+          setUnReadCount(unReadCount+1);
           setTotalNotifications((prev: number) => prev + 1);
         }
       };
@@ -165,7 +165,7 @@ export default function App() {
             <Route path="/makes/:brand" component={BrandPage} />
             <Route path="/auction" component={AuctionPage} />
             <Route path="/auction/:id" component={AuctionIdPage} />
-            <Route path="/raffle/:id" component={RaffleIdPage} />
+            <Route path="/raffle/:id" component={RaffleIdPage} />raf
 
             {/* Admin Routes */}
             <Route path="/admin">

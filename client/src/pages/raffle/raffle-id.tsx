@@ -17,8 +17,15 @@ import {
   Palette,
   Ticket,
   Trophy,
+  PoundSterling,
 } from "lucide-react";
-import { getRunningRaffle, purchaseRaffleTicket, incrementVehicleViews } from "@/api";
+import {
+  getRunningRaffle,
+  purchaseRaffleTicket,
+  verifyTicketPayment,
+  incrementRaffleClicks,
+  incrementRaffleViews,
+} from "@/api";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.bubble.css";
 import ReportDialog from "@/components/ui/report-dialog";
-import { incrementRaffleViews } from "@/api/raffle-api";
+import PaymentFormWrapper from "@/components/payment-form";
 
 export default function RaffleIdPage() {
   const { id } = useParams<{ id: string }>();
@@ -48,12 +55,19 @@ export default function RaffleIdPage() {
   const { toast } = useToast();
   const [reportOpen, setReportOpen] = useState(false);
   const [entries, setEntries] = useState<any>([]);
+  const [paymentformOpen, setPaymentformOpen] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState<any>({});
 
   // Total cost calculation
-  const totalCost = raffle?.ticketPrice ? raffle.ticketPrice * ticketQuantity : 0;
-  const ticketsLeft = raffle ? raffle.ticketQuantity - (raffle.soldTicket || 0) : 0;
-  const progressPercentage = raffle ? Math.min(100, ((raffle.soldTicket ) / raffle.ticketQuantity) * 100) : 0;
-
+  const totalCost = raffle?.ticketPrice
+    ? raffle.ticketPrice * ticketQuantity
+    : 0;
+  const ticketsLeft = raffle
+    ? raffle.ticketQuantity - (raffle.soldTicket || 0)
+    : 0;
+  const progressPercentage = raffle
+    ? Math.min(100, (raffle.soldTicket / raffle.ticketQuantity) * 100)
+    : 0;
 
   function handleQuantityInput(e: React.ChangeEvent<HTMLInputElement>) {
     const value: number = parseInt(e.target.value);
@@ -77,28 +91,40 @@ export default function RaffleIdPage() {
             title: "Login Required",
             description: "You need to be logged in before purchasing tickets",
           });
-        } else if (!card_verified) {
-          toast({
-            variant: "destructive",
-            title: "No Card Found",
-            description: "You need to validate your card before purchasing tickets",
+        }
+        // else if (!card_verified) {
+        //   toast({
+        //     variant: "destructive",
+        //     title: "No Card Found",
+        //     description: "You need to validate your card before purchasing tickets",
+        //   });
+        // }
+        else {
+          const result = await purchaseRaffleTicket(
+            id,
+            ticketQuantity.toString()
+          );
+          setPaymentInfo({
+            clientSecret: result.clientSecret,
+            timeout: result.timeout,
+            chargedAmount: result.chargedAmount,
+            currency: result.currency,
           });
-        } else {
-          const result = await purchaseRaffleTicket(id, ticketQuantity.toString());
+          setPaymentformOpen(true);
           toast({
             title: "Request Added",
             description: `Your ticket purchase request has been added.`,
           });
-          
+
           // Refresh raffle data
-          const updatedRaffle = await getRunningRaffle();
-          setRaffle(updatedRaffle);
-          
+          // const updatedRaffle = await getRunningRaffle();
+          // setRaffle(updatedRaffle);
+
           // Refresh entries
-        //   const updatedEntries = await getEntriesForRaffle(id);
-        //   setEntries(updatedEntries.entries);
+          //   const updatedEntries = await getEntriesForRaffle(id);
+          //   setEntries(updatedEntries.entries);
         }
-      } catch (e:any) {
+      } catch (e: any) {
         toast({
           variant: "destructive",
           title: "Purchase Failed",
@@ -123,7 +149,7 @@ export default function RaffleIdPage() {
         setLoading(false);
       }
     };
-    
+
     const fetchRaffleEntries = async () => {
       try {
         // const response = await getEntriesForRaffle(id);
@@ -135,7 +161,7 @@ export default function RaffleIdPage() {
 
     fetchRaffleEntries();
     fetchRaffle();
-    incrementRaffleViews(id)
+    incrementRaffleViews(id);
   }, [id]);
 
   if (loading) {
@@ -169,7 +195,7 @@ export default function RaffleIdPage() {
                     Ticket Price
                   </span>
                   <span className="text-2xl font-bold flex items-center">
-                    <DollarSign size={20} className="mr-1" />
+                    <PoundSterling size={20} className="mr-1" />
                     {raffle.ticketPrice}
                   </span>
                 </div>
@@ -180,7 +206,10 @@ export default function RaffleIdPage() {
                   </span>
                   <span className="text-2xl font-medium flex items-center">
                     <Clock size={20} className="mr-1" />
-                    <RaffleCountDownTimer raffle={raffle} setRaffle={setRaffle} />
+                    <RaffleCountDownTimer
+                      raffle={raffle}
+                      setRaffle={setRaffle}
+                    />
                   </span>
                 </div>
 
@@ -190,7 +219,7 @@ export default function RaffleIdPage() {
                   </span>
                   <span className="text-2xl font-medium flex items-center">
                     <Users size={20} className="mr-1" />
-                    {raffle.leads || 0}
+                    {raffle.soldTicket || 0}
                   </span>
                 </div>
               </div>
@@ -240,47 +269,64 @@ export default function RaffleIdPage() {
                     />
                   </div>
                 </div>
-                
+
                 {/* Raffle Progress */}
                 <div className="mt-8 border border-blue-100 rounded-md p-6 bg-white">
-                  <h2 className="text-xl font-bold mb-4 text-blue-800">Raffle Progress</h2>
-                  
+                  <h2 className="text-xl font-bold mb-4 text-blue-800">
+                    Raffle Progress
+                  </h2>
+
                   <div className="mb-6">
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium text-blue-700">Tickets Sold: {raffle.soldTicket}</span>
-                      <span className="font-medium text-blue-700">{raffle.ticketQuantity} Total Tickets</span>
+                      <span className="font-medium text-blue-700">
+                        Tickets Sold: {raffle.soldTicket}
+                      </span>
+                      <span className="font-medium text-blue-700">
+                        {raffle.ticketQuantity} Total Tickets
+                      </span>
                     </div>
                     <div className="w-full bg-blue-100 rounded-full h-4">
-                      <div 
-                        className="bg-blue-500 h-4 rounded-full" 
+                      <div
+                        className="bg-blue-500 h-4 rounded-full"
                         style={{ width: `${progressPercentage}%` }}
                       ></div>
                     </div>
                     <div className="flex justify-between mt-1">
-                      <span className="text-xs text-blue-600">{progressPercentage.toFixed(1)}% Complete</span>
-                      <span className="text-xs text-blue-600">{ticketsLeft} Tickets Left</span>
+                      <span className="text-xs text-blue-600">
+                        {progressPercentage.toFixed(1)}% Complete
+                      </span>
+                      <span className="text-xs text-blue-600">
+                        {ticketsLeft} Tickets Left
+                      </span>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col sm:flex-row gap-4 justify-between">
                     <div className="flex items-center bg-blue-50 p-4 rounded-lg flex-grow">
                       <Ticket className="text-blue-600 mr-3 h-8 w-8" />
                       <div>
-                        <div className="text-sm text-blue-600">Ticket Price</div>
-                        <div className="font-bold text-xl text-blue-800">${raffle.ticketPrice}</div>
+                        <div className="text-sm text-blue-600">
+                          Ticket Price
+                        </div>
+                        <div className="font-bold text-xl text-blue-800">
+                          ${raffle.ticketPrice}
+                        </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center bg-blue-50 p-4 rounded-lg flex-grow">
                       <Trophy className="text-blue-600 mr-3 h-8 w-8" />
                       <div>
                         <div className="text-sm text-blue-600">Draw Date</div>
                         <div className="font-bold text-blue-800">
-                          {new Date(raffle.endDate).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+                          {new Date(raffle.endDate).toLocaleDateString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }
+                          )}
                         </div>
                       </div>
                     </div>
@@ -347,7 +393,7 @@ export default function RaffleIdPage() {
                       </span>
                     </div>
                   </div>
-                  
+
                   {/* <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                     <h3 className="font-bold text-blue-800 mb-2">Prize Value</h3>
                     <div className="text-2xl font-bold text-blue-800">${raffle.value || 'N/A'}</div>
@@ -362,7 +408,7 @@ export default function RaffleIdPage() {
                     <Ticket className="h-4 w-4 mr-2" />
                     Buy Tickets Now
                   </Button>
-                  
+
                   {/* <Button
                     variant="destructive"
                     className="mt-2 w-full"
@@ -375,7 +421,7 @@ export default function RaffleIdPage() {
                 </div>
 
                 {/* Entry history card */}
-                <div className="bg-white border border-blue-100 rounded-lg p-5 shadow-sm">
+                {/* <div className="bg-white border border-blue-100 rounded-lg p-5 shadow-sm">
                   <h2 className="text-xl font-bold mb-4 border-b border-blue-100 pb-2 flex items-center text-blue-800">
                     <Users size={20} className="mr-2" />
                     Recent Entries
@@ -396,7 +442,7 @@ export default function RaffleIdPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {entries.map((entry:any, idx:number) => (
+                          {entries.map((entry: any, idx: number) => (
                             <tr key={idx} className="border-t border-blue-100">
                               <td className="py-2 font-medium">
                                 {entry.user.username}
@@ -420,35 +466,52 @@ export default function RaffleIdPage() {
                       </table>
                     )}
                   </div>
-                </div>
-                
+                </div> */}
+
                 {/* Rules card */}
                 <div className="bg-white border border-blue-100 rounded-lg p-5 shadow-sm">
                   <h2 className="text-xl font-bold mb-4 border-b border-blue-100 pb-2 flex items-center text-blue-800">
                     <Info size={20} className="mr-2" />
                     Raffle Rules
                   </h2>
-                  
+
                   <ul className="space-y-2 text-sm">
                     <li className="flex items-start">
-                      <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs mt-0.5">1</div>
+                      <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs mt-0.5">
+                        1
+                      </div>
                       <span>Purchase tickets to enter the raffle</span>
                     </li>
                     <li className="flex items-start">
-                      <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs mt-0.5">2</div>
-                      <span>Each ticket gives you one entry in the drawing</span>
+                      <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs mt-0.5">
+                        2
+                      </div>
+                      <span>
+                        Each ticket gives you one entry in the drawing
+                      </span>
                     </li>
                     <li className="flex items-start">
-                      <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs mt-0.5">3</div>
-                      <span>Winner will be randomly selected when the timer ends</span>
+                      <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs mt-0.5">
+                        3
+                      </div>
+                      <span>
+                        Winner will be randomly selected when the timer ends
+                      </span>
                     </li>
                     <li className="flex items-start">
-                      <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs mt-0.5">4</div>
+                      <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs mt-0.5">
+                        4
+                      </div>
                       <span>Winner will be notified via email and phone</span>
                     </li>
                     <li className="flex items-start">
-                      <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs mt-0.5">5</div>
-                      <span>The more tickets you purchase, the higher your chances of winning</span>
+                      <div className="h-5 w-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs mt-0.5">
+                        5
+                      </div>
+                      <span>
+                        The more tickets you purchase, the higher your chances
+                        of winning
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -458,10 +521,35 @@ export default function RaffleIdPage() {
         </div>
       )}
 
-      <Dialog open={purchaseOpen} onOpenChange={setPurchaseOpen}>
+      <Dialog open={paymentformOpen} onOpenChange={setPaymentformOpen}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl text-blue-800">Purchase Raffle Tickets</DialogTitle>
+            <DialogTitle className="text-2xl">Pay the fee</DialogTitle>
+            <DialogDescription>
+              {paymentInfo.timeout && (
+                <h1>Payment Expires in {paymentInfo.timeout}</h1>
+              )}
+              {paymentInfo.chargedAmount && (
+                <h1>
+                  Amount of {paymentInfo.chargedAmount}{" "}
+                  {paymentInfo.chargedAmount} would be deducted
+                </h1>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <PaymentFormWrapper
+            verifyPayment={verifyTicketPayment}
+            clientSecret={paymentInfo.clientSecret}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={purchaseOpen} onOpenChange={setPurchaseOpen}>
+        <DialogContent className="sm:max-w-3xl scale-90">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-blue-800">
+              Purchase Raffle Tickets
+            </DialogTitle>
             <DialogDescription>
               Select how many tickets you'd like to purchase for this raffle.
             </DialogDescription>
@@ -479,7 +567,7 @@ export default function RaffleIdPage() {
 
               <div className="bg-blue-50 p-4 rounded-md space-y-3">
                 <div className="flex items-center">
-                  <DollarSign size={18} className="mr-2 text-blue-600" />
+                  <PoundSterling size={18} className="mr-2 text-blue-600" />
                   <span className="font-semibold">Ticket Price:</span>
                   <span className="ml-2">${raffle.ticketPrice}</span>
                 </div>
@@ -487,24 +575,33 @@ export default function RaffleIdPage() {
                 <div className="flex items-center">
                   <Users size={18} className="mr-2 text-blue-600" />
                   <span className="font-semibold">Available Tickets:</span>
-                  <span className="ml-2">{ticketsLeft} of {raffle.ticketQuantity}</span>
+                  <span className="ml-2">
+                    {ticketsLeft} of {raffle.ticketQuantity}
+                  </span>
                 </div>
 
                 <div className="flex items-center">
                   <Clock size={18} className="mr-2 text-blue-600" />
                   <span className="font-semibold">Time Left:</span>
                   <span className="ml-2">
-                    <RaffleCountDownTimer raffle={raffle} setRaffle={setRaffle} />
+                    <RaffleCountDownTimer
+                      raffle={raffle}
+                      setRaffle={setRaffle}
+                    />
                   </span>
                 </div>
               </div>
 
               <div className="p-4 border rounded-md">
-                <div className="font-semibold mb-2">Enter Number of Tickets</div>
+                <div className="font-semibold mb-2">
+                  Enter Number of Tickets
+                </div>
                 <input
                   type="number"
                   className={`w-full border rounded-md px-3 py-2 ${
-                    purchaseError ? "border-red-500 bg-red-50" : "border-blue-300"
+                    purchaseError
+                      ? "border-red-500 bg-red-50"
+                      : "border-blue-300"
                   }`}
                   placeholder="How many tickets?"
                   value={ticketQuantity}
@@ -513,17 +610,24 @@ export default function RaffleIdPage() {
                   onChange={handleQuantityInput}
                 />
                 {purchaseError && (
-                  <div className="text-red-500 text-xs mt-1">{purchaseError}</div>
+                  <div className="text-red-500 text-xs mt-1">
+                    {purchaseError}
+                  </div>
                 )}
 
                 <div className="mt-4 p-3 bg-blue-50 rounded-md">
                   <div className="flex justify-between">
                     <span>Cost per ticket:</span>
-                    <span>${raffle.ticketPrice}</span>
+                    <span className="flex gap-1 items-center">
+                      <PoundSterling size={20} />
+                      {raffle.ticketPrice}
+                    </span>
                   </div>
                   <div className="flex justify-between font-bold text-blue-800 text-lg mt-2">
                     <span>Total cost:</span>
-                    <span>${totalCost.toFixed(2)}</span>
+                    <span className="flex gap-1 items-center">
+                      <PoundSterling size={20} /> {totalCost.toFixed(2)}
+                    </span>
                   </div>
                 </div>
 
@@ -544,13 +648,15 @@ export default function RaffleIdPage() {
               </div>
 
               <div className="border rounded-md p-4 bg-white h-[400px] overflow-y-auto">
-                <h3 className="font-bold text-lg text-blue-800 mb-3">{raffle.title}</h3>
-                
+                <h3 className="font-bold text-lg text-blue-800 mb-3">
+                  {raffle.title}
+                </h3>
+
                 <div className="space-y-4">
                   <p className="text-sm text-blue-700">
                     {raffle.year} {raffle.make} {raffle.model}
                   </p>
-                  
+
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="font-semibold block">Year:</span>
@@ -576,17 +682,25 @@ export default function RaffleIdPage() {
                     )}
                     <div>
                       <span className="font-semibold block">Value:</span>
-                      <span>${raffle.value}</span>
+                      <span className="flex gap-1 items-center">
+                        <PoundSterling size={20} />
+                        {raffle.value}
+                      </span>
                     </div>
                   </div>
-                  
+
                   <div className="border-t border-blue-100 pt-4 mt-4">
                     <h4 className="font-semibold mb-2">Your Chances:</h4>
                     <div className="bg-blue-50 p-3 rounded-md">
                       <div className="flex justify-between text-sm">
-                        <span>With {ticketQuantity} ticket{ticketQuantity > 1 ? 's' : ''}:</span>
+                        <span>
+                          With {ticketQuantity} ticket
+                          {ticketQuantity > 1 ? "s" : ""}:
+                        </span>
                         <span className="font-semibold">
-                          1 in {Math.round(raffle.ticketQuantity / ticketQuantity)} chance
+                          1 in{" "}
+                          {Math.round(raffle.ticketQuantity / ticketQuantity)}{" "}
+                          chance
                         </span>
                       </div>
                       <div className="text-xs text-blue-600 mt-1">
@@ -594,16 +708,16 @@ export default function RaffleIdPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="border-t border-blue-100 pt-4">
                     <h4 className="font-semibold mb-2">Drawing Date:</h4>
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-2 text-blue-600" />
-                      {new Date(raffle.endDate).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
+                      {new Date(raffle.endDate).toLocaleDateString("en-US", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
                       })}
                     </div>
                   </div>

@@ -82,9 +82,8 @@ export const vehicles = pgTable("vehicles", {
   sellerType: text("seller_type"), // private, trader, garage
   contactPreference: text("contact_preference"), // 'phone', 'email', 'both'
   listingStatus: vehicleListingStatusEnum().notNull().default("ACTIVE"),
-
   listingType: text().default("CLASSIFIED"),
-
+  expiresAt: timestamp("expires_at"),
   blacklistReason: text("reason"),
   negotiable: boolean("negotiable").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -230,7 +229,7 @@ export const raffle = pgTable("raffle", {
   endDate: timestamp("end_date").notNull(),
   featured: boolean().notNull().default(true),
   soldTicket: integer("sold_ticket").notNull().default(0),
-  status: text("status").notNull().default("running"),
+  status: text("status").notNull().default("UPCOMING"), //UPCOMING, RUNNING, ENDED
 
   createdAt: timestamp("created_at").defaultNow(),
 
@@ -336,7 +335,7 @@ export const blacklist_users = pgTable("blacklist_users", {
 export const packages = pgTable("packages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  type: text("type").notNull(), // 'CLASSIFIED', 'AUCTION', 'NUMBERPLATE'
+  type: text("type").notNull(), // 'CLASSIFIED', 'AUCTION-VEHICLE', 'AUCTION-NUMBERPLATE'
   prices: jsonb("prices").notNull(), //[minCarValue, maxCarValue, price]
   duration_days: integer("duration_days").notNull(), // in days (14, 28, or NULL for ultra sold)
   features: jsonb("features").array().notNull(),

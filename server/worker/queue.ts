@@ -15,4 +15,7 @@ export const paymentQueue = new Queue("payment",{connection})
 
 export const notificationQueue = new Queue("notification", { connection });
 
+export const packageQueue = new Queue("package", { connection });
+
+
 

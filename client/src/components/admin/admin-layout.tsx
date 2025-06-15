@@ -44,10 +44,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/raffle", label: "Raffle", icon: Ticket },
     // { href: "/admin/events", label: "Events", icon: Calendar },
     { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
-    { href: "/admin/spare-parts", label: "Spare Parts", icon: Wrench },
-    // { href: "/admin/inventory", label: "Inventory", icon: PackageOpen },
-    { href: "/admin/offers", label: "Offers", icon: Tag },
-    { href: "/admin/pricing", label: "Pricing", icon: PiggyBank }
+    // { href: "/admin/spare-parts", label: "Spare Parts", icon: Wrench },
+    // // { href: "/admin/inventory", label: "Inventory", icon: PackageOpen },
+    // { href: "/admin/offers", label: "Offers", icon: Tag },
+    // { href: "/admin/pricing", label: "Pricing", icon: PiggyBank }
   ];
 
   return (

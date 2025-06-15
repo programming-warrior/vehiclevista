@@ -13,7 +13,9 @@ import {
   contactSeller, 
   getNotifications, 
   markNotificationRead,
-  getCardInfo
+  getCardInfo,
+  getUsersAuctionListings,
+  getUsersClassifiedListings,
 } from "./user-api";
 import {
   getVehicles,
@@ -38,7 +40,7 @@ import {
     verifyBidPayment
 } from "./auction-api";
 
-import { getRunningRaffle, purchaseRaffleTicket, incrementRaffleViews, incrementRaffleClicks } from "./raffle-api";
+import { getRunningRaffle, purchaseRaffleTicket, incrementRaffleViews, incrementRaffleClicks, verifyTicketPayment } from "./raffle-api";
 
 import { 
   getPerformanceMetrics,
@@ -197,9 +199,15 @@ export {
   getNotifications,
   markNotificationRead,
   getCardInfo,
+  getUsersClassifiedListings,
+  getUsersAuctionListings,
 
   getRunningRaffle,
   purchaseRaffleTicket,
+  verifyTicketPayment,
+  incrementRaffleClicks,
+  incrementRaffleViews,
+  
 
   getPerformanceMetrics,
   getTopListings, 
