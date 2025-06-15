@@ -105,10 +105,11 @@ async function initPackageExpiry() {
         await packageQueue.add(
           "expire-package",
           {
-            userListingPackages: pkg.id,
+            userPackageListingId: pkg.id,
             listingId: pkg.listing_id,
           },
           {
+            jobId: `user-listing-package:${pkg.id}`,
             delay: delay,
           }
         );
@@ -120,7 +121,7 @@ async function initPackageExpiry() {
       }
     }
   } catch (e: any) {
-    console.error("Error in initActiveAuctionsCountdowns:", e);
+    console.error("Error in initPackageExpiry:", e);
     throw e;
   }
 }
