@@ -10,6 +10,8 @@ import {
   numberPlate,
   notifications,
   vehicleListingStatus,
+  userListingPackages,
+  packages,
 } from "../../shared/schema";
 import { eq, or, sql, and, ilike, hasOwnEntityKind } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
@@ -100,33 +102,44 @@ userRouter.get("/listings/classified", verifyToken, async (req, res) => {
   // Base query
   let query = db
     .select({
-      id: vehicles.id,
-      type: vehicles.type,
+      vehicleId: vehicles.id,
       title: vehicles.title,
-      price: vehicles.price,
-      expiresAt: vehicles.expiresAt,
-      negotiable: vehicles.negotiable,
       description: vehicles.description,
+      openToPx:vehicles.openToPX,
+      condition: vehicles.condition,
+      negotiable: vehicles.negotiable,
+      location: vehicles.location,
+      latitude: vehicles.latitude,
+      longitude: vehicles.longitude,
+      price: vehicles.price,
       createdAt: vehicles.createdAt,
       mileage: vehicles.mileage,
       status: vehicles.listingStatus,
-      blacklistReason: vehicles.blacklistReason,
-      fuelType: vehicles.fuelType,
-      transmissionType: vehicles.transmission,
-      condition: vehicles.condition,
-      bodyType: vehicles.bodyType,
       make: vehicles.make,
       model: vehicles.model,
       images: vehicles.images,
-      color: vehicles.color,
-      location: vehicles.location,
-      latitude: vehicles.latitude,
       views: vehicles.views,
       leads: vehicles.leads,
       clicks: vehicles.clicks,
+      // Package info
+      packageId: userListingPackages.packageId,
+      purchasedAt: userListingPackages.purchased_at,
+      expiresAt: userListingPackages.expires_at,
+      isPackageActive: userListingPackages.is_active,
+      packageName: packages.name,
+      packageType: packages.type,
+      rebookableDays: packages.rebookable_days,
+      isUntilSold: packages.is_until_sold,
+      isRebookable: packages.is_rebookable,
     })
-    .from(vehicles);
+    .from(vehicles)
+    .innerJoin(
+      userListingPackages,
+      and(eq(userListingPackages.listing_id, vehicles.id))
+    )
+    .innerJoin(packages, eq(packages.id, userListingPackages.packageId));
 
+  //ONLY RETURNS THE LISTINGS BELONING TO THE USER
   whereClause.push(eq(vehicles.sellerId, req.userId));
 
   if (searchTerm) {
@@ -142,28 +155,11 @@ userRouter.get("/listings/classified", verifyToken, async (req, res) => {
     whereClause.push(eq(vehicles.listingStatus, statusFilter));
   }
 
-  console.log(whereClause);
-
   if (whereClause.length > 0) {
     query.where(and(...whereClause));
   }
 
   const result = await query
-    .groupBy(
-      vehicles.id,
-      vehicles.createdAt,
-      vehicles.listingStatus,
-      vehicles.blacklistReason,
-      vehicles.make,
-      vehicles.model,
-      vehicles.images,
-      vehicles.color,
-      vehicles.location,
-      vehicles.latitude,
-      vehicles.views,
-      vehicles.leads,
-      vehicles.clicks
-    )
     .orderBy(orderByClause)
     .limit(limitNumber + 1)
     .offset(offset);
@@ -231,9 +227,7 @@ userRouter.get("/listings/auction", verifyToken, async (req, res) => {
   }
 
   // Base query
-  const query = db
-    .select()
-    .from(auctions)
+  const query = db.select().from(auctions);
 
   whereClause.push(eq(auctions.sellerId, req.userId));
 
@@ -273,56 +267,56 @@ userRouter.get("/listings/auction", verifyToken, async (req, res) => {
 
   const [{ count: totalAuctions }] = await countQuery;
 
-      const enhancedListings = await Promise.all(
-      result.map(async (auction) => {
-        if (auction.itemType === "VEHICLE" && auction.itemId) {
-          // Fetch vehicle details
-          const [vehicle] = await db
-            .select()
-            .from(vehicles)
-            .where(eq(vehicles.id, auction.itemId));
+  const enhancedListings = await Promise.all(
+    result.map(async (auction) => {
+      if (auction.itemType === "VEHICLE" && auction.itemId) {
+        // Fetch vehicle details
+        const [vehicle] = await db
+          .select()
+          .from(vehicles)
+          .where(eq(vehicles.id, auction.itemId));
 
-          return {
-            ...auction,
-            item: vehicle
-              ? {
-                  type: "VEHICLE",
-                  registration_num: vehicle.registration_num,
-                  make: vehicle.make,
-                  model: vehicle.model,
-                  year: vehicle.year,
-                  images: vehicle.images,
-                  location: vehicle.location,
-                  listingStatus: vehicle.listingStatus,
-                }
-              : null,
-          };
-        } else if (auction.itemType === "NUMBERPLATE" && auction.itemId) {
-          // Fetch number plate details
-          const [plate] = await db
-            .select()
-            .from(numberPlate)
-            .where(eq(numberPlate.id, auction.itemId));
-
-          return {
-            ...auction,
-            item: plate
-              ? {
-                  type: "NUMBERPLATE",
-                  plate_number: plate.plate_number,
-                  document_url: plate.docuemnt_url,
-                }
-              : null,
-          };
-        }
-
-        // Return auction without item if itemId is null or type is invalid
         return {
           ...auction,
-          item: null,
+          item: vehicle
+            ? {
+                type: "VEHICLE",
+                registration_num: vehicle.registration_num,
+                make: vehicle.make,
+                model: vehicle.model,
+                year: vehicle.year,
+                images: vehicle.images,
+                location: vehicle.location,
+                listingStatus: vehicle.listingStatus,
+              }
+            : null,
         };
-      })
-    );
+      } else if (auction.itemType === "NUMBERPLATE" && auction.itemId) {
+        // Fetch number plate details
+        const [plate] = await db
+          .select()
+          .from(numberPlate)
+          .where(eq(numberPlate.id, auction.itemId));
+
+        return {
+          ...auction,
+          item: plate
+            ? {
+                type: "NUMBERPLATE",
+                plate_number: plate.plate_number,
+                document_url: plate.docuemnt_url,
+              }
+            : null,
+        };
+      }
+
+      // Return auction without item if itemId is null or type is invalid
+      return {
+        ...auction,
+        item: null,
+      };
+    })
+  );
 
   return res.status(200).json({
     auctions: result.splice(0, limitNumber),
@@ -504,6 +498,53 @@ userRouter.patch(
       .set({ isRead: true })
       .where(eq(notifications.id, notificationIdNum));
     return res.status(200).json({ message: "Notification marked as read" });
+  }
+);
+
+userRouter.patch(
+  "/classified/mark-sold/:listingId",
+  verifyToken,
+  async (req, res) => {
+    if (!req.userId) return res.status(401).json({ error: "No user found" });
+    const userId = req.userId;
+    const { listingId } = req.params;
+    const listingIdNum = parseInt(listingId);
+    if (!listingIdNum || isNaN(listingIdNum))
+      return res.status(400).json({ error: "invalid input" });
+    const vehicleListingRow = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.id, listingIdNum));
+
+    if (vehicleListingRow.length === 0)
+      return res.status(404).json({ error: "vehicle not found" });
+    const vehicleListing = vehicleListingRow[0];
+    if (vehicleListing.sellerId !== userId)
+      return res
+        .status(403)
+        .json({ error: "You are not authorized to access this notification" });
+    if (vehicleListing.listingStatus !== "ACTIVE") {
+      return res.status(200).json({ message: "vehicle listing is not ACTIVE" });
+    }
+    const result = await db
+      .update(vehicles)
+      .set({ listingStatus: "SOLD" })
+      .where(
+        and(
+          eq(vehicles.id, listingIdNum),
+          eq(vehicles.sellerId, userId),
+          eq(vehicles.listingStatus, "ACTIVE")
+        )
+      )
+      .returning();
+    if (result.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "Could not mark as SOLD. Maybe already expired/sold?" });
+    }
+    return res
+      .status(200)
+      .json({ message: "Classified listing marked as sold" });
   }
 );
 

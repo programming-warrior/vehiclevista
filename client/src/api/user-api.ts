@@ -197,6 +197,21 @@ export async function getUserBids() {
   }
 }
 
+export async function markClassifiedListingSold(listingId:number) {
+  try {
+    const sessionId = localStorage.getItem("sessionId");
+    const response = await axios.patch(`${BACKEND_URL}/api/user/classified/mark-sold/${listingId}`, {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
+    return response.data;
+  } catch (e: any) {
+    throw new Error(e.response?.data?.error || "Failed to fetch user bids");
+  }
+}
+
 export async function getUsersClassifiedListings(
   options: {
     page?: number;

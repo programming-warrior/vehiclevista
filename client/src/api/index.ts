@@ -16,6 +16,7 @@ import {
   getCardInfo,
   getUsersAuctionListings,
   getUsersClassifiedListings,
+  markClassifiedListingSold
 } from "./user-api";
 import {
   getVehicles,
@@ -201,6 +202,7 @@ export {
   getCardInfo,
   getUsersClassifiedListings,
   getUsersAuctionListings,
+  markClassifiedListingSold,
 
   getRunningRaffle,
   purchaseRaffleTicket,

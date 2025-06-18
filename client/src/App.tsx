@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ProtectedRoute } from "@/lib/protected-route";
 import Footer from "@/components/footer";
 import Home from "@/pages/home";
-import VehiclePage from "@/pages/vehicle";
+import VehicleIdPage from "@/pages/vehicle/vehicle-id";
 import Search from "@/pages/search";
 import Login from "@/pages/login";
 import Navbar from "@/components/navbar";
@@ -29,14 +29,14 @@ import TraderBulkUpload from "@/pages/trader/bulk-upload";
 import TraderPackages from "@/pages/trader/packages";
 import MakesPage from "@/pages/makes";
 import BrandPage from "@/pages/makes/[brand]";
-import AuctionPage from "@/pages/auction";
+import AuctionPage from "@/pages/auction/auction";
 import Register from "@/pages/register";
 import SellerDashboard from "@/pages/seller";
 import SellerVehicleUpload from "./pages/seller/upload";
 import { useUser } from "./hooks/use-store";
 import { useValidateSession } from "./hooks/use-validatesession";
 import Loader from "./components/loader";
-import VehiclesList from "./pages/vehicles";
+import VehiclePage from "./pages/vehicle/vehicles";
 import SellerVehilceBulkUpload from "./pages/seller/bulk-upload";
 import { useWebSocket } from "./hooks/use-store";
 import AuctionIdPage from "./pages/auction/auction-id";
@@ -158,8 +158,8 @@ export default function App() {
             <Route path="/login" component={Login} />
             <Route path="/register" component={Register} />
             {/* <Route path="/classified" component={Classified} /> */}
-            <Route path="/vehicle" component={VehiclesList} />
-            <Route path="/vehicle/:id" component={VehiclePage} />
+            <Route path="/vehicle" component={VehiclePage} />
+            <Route path="/vehicle/:id" component={VehicleIdPage} />
             <Route path="/search" component={Search} />
             <Route path="/makes" component={MakesPage} />
             <Route path="/makes/:brand" component={BrandPage} />

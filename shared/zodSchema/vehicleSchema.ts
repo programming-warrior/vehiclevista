@@ -61,3 +61,22 @@ export const vehicleUploadSchema = z.object({
   // listingStatus: z.enum(["active", "inactive"], { required_error: "Listing status is required" }),
   negotiable: z.boolean().optional(),
 });
+
+
+export const vehicleEditSchema = z.object({
+  price: z
+    .string()
+    .refine((val) => !isNaN(parseFloat(val)), {
+      message: "Price must be a valid number",
+    }),
+  title: z.string().min(1, { message: "Title is required" }),
+  description: z.string().min(1, { message: "Description is required" }),
+  location: z.string().min(1, { message: "Location is required" }),
+  latitude: z.number().optional(),
+  longitude: z
+    .number().optional(),
+  images: z
+    .array(z.string()),
+  openToPX: z.boolean().optional(),
+  negotiable: z.boolean().optional(),
+});

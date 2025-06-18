@@ -22,7 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-export default function VehiclesList() {
+export default function VehiclePage() {
   const {
     brand,
     maxBudget,

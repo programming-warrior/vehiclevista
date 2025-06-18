@@ -34,7 +34,7 @@ import { Input } from "@/components/ui/input";
 import { useUser } from "@/hooks/use-store";
 import { toast } from "@/hooks/use-toast";
 
-export default function VehiclePage() {
+export default function VehicleIdPage() {
   const { id } = useParams<{ id: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [vehicle, setVehicle] = useState<any>(null);

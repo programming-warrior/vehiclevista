@@ -7,7 +7,7 @@ import {
   vehicles,
   auctions,
   packages,
-} from "@shared/schema";
+} from "../../../shared/schema";
 import { packageQueue } from "../queue";
 
 const packageJob = new Worker(
@@ -22,13 +22,15 @@ const packageJob = new Worker(
         .from(userListingPackages)
         .where(eq(userListingPackages.id, userPackageListingId));
 
+      console.log(userPackage);
       if (!userPackage?.is_active) return;
 
       const [packageDetail] = await db
         .select()
         .from(packages)
         .where(eq(packages.id, userPackage.packageId));
-
+      
+      console.log(packageDetail);
       if (packageDetail.type === "CLASSIFIED") {
         const [userVehicle] = await db
           .select()
@@ -99,6 +101,7 @@ async function initPackageExpiry() {
         new Date(pkg.expires_at).getTime() - Date.now()
       );
 
+      console.log(delay);
       // Re-schedule the job with the correct delay
       try {
       
