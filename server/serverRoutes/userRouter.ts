@@ -19,7 +19,9 @@ import { userRegisterSchema } from "../../shared/zodSchema/userSchema";
 import RedisClientSingleton from "../utils/redis";
 import { verifyToken } from "../middleware/authMiddleware";
 import { userSessionSchema } from "../utils/session";
-import { notificationQueue } from "../worker/queue";
+import { notificationQueue, cleanupQueue } from "../worker/queue";
+import { vehicleEditSchema } from "../../shared/zodSchema/vehicleSchema";
+import { deleteImagesFromS3 } from "../utils/s3";
 
 const userRouter = Router();
 
@@ -105,7 +107,7 @@ userRouter.get("/listings/classified", verifyToken, async (req, res) => {
       vehicleId: vehicles.id,
       title: vehicles.title,
       description: vehicles.description,
-      openToPx:vehicles.openToPX,
+      openToPx: vehicles.openToPX,
       condition: vehicles.condition,
       negotiable: vehicles.negotiable,
       location: vehicles.location,
@@ -191,7 +193,8 @@ userRouter.get("/listings/auction", verifyToken, async (req, res) => {
 
   const { page, limit, sortBy, filter } = req.query;
   const pageNumber = parseInt(page as string) || 1;
-  const limitNumber = parseInt(limit as string) || 10;
+  let limitNumber = parseInt(limit as string) || 10;
+  limitNumber = Math.max(limitNumber, 100);
   const offset = (pageNumber - 1) * limitNumber;
 
   let filterOptions: any = {};
@@ -227,7 +230,37 @@ userRouter.get("/listings/auction", verifyToken, async (req, res) => {
   }
 
   // Base query
-  const query = db.select().from(auctions);
+  const query = db
+    .select({
+      auctionId: auctions.id,
+      title: auctions.title,
+      description: auctions.description,
+      status: auctions.status,
+      startDate: auctions.startDate,
+      endDate: auctions.endDate,
+      currentBid: auctions.currentBid,
+      views: auctions.views,
+      clicks: auctions.clicks,
+      leads: auctions.leads,
+      itemId: auctions.itemId,
+      itemType: auctions.itemType,
+      // Package info
+      packageId: userListingPackages.packageId,
+      purchasedAt: userListingPackages.purchased_at,
+      expiresAt: userListingPackages.expires_at,
+      isPackageActive: userListingPackages.is_active,
+      packageName: packages.name,
+      packageType: packages.type,
+      rebookableDays: packages.rebookable_days,
+      isUntilSold: packages.is_until_sold,
+      isRebookable: packages.is_rebookable,
+    })
+    .from(auctions)
+    .innerJoin(
+      userListingPackages,
+      and(eq(userListingPackages.listing_id, auctions.id))
+    )
+    .innerJoin(packages, eq(packages.id, userListingPackages.packageId));
 
   whereClause.push(eq(auctions.sellerId, req.userId));
 
@@ -286,8 +319,6 @@ userRouter.get("/listings/auction", verifyToken, async (req, res) => {
                 model: vehicle.model,
                 year: vehicle.year,
                 images: vehicle.images,
-                location: vehicle.location,
-                listingStatus: vehicle.listingStatus,
               }
             : null,
         };
@@ -319,82 +350,12 @@ userRouter.get("/listings/auction", verifyToken, async (req, res) => {
   );
 
   return res.status(200).json({
-    auctions: result.splice(0, limitNumber),
-    totalAuctions: totalAuctions,
+    listings: enhancedListings,
+    totalListings: totalAuctions,
     totalPages: Math.ceil(totalAuctions / limitNumber),
     page: pageNumber,
     hasNextPage: result.length > limitNumber,
   });
-});
-
-userRouter.get("/listings/auction", verifyToken, async (req, res) => {
-  if (!req.userId) return res.status(401).json({ error: "No user found" });
-  const userId = req.userId;
-
-  try {
-    const auctionListings = await db
-      .select()
-      .from(auctions)
-      .where(eq(auctions.sellerId, userId))
-      .orderBy(sql`${auctions.createdAt} DESC`);
-
-    // Fetch corresponding items for each auction
-    const enhancedListings = await Promise.all(
-      auctionListings.map(async (auction) => {
-        if (auction.itemType === "VEHICLE" && auction.itemId) {
-          // Fetch vehicle details
-          const [vehicle] = await db
-            .select()
-            .from(vehicles)
-            .where(eq(vehicles.id, auction.itemId));
-
-          return {
-            ...auction,
-            item: vehicle
-              ? {
-                  type: "VEHICLE",
-                  registration_num: vehicle.registration_num,
-                  make: vehicle.make,
-                  model: vehicle.model,
-                  year: vehicle.year,
-                  images: vehicle.images,
-                  location: vehicle.location,
-                  listingStatus: vehicle.listingStatus,
-                }
-              : null,
-          };
-        } else if (auction.itemType === "NUMBERPLATE" && auction.itemId) {
-          // Fetch number plate details
-          const [plate] = await db
-            .select()
-            .from(numberPlate)
-            .where(eq(numberPlate.id, auction.itemId));
-
-          return {
-            ...auction,
-            item: plate
-              ? {
-                  type: "NUMBERPLATE",
-                  plate_number: plate.plate_number,
-                  document_url: plate.docuemnt_url,
-                }
-              : null,
-          };
-        }
-
-        // Return auction without item if itemId is null or type is invalid
-        return {
-          ...auction,
-          item: null,
-        };
-      })
-    );
-
-    return res.status(200).json(enhancedListings);
-  } catch (error) {
-    console.error("Error fetching auction listings:", error);
-    return res.status(500).json({ error: "Failed to fetch auction listings" });
-  }
 });
 
 userRouter.get("/bids", verifyToken, async (req, res) => {
@@ -498,6 +459,81 @@ userRouter.patch(
       .set({ isRead: true })
       .where(eq(notifications.id, notificationIdNum));
     return res.status(200).json({ message: "Notification marked as read" });
+  }
+);
+
+userRouter.patch(
+  "/classified/edit/:vehicleId",
+  verifyToken,
+  async (req, res) => {
+    if (!req.userId) return res.status(401).json({ error: "No user found" });
+    const userId = req.userId;
+    const payload = vehicleEditSchema.safeParse(req.body);
+    if (payload.error) return res.status(400).json(payload.error);
+    const { vehicleId } = req.params;
+    const vehicleIdNum = parseInt(vehicleId);
+    if (!vehicleIdNum || isNaN(vehicleIdNum))
+      return res.status(400).json({ error: "invalid input" });
+    const vehicleRow = await db
+      .select()
+      .from(vehicles)
+      .where(
+        and(
+          eq(vehicles.id, vehicleIdNum),
+          eq(vehicles.sellerId, userId),
+          eq(vehicles.listingStatus, "ACTIVE")
+        )
+      );
+
+    if (vehicleRow.length === 0)
+      return res.status(401).json({ error: "No record found" });
+
+    const currentVehicle = vehicleRow[0];
+    const currentImages = currentVehicle.images || [];
+    const newImages = payload.data.images || [];
+
+    const imagesToDelete = currentImages.filter(
+      (currentImg: string) => !newImages.includes(currentImg)
+    );
+
+    const updateResult = await db
+      .update(vehicles)
+      .set({
+        title: payload.data.title,
+        price: parseFloat(payload.data.price),
+        description: payload.data.description,
+        location: payload.data.location,
+        images: payload.data.images,
+        openToPX: payload.data.openToPX,
+        negotiable: payload.data.negotiable,
+        latitude: payload.data.latitude,
+        longitude: payload.data.longitude,
+      })
+      .where(
+        and(
+          eq(vehicles.id, vehicleIdNum),
+          eq(vehicles.sellerId, userId),
+          eq(vehicles.listingStatus, "ACTIVE")
+        )
+      )
+      .returning();
+
+    if (updateResult.length === 0)
+      return res.status(500).json({
+        error: "something went wrong",
+      });
+
+    if (imagesToDelete.length > 0) {
+      // Don't await this - let it run in background
+      cleanupQueue
+        .add("delete-s3-images", { image_urls: imagesToDelete })
+        .then(() => console.log("added orphaned images to cleanup queue"))
+        .catch((e: any) => {
+          console.error(e);
+        });
+    }
+
+    return res.status(201).json({ message: "vehicle udpated" });
   }
 );
 

@@ -82,7 +82,7 @@ export const vehicles = pgTable("vehicles", {
   sellerType: text("seller_type"), // private, trader, garage
   contactPreference: text("contact_preference"), // 'phone', 'email', 'both'
   listingStatus: vehicleListingStatusEnum().notNull().default("ACTIVE"),
-  listingType: text().default("CLASSIFIED"),
+  listingType: text().default("CLASSIFIED"), //for knowing if the vehicle is listed as classified or through auction
   expiresAt: timestamp("expires_at"),
   blacklistReason: text("reason"),
   negotiable: boolean("negotiable").default(true),

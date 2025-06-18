@@ -234,7 +234,7 @@ const paymentWorker = new Worker(
               })
               .returning();
 
-            //add auto package expiry logic 
+            //add auto package expiry logic
             await packageQueue.add(
               "expire-package",
               {

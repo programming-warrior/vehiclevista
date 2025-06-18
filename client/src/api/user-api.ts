@@ -197,15 +197,40 @@ export async function getUserBids() {
   }
 }
 
-export async function markClassifiedListingSold(listingId:number) {
+export async function editClassifiedListing(
+  vehicleId: number,
+  updatedValues: any
+) {
   try {
     const sessionId = localStorage.getItem("sessionId");
-    const response = await axios.patch(`${BACKEND_URL}/api/user/classified/mark-sold/${listingId}`, {
-      withCredentials: true,
-      headers: {
-        Authorization: `Bearer ${sessionId}`,
-      },
-    });
+    const response = await axios.patch(
+      `${BACKEND_URL}/api/user/classified/edit/${vehicleId}`,
+      updatedValues,
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${sessionId}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Error updating vehicle ");
+  }
+}
+
+export async function markClassifiedListingSold(listingId: number) {
+  try {
+    const sessionId = localStorage.getItem("sessionId");
+    const response = await axios.patch(
+      `${BACKEND_URL}/api/user/classified/mark-sold/${listingId}`,
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${sessionId}`,
+        },
+      }
+    );
     return response.data;
   } catch (e: any) {
     throw new Error(e.response?.data?.error || "Failed to fetch user bids");
@@ -242,6 +267,7 @@ export async function getUsersClassifiedListings(
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
         },
+        withCredentials:true,
       }
     );
     return response.data;
@@ -252,15 +278,36 @@ export async function getUsersClassifiedListings(
   }
 }
 
-export async function getUsersAuctionListings(searchParams: string) {
+export async function getUsersAuctionListings(
+  options: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    filter?: string;
+  } = {}
+) {
+  const { page = 1, limit = 10, sortBy = "newest", filter } = options;
+
+  const queryParams = new URLSearchParams();
+  queryParams.append("page", page.toString());
+  queryParams.append("limit", limit.toString());
+
+  if (sortBy) {
+    queryParams.append("sortBy", sortBy);
+  }
+
+  if (filter) {
+    queryParams.append("filter", filter);
+  }
   try {
     const response = await axios.get(
-      `${BACKEND_URL}/api/user/listings/auction?` + searchParams,
+      `${BACKEND_URL}/api/user/listings/auction?` + queryParams.toString(),
       {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
         },
+        withCredentials: true,
       }
     );
     return response.data;

@@ -29,6 +29,7 @@ export async function getVehicleById(vehicleId: string) {
   }
 }
 
+
 export async function getFeaturedVehicles(searchParam: string) {
   try {
     const response = await axios.get(

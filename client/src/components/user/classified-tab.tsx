@@ -238,7 +238,7 @@ const ProfileClassifiedTab = () => {
               ) : (
                 classifiedListings.map((listing: any) => (
                   <motion.div
-                    key={listing.id}
+                    key={listing.vehicleId}
                     variants={{
                       hidden: { y: 20, opacity: 0 },
                       visible: {
@@ -248,7 +248,7 @@ const ProfileClassifiedTab = () => {
                       },
                     }}
                     className="cursor-pointer relative p-4 md:p-6 border border-gray-200 rounded-lg hover:shadow-md transition-all duration-200 bg-white"
-                    onClick={() => setLocation(`/vehicle/${listing.id}`)}
+                    onClick={() => setLocation(`/vehicle/${listing.vehicleId}`)}
                   >
                     <span className="absolute top-3 right-2 cursor-pointer">
                       <DropdownMenu>
@@ -283,7 +283,11 @@ const ProfileClassifiedTab = () => {
                             )}
 
                           <DropdownMenuItem
-                            // onClick={handleEdit}
+                            onClick={(e)=>{
+                              e.stopPropagation();
+
+                              setLocation(`/vehicle/edit/${listing.vehicleId}`)
+                            }}
                             className="cursor-pointer"
                           >
                             <Edit className="mr-2 h-4 w-4" />
@@ -293,7 +297,7 @@ const ProfileClassifiedTab = () => {
                           <DropdownMenuItem
                             onClick={(e) => {
                               setIsConfirmDialogOpen(true);
-                              setSelectedListing(listing.id);
+                              setSelectedListing(listing.vehicleId);
                               e.stopPropagation();
                             }}
                             className="cursor-pointer text-red-600 focus:text-red-600 "

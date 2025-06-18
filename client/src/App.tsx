@@ -36,7 +36,7 @@ import SellerVehicleUpload from "./pages/seller/upload";
 import { useUser } from "./hooks/use-store";
 import { useValidateSession } from "./hooks/use-validatesession";
 import Loader from "./components/loader";
-import VehiclePage from "./pages/vehicle/vehicles";
+import VehiclePage from "./pages/vehicle/vehicle";
 import SellerVehilceBulkUpload from "./pages/seller/bulk-upload";
 import { useWebSocket } from "./hooks/use-store";
 import AuctionIdPage from "./pages/auction/auction-id";
@@ -50,6 +50,7 @@ import NotificationsPage from "./pages/notifications";
 import { useNotification } from "./hooks/use-store";
 import SellerAuctionUpload from "@/pages/seller/auction-create";
 import ScrollToTop from "./components/scroll-to-top";
+import VehicleEditPage from "./pages/vehicle/vehicle-edit";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -160,6 +161,7 @@ export default function App() {
             {/* <Route path="/classified" component={Classified} /> */}
             <Route path="/vehicle" component={VehiclePage} />
             <Route path="/vehicle/:id" component={VehicleIdPage} />
+            <Route path="/vehicle/edit/:id" component={VehicleEditPage} />
             <Route path="/search" component={Search} />
             <Route path="/makes" component={MakesPage} />
             <Route path="/makes/:brand" component={BrandPage} />

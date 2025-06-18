@@ -57,10 +57,9 @@ import {
 import { STRIPE_PUBLIC_KEY } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import ProfileClassifiedTab from "@/components/user/classified-tab";
+import { useLocation } from "wouter";
 
 const stripePromise = loadStripe(STRIPE_PUBLIC_KEY);
-
-
 
 // Animation variants
 const containerVariants = {
@@ -141,7 +140,11 @@ function StripeCardForm({
       <CardElement options={{ style: { base: { fontSize: "16px" } } }} />
       {error && <div className="text-red-500 text-sm">{error}</div>}
       <div className="flex gap-2">
-        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
+        <Button
+          type="submit"
+          className="w-full bg-blue-600 hover:bg-blue-700"
+          disabled={loading}
+        >
           {loading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
@@ -154,7 +157,12 @@ function StripeCardForm({
 }
 
 export default function UserProfile() {
-  const [activeTab, setActiveTab] = useState("account");
+  const [location] = useLocation();
+  console.log(location);
+  const queryParams = new URLSearchParams(window.location.search);
+  console.log( queryParams.get("tab"))
+  const currentTab = queryParams.get("tab") || "account";
+  const [activeTab, setActiveTab] = useState(currentTab);
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
   const { userId, role, card_verified } = useUser();
@@ -175,16 +183,6 @@ export default function UserProfile() {
     };
 
 
-    const fetchAucionListings = async () => {
-      try {
-        const data = await getUsersAuctionListings("");
-        setAuctionListings(data || []);
-      } catch (error) {
-        console.error("Error fetching auction listings:", error);
-        setAuctionListings([]);
-      }
-    };
-
     const fetchUserBids = async () => {
       try {
         const data = await getUserBids();
@@ -196,7 +194,7 @@ export default function UserProfile() {
       }
     };
 
-    fetchAucionListings();
+    // fetchAucionListings();
     fetchUserDetails();
     fetchUserBids();
   }, [userId]);
@@ -279,7 +277,9 @@ export default function UserProfile() {
 
     return (
       <span
-        className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(status)}`}
+        className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(
+          status
+        )}`}
       >
         {status}
       </span>
@@ -287,17 +287,17 @@ export default function UserProfile() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(price);
@@ -332,7 +332,9 @@ export default function UserProfile() {
                 </div>
               </CardHeader>
               <CardContent className="text-center">
-                <h2 className="text-2xl font-bold text-black">{userData.username}</h2>
+                <h2 className="text-2xl font-bold text-black">
+                  {userData.username}
+                </h2>
                 <p className="text-gray-600">{userData.email}</p>
                 <p className="text-sm text-gray-500 mt-1">
                   Member since {userData.memberSince}
@@ -340,19 +342,27 @@ export default function UserProfile() {
 
                 <div className="grid grid-cols-2 gap-4 mt-6">
                   <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <p className="text-2xl font-bold text-blue-600">{userData.totalBids}</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {userData.totalBids}
+                    </p>
                     <p className="text-sm text-gray-600">Total Bids</p>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p className="text-2xl font-bold text-black">{userData.totalPurchases}</p>
+                    <p className="text-2xl font-bold text-black">
+                      {userData.totalPurchases}
+                    </p>
                     <p className="text-sm text-gray-600">Purchases</p>
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <p className="text-2xl font-bold text-black">{userData.totalSold}</p>
+                    <p className="text-2xl font-bold text-black">
+                      {userData.totalSold}
+                    </p>
                     <p className="text-sm text-gray-600">Sold</p>
                   </div>
                   <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <p className="text-2xl font-bold text-blue-600">{userData.savedVehicles}</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {userData.savedVehicles}
+                    </p>
                     <p className="text-sm text-gray-600">Saved</p>
                   </div>
                 </div>
@@ -375,22 +385,22 @@ export default function UserProfile() {
                   <User size={16} />
                   <span className="hidden md:inline">Account</span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="classified" 
+                <TabsTrigger
+                  value="classified"
                   className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
                 >
                   <Package size={16} />
                   <span className="hidden md:inline">Classified</span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="auctions" 
+                <TabsTrigger
+                  value="auctions"
                   className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
                 >
                   <History size={16} />
                   <span className="hidden md:inline">Auctions</span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="saved" 
+                <TabsTrigger
+                  value="saved"
                   className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
                 >
                   <Heart size={16} />
@@ -408,7 +418,9 @@ export default function UserProfile() {
                 <TabsContent value="account" className="mt-0">
                   <Card className="border-gray-200">
                     <CardHeader>
-                      <CardTitle className="text-black">Account Settings</CardTitle>
+                      <CardTitle className="text-black">
+                        Account Settings
+                      </CardTitle>
                       <CardDescription className="text-gray-600">
                         Manage your account details and preferences
                       </CardDescription>
@@ -422,7 +434,9 @@ export default function UserProfile() {
                       )}
 
                       <div className="space-y-2">
-                        <Label htmlFor="username" className="text-black">Username</Label>
+                        <Label htmlFor="username" className="text-black">
+                          Username
+                        </Label>
                         <Input
                           id="username"
                           type="text"
@@ -433,7 +447,9 @@ export default function UserProfile() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="text-black">Email Address</Label>
+                        <Label htmlFor="email" className="text-black">
+                          Email Address
+                        </Label>
                         <Input
                           id="email"
                           type="email"
@@ -445,7 +461,9 @@ export default function UserProfile() {
 
                       <div className="pt-2">
                         <Button
-                          onClick={() => setIsPasswordFormOpen(!isPasswordFormOpen)}
+                          onClick={() =>
+                            setIsPasswordFormOpen(!isPasswordFormOpen)
+                          }
                           variant="outline"
                           className="w-full justify-between border-gray-200 text-black hover:bg-gray-50"
                         >
@@ -466,13 +484,18 @@ export default function UserProfile() {
                                 <Alert className="mb-4 bg-red-50 text-red-800 border-red-200">
                                   <AlertCircle className="h-4 w-4" />
                                   <AlertTitle>Error</AlertTitle>
-                                  <AlertDescription>{formError}</AlertDescription>
+                                  <AlertDescription>
+                                    {formError}
+                                  </AlertDescription>
                                 </Alert>
                               )}
 
                               <div className="space-y-4">
                                 <div className="space-y-2">
-                                  <Label htmlFor="currentPassword" className="text-black">
+                                  <Label
+                                    htmlFor="currentPassword"
+                                    className="text-black"
+                                  >
                                     Current Password
                                   </Label>
                                   <Input
@@ -490,7 +513,10 @@ export default function UserProfile() {
                                 </div>
 
                                 <div className="space-y-2">
-                                  <Label htmlFor="newPassword" className="text-black">
+                                  <Label
+                                    htmlFor="newPassword"
+                                    className="text-black"
+                                  >
                                     New Password
                                   </Label>
                                   <Input
@@ -508,7 +534,10 @@ export default function UserProfile() {
                                 </div>
 
                                 <div className="space-y-2">
-                                  <Label htmlFor="confirmPassword" className="text-black">
+                                  <Label
+                                    htmlFor="confirmPassword"
+                                    className="text-black"
+                                  >
                                     Confirm New Password
                                   </Label>
                                   <Input
@@ -534,7 +563,10 @@ export default function UserProfile() {
                                   >
                                     Cancel
                                   </Button>
-                                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                                  <Button
+                                    type="submit"
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                  >
                                     Update Password
                                   </Button>
                                 </div>
@@ -546,7 +578,9 @@ export default function UserProfile() {
 
                       <div className="pt-2">
                         <Button
-                          onClick={() => setIsPaymentFormOpen(!isPaymentFormOpen)}
+                          onClick={() =>
+                            setIsPaymentFormOpen(!isPaymentFormOpen)
+                          }
                           variant="outline"
                           className="w-full justify-between border-gray-200 text-black hover:bg-gray-50"
                         >
@@ -570,18 +604,22 @@ export default function UserProfile() {
                       </div>
                     </CardContent>
                     <CardFooter className="flex justify-between">
-                      <Button variant="outline" className="border-gray-200 text-black hover:bg-gray-50">
+                      <Button
+                        variant="outline"
+                        className="border-gray-200 text-black hover:bg-gray-50"
+                      >
                         Cancel
                       </Button>
-                      <Button className="bg-blue-600 hover:bg-blue-700">Save Changes</Button>
+                      <Button className="bg-blue-600 hover:bg-blue-700">
+                        Save Changes
+                      </Button>
                     </CardFooter>
                   </Card>
                 </TabsContent>
 
                 <TabsContent value="classified" className="mt-0">
-                        <ProfileClassifiedTab/>
+                  <ProfileClassifiedTab />
                 </TabsContent>
-
 
                 {/* <TabsContent value="saved" className="mt-0">
                   <Card>
