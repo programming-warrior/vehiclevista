@@ -58,6 +58,7 @@ import { STRIPE_PUBLIC_KEY } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import ProfileClassifiedTab from "@/components/user/classified-tab";
 import { useLocation } from "wouter";
+import ProfileAuctionTab from "@/components/user/auction-tab";
 
 const stripePromise = loadStripe(STRIPE_PUBLIC_KEY);
 
@@ -160,7 +161,7 @@ export default function UserProfile() {
   const [location] = useLocation();
   console.log(location);
   const queryParams = new URLSearchParams(window.location.search);
-  console.log( queryParams.get("tab"))
+  console.log(queryParams.get("tab"));
   const currentTab = queryParams.get("tab") || "account";
   const [activeTab, setActiveTab] = useState(currentTab);
   const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
@@ -181,7 +182,6 @@ export default function UserProfile() {
         console.error("Error fetching user details:", error);
       }
     };
-
 
     const fetchUserBids = async () => {
       try {
@@ -399,13 +399,13 @@ export default function UserProfile() {
                   <History size={16} />
                   <span className="hidden md:inline">Auctions</span>
                 </TabsTrigger>
-                <TabsTrigger
+                {/* <TabsTrigger
                   value="saved"
                   className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
                 >
                   <Heart size={16} />
                   <span className="hidden md:inline">Saved</span>
-                </TabsTrigger>
+                </TabsTrigger> */}
               </TabsList>
 
               <motion.div
@@ -619,6 +619,9 @@ export default function UserProfile() {
 
                 <TabsContent value="classified" className="mt-0">
                   <ProfileClassifiedTab />
+                </TabsContent>
+                <TabsContent value="auctions" className="mt-0">
+                  <ProfileAuctionTab />
                 </TabsContent>
 
                 {/* <TabsContent value="saved" className="mt-0">

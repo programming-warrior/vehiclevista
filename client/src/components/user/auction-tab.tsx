@@ -80,7 +80,7 @@ const ProfileAuctionTab = () => {
   const [page, setPage] = useState<number>(1);
   const { userId } = useUser();
   const [sortOption, setSortOption] = useState("newest");
-  const [status, setStatus] = useState("ACTIVE");
+  const [status, setStatus] = useState("RUNNING");
   const [limit, setLimit] = useState(5);
   const [location, setLocation] = useLocation();
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -309,9 +309,9 @@ const ProfileAuctionTab = () => {
                     <div className="flex flex-col lg:flex-row gap-4">
                       {/* Vehicle Image */}
                       <div className="w-full lg:w-48 h-32 lg:h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                        {listing.item.type== "VEHICLE" && listing.item.images && listing.images.length > 0 && (
+                        {listing.item.type== "VEHICLE" && listing.item.images && listing.item.images.length > 0 && (
                           <img
-                            src={listing.images[0]}
+                            src={listing.item.images[0]}
                             alt={listing.title}
                             className="w-full h-full object-cover"
                           />

@@ -12,6 +12,7 @@ import {
   vehicleListingStatus,
   userListingPackages,
   packages,
+  auctionStatus,
 } from "../../shared/schema";
 import { eq, or, sql, and, ilike, hasOwnEntityKind } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
@@ -273,7 +274,7 @@ userRouter.get("/listings/auction", verifyToken, async (req, res) => {
     );
   }
 
-  if (statusFilter) {
+  if (statusFilter && auctionStatus.includes(statusFilter)) {
     whereClause.push(eq(auctions.status, statusFilter));
   }
 
