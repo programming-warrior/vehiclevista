@@ -7,10 +7,12 @@ import {
   bids,
   raffle,
   raffleTicketSale,
+  users,
 } from "../../../shared/schema";
 import { eq } from "drizzle-orm";
 import { createRefund } from "../../utils/stripe";
 import { notificationQueue } from "../queue";
+import { create } from "node:domain";
 
 const bidWorker = new Worker(
   "bid",
@@ -111,7 +113,7 @@ const bidWorker = new Worker(
             userId,
             raffleId,
             ticketQuantity,
-            refund
+            refund,
           });
           throw new Error(
             JSON.stringify("Ticket quantity exceeds issued remaining tickets")
@@ -137,11 +139,22 @@ const bidWorker = new Worker(
       });
       console.log("ticket added to the db and raffle upadted");
       const bidId = insertedBids[0]?.id;
-      await notificationQueue.add("p", {
+      await notificationQueue.add("raffle-ticketpurchase-success", {
         userId,
         raffleId,
         ticketQuantity,
       });
+      const [userDetail] = await db.select().from(users).where(eq(users.id, userId));
+      await connection.publish(
+        `RAFFLE_TICKET_PURCHASED`,
+        JSON.stringify({
+          raffleId: raffleId,
+          ticketQuantity: ticketQuantity,
+          userId: userId,
+          username: userDetail?.username || "",
+          createdAt: insertedBids[0]?.createdAt,
+        })
+      );
       console.log("bid published to redis");
     }
   },

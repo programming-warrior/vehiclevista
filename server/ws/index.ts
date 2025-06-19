@@ -199,6 +199,8 @@ async function subscribeToBidPlace() {
   });
 }
 
+
+
 async function subscribeToReceiveNofication() {
   const channel = "RECEIVE_NOTIFICATION";
   await subscribeOnce(channel, (redis_msg, channel) => {

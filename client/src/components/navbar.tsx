@@ -119,7 +119,7 @@ export default function Navbar() {
       .filter(n => !n.isRead)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     );
-  },[notifications, unReadCount])
+  },[notifications])
 
   console.log(filteredNotification);
 
@@ -257,7 +257,7 @@ export default function Navbar() {
                   variant="destructive"
                   className="absolute -top-2 -right-2 h-5 w-5  flex items-center justify-center p-[1px] text-xs bg-red-500 hover:bg-red-500"
                 >
-                  {unReadCount > 9 ? "9+" : unReadCount}
+                 
                 </Badge>
               )}
             </Button>
@@ -268,14 +268,7 @@ export default function Navbar() {
                     <h3 className="font-semibold text-gray-900">
                       Notifications
                     </h3>
-                    {unReadCount > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className="bg-blue-100 text-blue-800"
-                      >
-                        {unReadCount} new
-                      </Badge>
-                    )}
+               
                   </div>
                 </div>
                 {notifications.length > 0 ? (

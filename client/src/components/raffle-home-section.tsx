@@ -141,7 +141,7 @@ export default function RaffleHomeSection() {
           <CardFooter className="pt-2 pb-6 px-6">
             <Button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 py-6 text-lg rounded-lg"
-              onClick={() => setLocation(`/raffle/${raffle.id}`)}
+              onClick={() => setLocation(`/raffle`)}
             >
               Enter Raffle Now <ArrowRight className="h-5 w-5" />
             </Button>

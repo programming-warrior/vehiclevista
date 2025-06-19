@@ -13,6 +13,7 @@ import {
   Bike,
   Truck,
   Bus,
+  CheckCircle,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +52,7 @@ export default function AdminVehicles() {
   const [filteredVehicles, setFilteredVehicles] = useState<any>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState("newest");
-  const [showBlacklisted, setShowBlacklisted] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("ACTIVE"); // Changed from showBlacklisted
   const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [blacklistReason, setBlacklistReason] = useState("");
@@ -67,7 +68,7 @@ export default function AdminVehicles() {
         setIsLoading(true);
         const filter = {
           search: debouncedSearch,
-          status: showBlacklisted ? "BLACKLISTED" : "ACTIVE",
+          status: statusFilter,
         };
         const data = await adminGetVehicles({
           page,
@@ -91,7 +92,7 @@ export default function AdminVehicles() {
   useEffect(() => {
     fetch(1);
     setPage(1);
-  }, [debouncedSearch, showBlacklisted]);
+  }, [debouncedSearch, statusFilter]);
 
 
   const handleBlacklistVehicle = (vehicle: any) => {
@@ -148,6 +149,32 @@ export default function AdminVehicles() {
     });
   };
 
+  const getStatusTitle = () => {
+    switch (statusFilter) {
+      case "ACTIVE":
+        return "Active Vehicles";
+      case "BLACKLISTED":
+        return "Blacklisted Vehicles";
+      case "SOLD":
+        return "Sold Vehicles";
+      default:
+        return "All Vehicles";
+    }
+  };
+
+  const getStatusDescription = () => {
+    switch (statusFilter) {
+      case "ACTIVE":
+        return "Manage existing vehicle listings";
+      case "BLACKLISTED":
+        return "Vehicles that have been blacklisted from the platform";
+      case "SOLD":
+        return "Vehicles that have been marked as sold";
+      default:
+        return "All vehicle listings";
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-4">
@@ -168,22 +195,30 @@ export default function AdminVehicles() {
         <div className="flex justify-between items-center space-x-2">
           <div className="flex items-center space-x-2">
             <Button
-              variant={!showBlacklisted ? "default" : "outline"}
+              variant={statusFilter === "ACTIVE" ? "default" : "outline"}
               className={
-                !showBlacklisted ? "bg-blue-600 hover:bg-blue-700" : ""
+                statusFilter === "ACTIVE" ? "bg-blue-600 hover:bg-blue-700" : ""
               }
-              onClick={() => setShowBlacklisted(false)}
+              onClick={() => setStatusFilter("ACTIVE")}
             >
               <ShieldCheck className="mr-2 h-4 w-4" />
               Active Vehicles
             </Button>
             <Button
-              variant={showBlacklisted ? "default" : "outline"}
-              className={showBlacklisted ? "bg-blue-600 hover:bg-blue-700" : ""}
-              onClick={() => setShowBlacklisted(true)}
+              variant={statusFilter === "BLACKLISTED" ? "default" : "outline"}
+              className={statusFilter === "BLACKLISTED" ? "bg-blue-600 hover:bg-blue-700" : ""}
+              onClick={() => setStatusFilter("BLACKLISTED")}
             >
               <ShieldAlert className="mr-2 h-4 w-4" />
               Blacklisted Vehicles
+            </Button>
+            <Button
+              variant={statusFilter === "SOLD" ? "default" : "outline"}
+              className={statusFilter === "SOLD" ? "bg-blue-600 hover:bg-blue-700" : ""}
+              onClick={() => setStatusFilter("SOLD")}
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Sold Vehicles
             </Button>
           </div>
 
@@ -205,14 +240,15 @@ export default function AdminVehicles() {
           </div>
         </div>
 
-        {showBlacklisted && filteredVehicles.length === 0 && (
+        {((statusFilter === "BLACKLISTED" && filteredVehicles.length === 0) ||
+          (statusFilter === "SOLD" && filteredVehicles.length === 0)) && (
           <Alert className="border-blue-200 bg-blue-50">
             <AlertCircle className="h-4 w-4 text-blue-600" />
             <AlertTitle className="text-blue-700">
-              No blacklisted vehicles
+              No {statusFilter.toLowerCase()} vehicles
             </AlertTitle>
             <AlertDescription className="text-blue-600">
-              There are currently no blacklisted vehicles in the system.
+              There are currently no {statusFilter.toLowerCase()} vehicles in the system.
             </AlertDescription>
           </Alert>
         )}
@@ -220,12 +256,10 @@ export default function AdminVehicles() {
         <Card className="border-blue-200">
           <CardHeader className="bg-blue-50">
             <CardTitle className="text-blue-700">
-              {showBlacklisted ? "Blacklisted Vehicles" : "All Vehicles"}
+              {getStatusTitle()}
             </CardTitle>
             <CardDescription className="text-blue-600">
-              {showBlacklisted
-                ? "Vehicles that have been blacklisted from the platform"
-                : "Manage existing vehicle listings"}
+              {getStatusDescription()}
             </CardDescription>
           </CardHeader>
 
@@ -354,16 +388,22 @@ export default function AdminVehicles() {
                             variant={
                               vehicle.status === "ACTIVE"
                                 ? "outline"
+                                : vehicle.status === "SOLD"
+                                ? "secondary"
                                 : "destructive"
                             }
                             className={
                               vehicle.status === "ACTIVE"
                                 ? "border-blue-500 text-blue-600"
+                                : vehicle.status === "SOLD"
+                                ? "bg-green-100 text-green-700 border-green-200"
                                 : ""
                             }
                           >
                             {vehicle.status === "BLACKLISTED"
                               ? "Blacklisted"
+                              : vehicle.status === "SOLD"
+                              ? "Sold"
                               : "Active"}
                           </Badge>
                         </td>
@@ -378,7 +418,7 @@ export default function AdminVehicles() {
                               <ShieldAlert className="mr-2 h-4 w-4" />
                               Blacklist
                             </Button>
-                          ) : (
+                          ) : vehicle.status === "BLACKLISTED" ? (
                             <Button
                               variant="outline"
                               size="sm"
@@ -388,6 +428,10 @@ export default function AdminVehicles() {
                               <ShieldCheck className="mr-2 h-4 w-4" />
                               Restore
                             </Button>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              No actions available
+                            </span>
                           )}
                         </td>
                       </tr>

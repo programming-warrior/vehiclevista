@@ -212,7 +212,7 @@ export default function AdminRafflePage() {
                               size="sm"
                               className="border-blue-500 text-blue-500 hover:bg-blue-50"
                               onClick={() =>
-                                window.open(`/raffles/${raffle.id}`, "_blank")
+                                window.open(`/raffle/${raffle.id}`, "_blank")
                               }
                             >
                               View Details
@@ -289,7 +289,7 @@ export default function AdminRafflePage() {
                                   className="mr-2 border-blue-500 text-blue-500 hover:bg-blue-50"
                                   onClick={() =>
                                     window.open(
-                                      `/raffles/${raffle.id}`,
+                                      `/admin/raffle/${raffle.id}`,
                                       "_blank"
                                     )
                                   }

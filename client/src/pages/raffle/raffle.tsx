@@ -20,12 +20,12 @@ import {
   PoundSterling,
 } from "lucide-react";
 import {
-  getRaffleById,
+  getRunningRaffle,
   purchaseRaffleTicket,
   verifyTicketPayment,
   incrementRaffleClicks,
   incrementRaffleViews,
-  getBidsForRaffle,
+  getBidsForRunningRaffle
 } from "@/api";
 import {
   Dialog,
@@ -45,7 +45,7 @@ import "react-quill/dist/quill.bubble.css";
 import ReportDialog from "@/components/ui/report-dialog";
 import PaymentFormWrapper from "@/components/payment-form";
 
-export default function RaffleIdPage() {
+export default function RunningRafflePage() {
   const { id } = useParams<{ id: string }>();
   const [raffle, setRaffle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +59,7 @@ export default function RaffleIdPage() {
   const [paymentformOpen, setPaymentformOpen] = useState(false);
   const [paymentInfo, setPaymentInfo] = useState<any>({});
   const [bids, setBids] = useState<any>([]);
+  
 
   // Total cost calculation
   const totalCost = raffle?.ticketPrice
@@ -85,7 +86,9 @@ export default function RaffleIdPage() {
   }
 
   async function handlePurchaseTickets() {
-    if (id && !purchaseError && ticketQuantity > 0) {
+    console.log('handle purchase ticket called')
+    console.log(id);
+    if ( !purchaseError && ticketQuantity > 0) {
       try {
         if (!userId) {
           toast({
@@ -142,7 +145,7 @@ export default function RaffleIdPage() {
     const fetchRaffle = async () => {
       setLoading(true);
       try {
-        const response = await getRaffleById(id);
+        const response = await getRunningRaffle();
         setRaffle(response);
       } catch (error) {
         console.error("Error fetching raffle:", error);
@@ -153,10 +156,11 @@ export default function RaffleIdPage() {
 
     const fetchRaffleBids = async () => {
       try {
-        const response = await getBidsForRaffle(id as string);
-        setBids(response.purchaseHistory || []);
+        const response = await getBidsForRunningRaffle();
+        // setEntries(response.entries);
+        setBids(response.purchaseHistory || [])
       } catch (error) {
-        console.error("Error fetching bids:", error);
+        console.error("Error fetching entries:", error);
       }
     };
 
@@ -225,12 +229,12 @@ export default function RaffleIdPage() {
                 </div>
               </div>
 
-              {/* <Button
+              <Button
                 onClick={() => setPurchaseOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-md"
               >
                 Buy Tickets
-              </Button> */}
+              </Button>
             </div>
           </div>
 
@@ -400,7 +404,7 @@ export default function RaffleIdPage() {
                     <div className="text-2xl font-bold text-blue-800">${raffle.value || 'N/A'}</div>
                   </div>
                    */}
-                  {/* <Button
+                  <Button
                     variant="outline"
                     className="mt-4 w-full border-blue-600 text-blue-600 hover:bg-blue-50"
                     size="lg"
@@ -408,7 +412,7 @@ export default function RaffleIdPage() {
                   >
                     <Ticket className="h-4 w-4 mr-2" />
                     Buy Tickets Now
-                  </Button> */}
+                  </Button>
 
                   {/* <Button
                     variant="destructive"
@@ -469,7 +473,6 @@ export default function RaffleIdPage() {
                   </div>
                 </div> */}
 
-                {/* Bid history card */}
                 <div className="bg-gray-50 border rounded-lg p-5 shadow-sm">
                   <h2 className="text-xl text-blue-700 font-bold mb-4 border-b pb-2 flex items-center">
                     <Users size={20} className="mr-2" />
@@ -486,7 +489,7 @@ export default function RaffleIdPage() {
                         <thead>
                           <tr className="text-left text-gray-600">
                             <th className="pb-2">User</th>
-                            <th className="pb-2">Amount</th>
+                            <th className="pb-2">Ticket Quantity</th>
                             <th className="pb-2">Time</th>
                           </tr>
                         </thead>
@@ -496,7 +499,7 @@ export default function RaffleIdPage() {
                               <td className="py-2 font-medium">
                                 {bid.user.username}
                               </td>
-                              <td className="py-2">${bid.bidAmount}</td>
+                              <td className="py-2">{bid.ticketQtn}</td>
                               <td className="py-2 text-gray-500">
                                 {new Date(bid.createdAt).toLocaleString(
                                   "en-US",

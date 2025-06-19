@@ -14,7 +14,7 @@ import {
   Truck,
   Bus,
   Clock,
-  CheckCircle
+  CheckCircle,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +69,7 @@ export default function AdminVehicles() {
 
   const debouncedSearch = useDebounce(searchQuery, 500);
 
-  async function fetch(page:number) {
+  async function fetch(page: number) {
     try {
       setIsLoading(true);
       const filter = {
@@ -96,13 +96,13 @@ export default function AdminVehicles() {
   useEffect(() => {
     fetch(page);
   }, [page, limit, sortOption]);
-  
+
   useEffect(() => {
     fetch(1);
     setPage(1);
   }, [debouncedSearch, activeTab]);
 
-  const handleBlacklistVehicle = (vehicle:any) => {
+  const handleBlacklistVehicle = (vehicle: any) => {
     setSelectedVehicle(vehicle);
     setBlacklistDialogOpen(true);
   };
@@ -111,7 +111,7 @@ export default function AdminVehicles() {
     try {
       // await blacklistVehicle(selectedVehicle.id, blacklistReason);
       setAuctions(
-        auctions.map((vehicle:any) =>
+        auctions.map((vehicle: any) =>
           vehicle.id === selectedVehicle?.id
             ? { ...vehicle, status: "BLACKLISTED", blacklistReason }
             : vehicle
@@ -119,7 +119,7 @@ export default function AdminVehicles() {
       );
       setFilteredAuctions(
         filteredAuctions.filter(
-          (vehicle:any) => vehicle.id !== selectedVehicle?.id
+          (vehicle: any) => vehicle.id !== selectedVehicle?.id
         )
       );
       setBlacklistDialogOpen(false);
@@ -129,43 +129,55 @@ export default function AdminVehicles() {
     }
   };
 
-  const removeFromBlacklist = async (vehicleId:number) => {
+  const removeFromBlacklist = async (vehicleId: number) => {
     try {
       // await unBlacklistVehicle(vehicleId, "");
       setAuctions(
-        auctions.map((vehicle:any) =>
+        auctions.map((vehicle: any) =>
           vehicle.id === vehicleId
             ? { ...vehicle, status: "ACTIVE", blacklistReason: "" }
             : vehicle
         )
       );
       setFilteredAuctions(
-        filteredAuctions.filter((vehicle:any) => vehicle.id !== vehicleId)
+        filteredAuctions.filter((vehicle: any) => vehicle.id !== vehicleId)
       );
     } catch (error) {
       console.error("Error unblacklisting vehicle:", error);
     }
   };
 
-  const formatDate = (dateString:string) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "numeric",
       day: "numeric",
       hour: "2-digit",
-      minute:"2-digit",
+      minute: "2-digit",
     });
   };
 
-  const getStatusBadge = (status:string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "RUNNING":
-        return <Badge variant="outline" className="border-green-500 text-green-600">Running</Badge>;
+        return (
+          <Badge variant="outline" className="border-green-500 text-green-600">
+            Running
+          </Badge>
+        );
       case "UPCOMING":
-        return <Badge variant="outline" className="border-blue-500 text-blue-600">Upcoming</Badge>;
+        return (
+          <Badge variant="outline" className="border-blue-500 text-blue-600">
+            Upcoming
+          </Badge>
+        );
       case "ENDED":
-        return <Badge variant="outline" className="border-gray-500 text-gray-600">Ended</Badge>;
+        return (
+          <Badge variant="outline" className="border-gray-500 text-gray-600">
+            Ended
+          </Badge>
+        );
       case "BLACKLISTED":
         return <Badge variant="destructive">Blacklisted</Badge>;
       default:
@@ -173,7 +185,7 @@ export default function AdminVehicles() {
     }
   };
 
-  const getStatusIcon = (status:string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case "RUNNING":
         return <Car className="mr-2 h-4 w-4" />;
@@ -193,7 +205,7 @@ export default function AdminVehicles() {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold text-blue-700">
-             Auction Management
+            Auction Management
           </h2>
           <div className="flex gap-2">
             <Input
@@ -207,34 +219,47 @@ export default function AdminVehicles() {
 
         <Card className="border-blue-200">
           <CardHeader className="bg-blue-50 pb-2">
-            <CardTitle className="text-blue-700">
-              Auction Listings
-            </CardTitle>
+            <CardTitle className="text-blue-700">Auction Listings</CardTitle>
             <CardDescription className="text-blue-600">
               Manage all vehicle auction listings on the platform
             </CardDescription>
           </CardHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
             <div className="px-6 pt-2 bg-blue-50">
               <TabsList className="grid grid-cols-4 bg-blue-100">
-                <TabsTrigger value="RUNNING" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                <TabsTrigger
+                  value="RUNNING"
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                >
                   <Car className="mr-2 h-4 w-4" />
                   Running
                 </TabsTrigger>
-                <TabsTrigger value="UPCOMING" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                <TabsTrigger
+                  value="SOLD"
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                >
+                  <ShieldAlert className="mr-2 h-4 w-4" />
+                  Sold
+                </TabsTrigger>
+                <TabsTrigger
+                  value="UPCOMING"
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                >
                   <Clock className="mr-2 h-4 w-4" />
                   Upcoming
                 </TabsTrigger>
-                <TabsTrigger value="ENDED" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                <TabsTrigger
+                  value="ENDED"
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                >
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Ended
                 </TabsTrigger>
-                <TabsTrigger value="BLACKLISTED" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                  <ShieldAlert className="mr-2 h-4 w-4" />
-                  Blacklisted
-                </TabsTrigger>
-
               </TabsList>
             </div>
 
@@ -248,7 +273,9 @@ export default function AdminVehicles() {
                   <SelectContent>
                     <SelectItem value="newest">Newest</SelectItem>
                     <SelectItem value="oldest">Oldest</SelectItem>
-                    <SelectItem value="reports">Reports (High to Low)</SelectItem>
+                    <SelectItem value="reports">
+                      Reports (High to Low)
+                    </SelectItem>
                     <SelectItem value="views">Views (High to Low)</SelectItem>
                     <SelectItem value="leads">Leads (High to Low)</SelectItem>
                     <SelectItem value="clicks">Clicks (High to Low)</SelectItem>
@@ -266,7 +293,8 @@ export default function AdminVehicles() {
                       No {activeTab.toLowerCase()} auctions
                     </AlertTitle>
                     <AlertDescription className="text-blue-600">
-                      There are currently no {activeTab.toLowerCase()} auctions in the system.
+                      There are currently no {activeTab.toLowerCase()} auctions
+                      in the system.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -278,127 +306,141 @@ export default function AdminVehicles() {
                     <Skeleton className="w-full h-16 bg-blue-100" />
                     <Skeleton className="w-full h-16 bg-blue-100" />
                   </div>
-                ) : filteredAuctions.length > 0 && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-blue-100">
-                          <th className="text-left py-3 px-4 font-medium text-blue-700">
-                            Title
-                          </th>
-                          <th className="text-left py-3 px-4 font-medium text-blue-700">
-                            Start Date
-                          </th>
-                          <th className="text-left py-3 px-4 font-medium text-blue-700">
-                            End Date
-                          </th>
-                          <th className="text-center py-3 px-4 font-medium text-blue-700">
-                            <div className="flex items-center justify-center">
-                              Reports
-                              <ArrowUpDown className="ml-1 h-4 w-4" />
-                            </div>
-                          </th>
-                          <th className="text-center py-3 px-4 font-medium text-blue-700">
-                            Stats
-                          </th>
-                          <th className="text-center py-3 px-4 font-medium text-blue-700">
-                            Bids
-                          </th>
-                          <th className="text-left py-3 px-4 font-medium text-blue-700">
-                            Status
-                          </th>
-                          <th className="text-right py-3 px-4 font-medium text-blue-700">
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredAuctions.map((auction:any) => (
-                          <tr
-                            key={auction.id}
-                            onClick={()=>setLocation(`/auction/${auction.id}`)}
-                            className="border-b border-blue-100 hover:bg-blue-50 cursor-pointer"
-                          >
-                            <td className="py-4 px-4">
-                              <div className="flex items-center font-medium">
-                                {auction.title}
+                ) : (
+                  filteredAuctions.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-blue-100">
+                            <th className="text-left py-3 px-4 font-medium text-blue-700">
+                              Title
+                            </th>
+                            <th className="text-left py-3 px-4 font-medium text-blue-700">
+                              Start Date
+                            </th>
+                            <th className="text-left py-3 px-4 font-medium text-blue-700">
+                              End Date
+                            </th>
+                            <th className="text-center py-3 px-4 font-medium text-blue-700">
+                              <div className="flex items-center justify-center">
+                                Reports
+                                <ArrowUpDown className="ml-1 h-4 w-4" />
                               </div>
-                            </td>
-                            <td className="py-4 px-4">
-                              {formatDate(auction.startDate)}
-                            </td>
-                            <td className="py-4 px-4">
-                              {formatDate(auction.endDate)}
-                            </td>
-                            <td className="py-4 px-4 text-center">
-                              {parseInt(auction.reports_count) > 0 ? (
-                                <Badge variant="destructive">
-                                  {auction.reports_count}
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">0</span>
-                              )}
-                            </td>
-                            <td className="py-4 px-4">
-                              <div className="flex items-center justify-center space-x-2">
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs flex items-center"
-                                >
-                                  <Eye className="mr-1 h-3 w-3" /> {auction.views}
-                                </Badge>
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs flex items-center"
-                                >
-                                  <MessageSquare className="mr-1 h-3 w-3" />{" "}
-                                  {auction.leads}
-                                </Badge>
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs flex items-center"
-                                >
-                                  <MousePointer className="mr-1 h-3 w-3" />{" "}
-                                  {auction.clicks}
-                                </Badge>
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 text-center">
-                              <Badge variant="outline" className="border-blue-500 text-blue-600">
-                                {auction.total_bids}
-                              </Badge>
-                            </td>
-                            <td className="py-4 px-4">
-                              {getStatusBadge(auction.status)}
-                            </td>
-                            <td className="py-4 px-4 text-right">
-                              {auction.status !== "BLACKLISTED" ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                                  onClick={() => handleBlacklistVehicle(auction)}
-                                >
-                                  <ShieldAlert className="mr-2 h-4 w-4" />
-                                  Blacklist
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                                  onClick={() => removeFromBlacklist(auction.id)}
-                                >
-                                  <ShieldCheck className="mr-2 h-4 w-4" />
-                                  Restore
-                                </Button>
-                              )}
-                            </td>
+                            </th>
+                            <th className="text-center py-3 px-4 font-medium text-blue-700">
+                              Stats
+                            </th>
+                            <th className="text-center py-3 px-4 font-medium text-blue-700">
+                              Bids
+                            </th>
+                            <th className="text-left py-3 px-4 font-medium text-blue-700">
+                              Status
+                            </th>
+                            {/* <th className="text-right py-3 px-4 font-medium text-blue-700">
+                              Action
+                            </th> */}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {filteredAuctions.map((auction: any) => (
+                            <tr
+                              key={auction.id}
+                              onClick={() =>
+                                setLocation(`/auction/${auction.id}`)
+                              }
+                              className="border-b border-blue-100 hover:bg-blue-50 cursor-pointer"
+                            >
+                              <td className="py-4 px-4">
+                                <div className="flex items-center font-medium">
+                                  {auction.title}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                {formatDate(auction.startDate)}
+                              </td>
+                              <td className="py-4 px-4">
+                                {formatDate(auction.endDate)}
+                              </td>
+                              <td className="py-4 px-4 text-center">
+                                {parseInt(auction.reports_count) > 0 ? (
+                                  <Badge variant="destructive">
+                                    {auction.reports_count}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    0
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="flex items-center justify-center space-x-2">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs flex items-center"
+                                  >
+                                    <Eye className="mr-1 h-3 w-3" />{" "}
+                                    {auction.views}
+                                  </Badge>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs flex items-center"
+                                  >
+                                    <MessageSquare className="mr-1 h-3 w-3" />{" "}
+                                    {auction.leads}
+                                  </Badge>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs flex items-center"
+                                  >
+                                    <MousePointer className="mr-1 h-3 w-3" />{" "}
+                                    {auction.clicks}
+                                  </Badge>
+                                </div>
+                              </td>
+                              <td className="py-4 px-4 text-center">
+                                <Badge
+                                  variant="outline"
+                                  className="border-blue-500 text-blue-600"
+                                >
+                                  {auction.total_bids}
+                                </Badge>
+                              </td>
+                              <td className="py-4 px-4">
+                                {getStatusBadge(auction.status)}
+                              </td>
+                              {/* <td className="py-4 px-4 text-right">
+                                {auction.status !== "BLACKLISTED" ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                    onClick={() =>
+                                      handleBlacklistVehicle(auction)
+                                    }
+                                  >
+                                    <ShieldAlert className="mr-2 h-4 w-4" />
+                                    Blacklist
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                                    onClick={() =>
+                                      removeFromBlacklist(auction.id)
+                                    }
+                                  >
+                                    <ShieldCheck className="mr-2 h-4 w-4" />
+                                    Restore
+                                  </Button>
+                                )}
+                              </td> */}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
                 )}
               </CardContent>
             </TabsContent>
@@ -476,8 +518,8 @@ export default function AdminVehicles() {
                 Blacklist Auction
               </DialogTitle>
               <DialogDescription className="text-blue-600">
-                Are you sure you want to blacklist "{selectedVehicle?.title}"? This will remove it from active
-                listings.
+                Are you sure you want to blacklist "{selectedVehicle?.title}"?
+                This will remove it from active listings.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">

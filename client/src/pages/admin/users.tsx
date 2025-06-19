@@ -324,6 +324,7 @@ export default function AdminUsers() {
                           </Badge>
                         </td>
                         <td className="py-4 px-4 text-right">
+                          
                           {user.status === "active" ? (
                             <Button
                               variant="outline"

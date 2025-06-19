@@ -22,7 +22,6 @@ import { verifyToken } from "../middleware/authMiddleware";
 import { userSessionSchema } from "../utils/session";
 import { notificationQueue, cleanupQueue } from "../worker/queue";
 import { vehicleEditSchema } from "../../shared/zodSchema/vehicleSchema";
-import { auctionCountdownIntervals } from "../lib/auctionCountdownStore";
 
 
 

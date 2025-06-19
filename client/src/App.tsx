@@ -51,6 +51,7 @@ import { useNotification } from "./hooks/use-store";
 import SellerAuctionUpload from "@/pages/seller/auction-create";
 import ScrollToTop from "./components/scroll-to-top";
 import VehicleEditPage from "./pages/vehicle/vehicle-edit";
+import RunningRafflePage from "./pages/raffle/raffle";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -167,11 +168,15 @@ export default function App() {
             <Route path="/makes/:brand" component={BrandPage} />
             <Route path="/auction" component={AuctionPage} />
             <Route path="/auction/:id" component={AuctionIdPage} />
-            <Route path="/raffle/:id" component={RaffleIdPage} />raf
+            <Route path="/raffle" component={RunningRafflePage} />
+
 
             {/* Admin Routes */}
             <Route path="/admin">
               <ProtectedRoute component={AdminDashboard} adminOnly />
+            </Route>
+              <Route path="/admin/raffle/:id">
+              <ProtectedRoute component={RaffleIdPage} adminOnly />
             </Route>
             <Route path="/admin/blacklist">
               <ProtectedRoute component={AdminPublicBlacklist} adminOnly />

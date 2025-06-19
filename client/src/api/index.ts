@@ -43,7 +43,16 @@ import {
     verifyBidPayment
 } from "./auction-api";
 
-import { getRunningRaffle, purchaseRaffleTicket, incrementRaffleViews, incrementRaffleClicks, verifyTicketPayment } from "./raffle-api";
+import { 
+  getRunningRaffle, 
+  purchaseRaffleTicket, 
+  incrementRaffleViews, 
+  incrementRaffleClicks, 
+  verifyTicketPayment, 
+  getRaffleById, 
+  getBidsForRaffle, 
+  getBidsForRunningRaffle,
+} from "./raffle-api";
 
 import { 
   getPerformanceMetrics,
@@ -209,12 +218,14 @@ export {
   editClassifiedListing,
 
   getRunningRaffle,
+  getRaffleById,
   purchaseRaffleTicket,
   verifyTicketPayment,
   incrementRaffleClicks,
   incrementRaffleViews,
+  getBidsForRaffle,
+  getBidsForRunningRaffle,
   
-
   getPerformanceMetrics,
   getTopListings, 
   getListingReports,

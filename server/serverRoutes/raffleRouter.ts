@@ -7,6 +7,7 @@ import {
   bids,
   users,
   raffle,
+  raffleTicketSale,
 } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
@@ -16,10 +17,11 @@ import { z } from "zod";
 import { verifyToken } from "../middleware/authMiddleware";
 import { parseCsvFile, extractVehicles } from "../utils/helper";
 import multer from "multer";
-import { auctionQueue, bidQueue } from "../worker/queue";
+import { auctionQueue, bidQueue, raffleQueue } from "../worker/queue";
 import { vehicleTypesEnum } from "../../shared/schema";
 import { stripe } from "../utils/stripe";
 import { CURRENCY } from "../utils/constants";
+import { Repeat1 } from "lucide-react";
 
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 
@@ -44,93 +46,117 @@ raffleRouter.get("/get", async (req, res) => {
   }
 });
 
-raffleRouter.post(
-  "/purchase-ticket/:raffleId",
-  verifyToken,
-  async (req, res) => {
-    if (!req.userId )
-      return res.status(403).json({ error: "Unauthorized" });
-    try {
-      const raffleId = parseInt(req.params.raffleId, 10);
-      if (isNaN(raffleId)) {
-        return res.status(400).json({ error: "Invalid raffle ID" });
-      }
-      let { ticketQuantity } = req.body;
-      ticketQuantity = parseInt(ticketQuantity);
-      if (!ticketQuantity || isNaN(ticketQuantity) || ticketQuantity < 0) {
-        return res.status(400).json({ error: "invalid ticket quantity" });
-      }
-      
-      const result = await db.select().from(raffle).where(eq(raffle.id, raffleId));
-      console.log(result);
-      if (result.length == 0)
-        return res.status(404).json({ error: "Invalid RaffleID" });
-
-      console.log(result[0].status);
-      if (result[0].status !== "RUNNING")
-        return res.status(404).json({ error: "raffle is not running" });
-
-      const RAFFLE_TICKET_CHARGE_PERCENTAGE = 0.03;
-
-      let totalChargedAmount =
-        RAFFLE_TICKET_CHARGE_PERCENTAGE *
-        ticketQuantity *
-        result[0].ticketPrice;
-      totalChargedAmount= Math.ceil(totalChargedAmount);
-      totalChargedAmount= Math.max(2,totalChargedAmount);
-      const amountInPence = Math.round(totalChargedAmount * 100);
-      //create payment session
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amountInPence,
-        currency: CURRENCY,
-        automatic_payment_methods: {
-          enabled: true,
-        },
-        metadata: {
-          raffleId: result[0].id.toString(),
-          ticketQuantity: ticketQuantity,
-          userId: req.userId.toString(),
-          chargedAmount: totalChargedAmount,
-        },
+raffleRouter.get("/get/:id", verifyToken, async (req, res) => {
+  if (!req.role || req.role !== "admin")
+    res.status(401).json({
+      error: "unauthorized",
+    });
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(parseInt(id)))
+      res.status(400).json({
+        error: "invalid id",
       });
-      const redis = await RedisClientSingleton.getRedisClient();
-      await redis.set(
-        `paymentSession:${paymentIntent.id}`,
-        JSON.stringify({
-          raffleId: result[0].id.toString(),
-          ticketQuantity: ticketQuantity,
-          userId: req.userId.toString(),
-          chargedAmount: totalChargedAmount,
-          status: "PENDING",
-        }),
-        { EX: 60 * 2 } // 2 minutes
-      );
+    const [result] = await db
+      .select()
+      .from(raffle)
+      .where(eq(raffle.id, Number(id)));
 
-      return res.status(202).json({
-        message: "success",
-        clientSecret: paymentIntent.client_secret,
-        timeout: "2 mintues",
-        chargedAmount: totalChargedAmount,
-        currency: CURRENCY,
+    if (!result)
+      return res.status(404).json({
+        error: "not found",
       });
-      // await bidQueue.add("processRaffleTicket", {
-      //   raffleId,
-      //   userId: req.userId,
-      //   ticketQuantity,
-      // });
-      // console.log("added to the bid queue");
-    } catch (e: any) {
-      if (e.message === "raffle not found") {
-        return res.status(404).json({ error: e.message });
-      }
-      if (e.message === "bidAmount needs to be greater than the currentBid") {
-        return res.status(400).json({ error: e.message });
-      }
-      console.log(e);
-      return res.status(500).json({ error: e.message });
-    }
+    res.status(200).json(result);
+  } catch (err: any) {
+    console.error("Error fetching vehicles:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching vehicle list", error: err.message });
   }
-);
+});
+
+raffleRouter.post("/purchase-ticket", verifyToken, async (req, res) => {
+  if (!req.userId) return res.status(403).json({ error: "Unauthorized" });
+  try {
+    // const raffleId = parseInt(req.params.raffleId, 10);
+    // if (isNaN(raffleId)) {
+    //   return res.status(400).json({ error: "Invalid raffle ID" });
+    // }
+    let { ticketQuantity } = req.body;
+    ticketQuantity = parseInt(ticketQuantity);
+    if (!ticketQuantity || isNaN(ticketQuantity) || ticketQuantity < 0) {
+      return res.status(400).json({ error: "invalid ticket quantity" });
+    }
+
+    //ONLY ONE RAFFLE WOULD BE RUNNING AT A TIME, SO DON'T NEED RAFFLEID
+    const result = await db
+      .select()
+      .from(raffle)
+      .where(eq(raffle.status, "RUNNING"));
+    console.log(result);
+    if (result.length == 0)
+      return res.status(404).json({ error: "Invalid RaffleID" });
+
+    console.log(result[0].status);
+
+    const RAFFLE_TICKET_CHARGE_PERCENTAGE = 0.03; //thiry percent of the raffled vehicle value
+
+    let totalChargedAmount =
+      RAFFLE_TICKET_CHARGE_PERCENTAGE * ticketQuantity * result[0].ticketPrice;
+    totalChargedAmount = Math.ceil(totalChargedAmount);
+    totalChargedAmount = Math.max(2, totalChargedAmount);
+    const amountInPence = Math.round(totalChargedAmount * 100);
+    //create payment session
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInPence,
+      currency: CURRENCY,
+      automatic_payment_methods: {
+        enabled: true,
+      },
+      metadata: {
+        raffleId: result[0].id.toString(),
+        ticketQuantity: ticketQuantity,
+        userId: req.userId.toString(),
+        chargedAmount: totalChargedAmount,
+      },
+    });
+    const redis = await RedisClientSingleton.getRedisClient();
+    await redis.set(
+      `paymentSession:${paymentIntent.id}`,
+      JSON.stringify({
+        raffleId: result[0].id.toString(),
+        ticketQuantity: ticketQuantity,
+        userId: req.userId.toString(),
+        chargedAmount: totalChargedAmount,
+        status: "PENDING",
+      }),
+      { EX: 60 * 2 } // 2 minutes
+    );
+
+    return res.status(202).json({
+      message: "success",
+      clientSecret: paymentIntent.client_secret,
+      timeout: "2 mintues",
+      chargedAmount: totalChargedAmount,
+      currency: CURRENCY,
+    });
+    // await bidQueue.add("processRaffleTicket", {
+    //   raffleId,
+    //   userId: req.userId,
+    //   ticketQuantity,
+    // });
+    // console.log("added to the bid queue");
+  } catch (e: any) {
+    if (e.message === "raffle not found") {
+      return res.status(404).json({ error: e.message });
+    }
+    if (e.message === "bidAmount needs to be greater than the currentBid") {
+      return res.status(400).json({ error: e.message });
+    }
+    console.log(e);
+    return res.status(500).json({ error: e.message });
+  }
+});
 
 raffleRouter.post("/purchase/verify-payment", verifyToken, async (req, res) => {
   if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
@@ -159,7 +185,8 @@ raffleRouter.post("/purchase/verify-payment", verifyToken, async (req, res) => {
       return res.status(403).json({ error: "unauthorized" });
 
     if (paymentIntent.status === "succeeded") {
-      const { raffleId, userId, ticketQuantity, chargedAmount } = paymentIntent.metadata;
+      const { raffleId, userId, ticketQuantity, chargedAmount } =
+        paymentIntent.metadata;
       await redis.del(`paymentSession:${paymentIntentId}`);
       await bidQueue.add("processRaffleTicket", {
         userId: req.userId,
@@ -177,32 +204,70 @@ raffleRouter.post("/purchase/verify-payment", verifyToken, async (req, res) => {
   }
 });
 
-raffleRouter.get("/bids/:auctionId", async (req, res) => {
+raffleRouter.get("/purchases", async (req, res) => {
   try {
-    const auctionId = parseInt(req.params.auctionId, 10);
-    if (isNaN(auctionId)) {
-      return res.status(400).json({ error: "Invalid auction ID" });
-    }
-
+    const [runningRaffle] = await db
+      .select()
+      .from(raffle)
+      .where(eq(raffle.status, "RUNNING"));
+    if (!runningRaffle)
+      return res.status(404).json({
+        error: "no running raffle",
+      });
     const result = await db
       .select({
-        bid: bids,
+        ticketPurchases: raffleTicketSale,
         user: {
           id: users.id,
           username: users.username,
         },
       })
-      .from(bids)
-      .innerJoin(users, eq(bids.userId, users.id))
-      .where(eq(bids.auctionId, auctionId))
-      .orderBy(sql`${bids.createdAt} DESC`);
+      .from(raffleTicketSale)
+      .innerJoin(users, eq(raffleTicketSale.userId, users.id))
+      .where(eq(raffleTicketSale.raffleId, runningRaffle.id))
+      .orderBy(sql`${raffleTicketSale.createdAt} DESC`);
 
-    const bidsWithUser = result.map((row) => ({
-      ...row.bid,
+    const ticketPurchasesWithUser = result.map((row) => ({
+      ...row.ticketPurchases,
       user: row.user,
     }));
 
-    return res.status(200).json({ bids: bidsWithUser });
+    return res.status(200).json({ purchaseHistory: ticketPurchasesWithUser });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+raffleRouter.get("/purchases/:raffleId", verifyToken, async (req, res) => {
+  if (!req.role || req.role !== "admin")
+    res.status(401).json({
+      error: "not authorized",
+    });
+  try {
+    const raffleId = parseInt(req.params.raffleId, 10);
+    if (isNaN(raffleId)) {
+      return res.status(400).json({ error: "Invalid auction ID" });
+    }
+
+    const result = await db
+      .select({
+        ticketPurchases: raffleTicketSale,
+        user: {
+          id: users.id,
+          username: users.username,
+        },
+      })
+      .from(raffleTicketSale)
+      .innerJoin(users, eq(raffleTicketSale.userId, users.id))
+      .where(eq(raffleTicketSale.raffleId, raffleId))
+      .orderBy(sql`${raffleTicketSale.createdAt} DESC`);
+
+    const ticketPurchasesWithUser = result.map((row) => ({
+      ...row.ticketPurchases,
+      user: row.user,
+    }));
+
+    return res.status(200).json({ purchaseHistory: ticketPurchasesWithUser });
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
   }
