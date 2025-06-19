@@ -97,13 +97,13 @@ export default function RaffleHomeSection() {
                     <span className="text-sm text-blue-600 ml-1">per ticket</span>
                   </div>
                 </div>
-                <div className="flex items-center">
+                {/* <div className="flex items-center">
                   <Users className="h-6 w-6 mr-2 text-blue-600" />
                   <div>
                     <span className="font-bold text-xl text-blue-800">{raffle.leads || 0}</span>
                     <span className="text-sm text-blue-600 ml-1">entries</span>
                   </div>
-                </div>
+                </div> */}
               </div>
 
               <div className="space-y-3">
