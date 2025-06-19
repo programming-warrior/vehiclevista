@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "apiServer",
-      script: "./dist/server/index.js",
+      script: "npm run server-prod",
     },
     {
       name: "websocketServer",
