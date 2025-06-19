@@ -340,7 +340,7 @@ export default function UserProfile() {
                   Member since {userData.memberSince}
                 </p>
 
-                <div className="grid grid-cols-2 gap-4 mt-6">
+                {/* <div className="grid grid-cols-2 gap-4 mt-6">
                   <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
                     <p className="text-2xl font-bold text-blue-600">
                       {userData.totalBids}
@@ -365,7 +365,7 @@ export default function UserProfile() {
                     </p>
                     <p className="text-sm text-gray-600">Saved</p>
                   </div>
-                </div>
+                </div> */}
               </CardContent>
             </Card>
           </div>
@@ -377,7 +377,7 @@ export default function UserProfile() {
               onValueChange={handleTabChange}
               className="h-full"
             >
-              <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-6 bg-gray-100">
+              <TabsList className="grid grid-cols-2 md:grid-cols-3 mb-6 bg-gray-100">
                 <TabsTrigger
                   value="account"
                   className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"

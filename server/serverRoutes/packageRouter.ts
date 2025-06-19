@@ -21,13 +21,14 @@ const packageRouter = Router();
 packageRouter.post("/evaluate-price", verifyToken, async (req, res) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
-    let { type, vehicle_price } = req.body;
-    if (!type || !vehicle_price) {
+    let { type, item_value} = req.body;
+    if (!type || !item_value) {
       return res
         .status(400)
         .json({ message: "Type and vehicle price are required" });
     }
-
+    console.log(type);
+    console.log(item_value);
     //check for any discount
     let saved_packages: any = {};
     const result = await db
@@ -43,9 +44,9 @@ packageRouter.post("/evaluate-price", verifyToken, async (req, res) => {
       console.log(r.prices);
       let chargeable_amount = 0;
       r.prices.forEach((p: any) => {
-        if (p[0] <= vehicle_price) {
-          if (p[1] > -1 && p[1] >= vehicle_price) {
-            chargeable_amount = p[2] ?? vehicle_price;
+        if (p[0] <= item_value) {
+          if (p[1] > -1 && p[1] >= item_value) {
+            chargeable_amount = p[2] ?? item_value;
           }
         }
       });
@@ -79,7 +80,7 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
     let { package_id, draft_id, type } = req.body;
-    if (!package_id || !draft_id || !["CLASSIFIED", "AUCTION"].includes(type)) {
+    if (!package_id || !draft_id || !["CLASSIFIED", "AUCTION-VEHICLE", "AUCTION-NUMBERPLATE"].includes(type)) {
       return res
         .status(400)
         .json({ message: "Package ID and Draft ID are required" });
@@ -96,7 +97,7 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Package not found" });
     }
     let vehiclePrice: number | undefined;
-    let plateNumber: number | undefined;
+    let plateValue: number | undefined;
 
     if (type === "CLASSIFIED") {
       const [draft_vehicle] = await db
@@ -107,7 +108,7 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
         return res.status(404).json({ message: "Draft vehicle not found" });
       }
       vehiclePrice = draft_vehicle.price;
-    } else if (type === "AUCTION") {
+    } else if (type.split('-')[0] === "AUCTION") {
       const [draft_auction] = await db
         .select()
         .from(auctionDrafts)
@@ -137,7 +138,7 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
             .status(404)
             .json({ message: "Related numberplate draft not found" });
         }
-        plateNumber = parseInt(draft_numberPlate.plate_number);
+        plateValue = draft_numberPlate.plate_value;
       }
     }
 
@@ -146,7 +147,7 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
 
     let compareFeature: number = vehiclePrice
       ? (vehiclePrice as number)
-      : (plateNumber as number);
+      : (plateValue as number);
 
     const amount = prices.reduce((acc: number, price: any) => {
       if (price[0] <= compareFeature) {

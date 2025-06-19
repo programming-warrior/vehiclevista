@@ -4,11 +4,9 @@ import { userSessionSchema } from "server/utils/session";
 import z from "zod"
 
 export async function verifyToken(req: Request, res: Response, next: NextFunction) {
-  console.log(req.cookies.sessionId);
-  console.log(req.headers.authorization);
+ 
   const sessionId =
     req.cookies.sessionId || req.headers.authorization?.split(" ")[1];
-    console.log(sessionId);
 
 
   if (!sessionId) {
@@ -17,7 +15,6 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
   const redisClient = await RedisClientSingleton.getRedisClient();
 
   const sessionData = await redisClient.get(`session:${sessionId}`);
-  console.log(sessionData);
   if (!sessionData) {
     res.clearCookie("sessionId");
     return res.status(403).json({ error: "Invalid session" });
@@ -32,7 +29,6 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
 export const verifyWebSocketToken = async (
   authHeader: string
 ) => {
-  console.log(authHeader)
   const sessionId = authHeader?.split(",")[1]?.trim();
   if (!sessionId) {
     console.error("No token found, connection closed.");
@@ -42,7 +38,6 @@ export const verifyWebSocketToken = async (
     const redisClient = await RedisClientSingleton.getRedisClient();
 
     const sessionData = await redisClient.get(`session:${sessionId}`);
-    console.log(sessionData);
     if (!sessionData) {
       return null;
     }

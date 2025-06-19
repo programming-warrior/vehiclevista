@@ -57,7 +57,7 @@ import {
 import { motion } from "framer-motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useUser } from "@/hooks/use-store";
-import { getUsersAuctionListings, markClassifiedListingSold } from "@/api";
+import { getUsersAuctionListings, markAuctionListingSold } from "@/api";
 import Loader from "@/components/loader";
 import { Skeleton } from "../ui/skeleton";
 
@@ -113,7 +113,6 @@ const ProfileAuctionTab = () => {
 
     fetchAuctionListings();
   }, [userId, sortOption, status, page]);
-
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -184,6 +183,7 @@ const ProfileAuctionTab = () => {
                   <SelectItem value="UPCOMING">Upcoming</SelectItem>
                   <SelectItem value="RUNNING">Running</SelectItem>
                   <SelectItem value="ENDED">Ended</SelectItem>
+                  <SelectItem value="SOLD">Sold</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -230,7 +230,7 @@ const ProfileAuctionTab = () => {
               {auctionListings.length === 0 ? (
                 <Alert className="bg-blue-50 text-blue-800 border-blue-200">
                   <Package className="h-4 w-4" />
-                  <AlertTitle>No Classified Listings Found</AlertTitle>
+                  <AlertTitle>No Auctions Listings Found</AlertTitle>
                   <AlertDescription></AlertDescription>
                 </Alert>
               ) : (
@@ -259,18 +259,9 @@ const ProfileAuctionTab = () => {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          {listing.status === "ENDED" &&
-                            listing.isRebookable && (
-                              <DropdownMenuItem
-                                // onClick={handleRebook}
-                                className="cursor-pointer"
-                              >
-                                <Calendar className="mr-2 h-4 w-4" />
-                                Rebook
-                              </DropdownMenuItem>
-                            )}
-                          {listing.status === "ENDED" &&
-                            !listing.isRebookable && (
+                        
+                          {/* {listing.status === "ENDED" &&
+                             (
                               <DropdownMenuItem
                                 // onClick={handleRebuy}
                                 className="cursor-pointer"
@@ -278,9 +269,9 @@ const ProfileAuctionTab = () => {
                                 <ShoppingCart className="mr-2 h-4 w-4" />
                                 Re-new
                               </DropdownMenuItem>
-                            )}
+                            )} */}
 
-                          <DropdownMenuItem
+                          {/* <DropdownMenuItem
                             onClick={(e)=>{
                               e.stopPropagation();
 
@@ -290,50 +281,54 @@ const ProfileAuctionTab = () => {
                           >
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
-                          </DropdownMenuItem>
+                          </DropdownMenuItem> */}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              setIsConfirmDialogOpen(true);
-                              setSelectedListing(listing.auctionId);
-                              e.stopPropagation();
-                            }}
-                            className="cursor-pointer text-red-600 focus:text-red-600 "
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Mark Sold
-                          </DropdownMenuItem>
+                          {listing.status === "RUNNING" && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                setIsConfirmDialogOpen(true);
+                                setSelectedListing(listing.auctionId);
+                                e.stopPropagation();
+                              }}
+                              className="cursor-pointer text-red-600 focus:text-red-600 "
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Mark Sold
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </span>
                     <div className="flex flex-col lg:flex-row gap-4">
                       {/* Vehicle Image */}
                       <div className="w-full lg:w-48 h-32 lg:h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                        {listing.item.type== "VEHICLE" && listing.item.images && listing.item.images.length > 0 && (
-                          <img
-                            src={listing.item.images[0]}
-                            alt={listing.title}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-                        {listing.item.type == "NUMBERPLATE" && listing.item.plate_number && (
-                          <div className="flex items-center justify-center h-full">
-                            <span
-                              className="bg-yellow-300 border-2 border-black rounded-md px-6 py-2 text-2xl font-bold tracking-widest text-black shadow-inner"
-                              style={{
-                                letterSpacing: "0.2em",
-                                fontFamily: "monospace",
-                                minWidth: "120px",
-                                display: "inline-block",
-                              }}
-                            >
-                              {listing.item.plate_number}
-                            </span>
-                          </div>
-                        )}
+                        {listing.item.type == "VEHICLE" &&
+                          listing.item.images &&
+                          listing.item.images.length > 0 && (
+                            <img
+                              src={listing.item.images[0]}
+                              alt={listing.title}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                        {listing.item.type == "NUMBERPLATE" &&
+                          listing.item.plate_number && (
+                            <div className="flex items-center justify-center h-full">
+                              <span
+                                className="bg-yellow-300 border-2 border-black rounded-md px-6 py-2 text-2xl font-bold tracking-widest text-black shadow-inner"
+                                style={{
+                                  letterSpacing: "0.2em",
+                                  fontFamily: "monospace",
+                                  minWidth: "120px",
+                                  display: "inline-block",
+                                }}
+                              >
+                                {listing.item.plate_number}
+                              </span>
+                            </div>
+                          )}
                       </div>
 
-                    
                       <div className="flex-1 space-y-3  w-full">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                           <div className="flex-1">
@@ -360,7 +355,6 @@ const ProfileAuctionTab = () => {
                             </div>
                           </div>
                         </div>
-
 
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-600 ">
                           <div className="flex items-center gap-1">
@@ -406,7 +400,6 @@ const ProfileAuctionTab = () => {
                             <span>{listing.clicks}</span>
                             <span className="hidden sm:inline">clicks</span>
                           </div>
-                  
                         </div>
                         <div className="text-xs text-gray-500 lg:text-center">
                           <Clock size={12} className="inline mr-1" />
@@ -485,13 +478,13 @@ const ProfileAuctionTab = () => {
       </Card>
 
       <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-        <DialogContent >
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Mark as Sold</DialogTitle>
           </DialogHeader>
           <div className="py-2">
-            Are you sure you want to mark this listing as sold? It will remove
-            the vehicle from the listing and cannot be undone.
+            Are you sure you want to mark this listing as sold? It will end
+            the auction and cannot be undone.
           </div>
           <DialogFooter>
             <Button
@@ -505,8 +498,8 @@ const ProfileAuctionTab = () => {
               onClick={() => {
                 console.log(selectedListing);
                 if (selectedListing) {
-                  console.log('calling mark classified listing sold');
-                  markClassifiedListingSold(selectedListing)
+                  console.log("calling mark classified listing sold");
+                   markAuctionListingSold(selectedListing)
                     .then((data) => {
                       toast({
                         title: "success",

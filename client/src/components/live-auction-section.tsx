@@ -24,6 +24,13 @@ type Vehicle = {
   images: string[];
 };
 
+type NumberPlate = {
+  id: string | number;
+  document_urls: string[];
+  plate_number: string;
+  plate_value: number;
+};
+
 type Auction = {
   id: string | number;
   title: string;
@@ -32,7 +39,8 @@ type Auction = {
   currentBid: number;
   endTime: string;
   status: string;
-  vehicle: Vehicle;
+  vehicle?: Vehicle;
+  numberPlate?: NumberPlate;
   remainingTime?: number;
 };
 
@@ -44,7 +52,10 @@ type AuctionResponse = {
   hasNextPage: boolean;
 };
 
-export default function LiveAuctionSection({itemType= "" ,auctionVehicleType = "" }:any) {
+export default function LiveAuctionSection({
+  itemType = "",
+  auctionVehicleType = "",
+}: any) {
   const { socket } = useWebSocket();
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +68,9 @@ export default function LiveAuctionSection({itemType= "" ,auctionVehicleType = "
     const fetchAuctions = async () => {
       try {
         setLoading(true);
-        const data: AuctionResponse = await getActiveAuctions(`itemType=${itemType}&type=${auctionVehicleType}`);
+        const data: AuctionResponse = await getActiveAuctions(
+          `itemType=${itemType}&type=${auctionVehicleType}`
+        );
 
         setAuctions(data.auctions);
 
@@ -123,7 +136,6 @@ export default function LiveAuctionSection({itemType= "" ,auctionVehicleType = "
       //     );
       //   });
       // }
-
       // if (socket) {
       //   socket.removeEventListener("message", handleWebSocketMessage);
       // }
@@ -167,23 +179,34 @@ export default function LiveAuctionSection({itemType= "" ,auctionVehicleType = "
   return (
     <section className="">
       <div className="container mx-auto">
-   
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {auctions.map((auction, idx) => (
             <Link key={auction.id} href={`/auction/${auction.id}`}>
               <Card className="group relative overflow-hidden hover:shadow-lg transition-shadow duration-300">
                 <div className="relative aspect-[4/3]">
-                  {auction.vehicle.images &&
-                  auction.vehicle.images.length > 0 ? (
+                  {auction.vehicle &&
+                  auction.vehicle.images &&
+                  auction.vehicle.images.length > 0  && (
                     <img
                       src={auction.vehicle.images[0]}
                       alt={`${auction.vehicle.make} ${auction.vehicle.model}`}
                       className="object-cover w-full h-full"
                     />
-                  ) : (
-                    <div className="flex items-center justify-center h-full bg-gray-200">
-                      <span className="text-gray-500">No image available</span>
+                  )}
+
+                  {auction.numberPlate && auction.numberPlate.plate_number && (
+                    <div className="flex items-center justify-center h-full">
+                      <span
+                        className="bg-yellow-300 border-2 border-black rounded-md px-6 py-2 text-2xl font-bold tracking-widest text-black shadow-inner"
+                        style={{
+                          letterSpacing: "0.2em",
+                          fontFamily: "monospace",
+                          minWidth: "120px",
+                          display: "inline-block",
+                        }}
+                      >
+                        {auction.numberPlate.plate_number}
+                      </span>
                     </div>
                   )}
 
@@ -203,8 +226,8 @@ export default function LiveAuctionSection({itemType= "" ,auctionVehicleType = "
                   <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-center py-2 px-4">
                     <CountdownTimer
                       auction={auction}
-                      setAuction={(updater:any) =>
-                        setAuctions(prev =>
+                      setAuction={(updater: any) =>
+                        setAuctions((prev) =>
                           prev.map((a, i) =>
                             i === idx
                               ? typeof updater === "function"
@@ -219,36 +242,41 @@ export default function LiveAuctionSection({itemType= "" ,auctionVehicleType = "
                 </div>
 
                 <div className="p-4">
-                  <h3 className="font-medium text-lg mb-1">
-                    {auction.vehicle.make} {auction.vehicle.model}
-                  </h3>
+                  {auction.vehicle && (
+                    <h3 className="font-medium text-lg mb-1">
+                      {auction.vehicle.make} {auction.vehicle.model}
+                    </h3>
+                  )}
 
                   <p className="text-sm text-gray-500 mb-3 line-clamp-2">
                     {auction.description}
                   </p>
 
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <Calendar size={16} />
-                      <span>{auction.vehicle.year}</span>
-                    </div>
+                  {auction.vehicle && (
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Calendar size={16} />
+                        <span>{auction.vehicle.year}</span>
+                      </div>
 
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <Gauge size={16} />
-                      <span>{auction.vehicle.mileage.toLocaleString()} mi</span>
-                    </div>
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Gauge size={16} />
+                        <span>
+                          {auction.vehicle.mileage.toLocaleString()} mi
+                        </span>
+                      </div>
 
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <Fuel size={16} />
-                      <span>{auction.vehicle.fuelType}</span>
-                    </div>
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Fuel size={16} />
+                        <span>{auction.vehicle.fuelType}</span>
+                      </div>
 
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <Settings size={16} />
-                      <span>{auction.vehicle.transmission}</span>
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Settings size={16} />
+                        <span>{auction.vehicle.transmission}</span>
+                      </div>
                     </div>
-                  </div>
-
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold">
                       $

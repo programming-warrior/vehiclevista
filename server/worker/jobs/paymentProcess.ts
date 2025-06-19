@@ -15,7 +15,7 @@ import {
   numberPlate,
 } from "../../../shared/schema";
 import { eq, and } from "drizzle-orm";
-import { auctionQueue, packageQueue } from "../queue";
+import { auctionQueue, packageQueue, notificationQueue } from "../queue";
 
 const paymentWorker = new Worker(
   "payment",
@@ -102,9 +102,10 @@ const paymentWorker = new Worker(
                 })
                 .returning();
               listing_id = savedValue.id;
-            } else if (packageDetails.type === "AUCTION") {
+            } else if (packageDetails.type.split('-')[0] === "AUCTION") {
               console.log("processing auction");
               //move auction and vehicle draftdata
+              let currentBid:number = 0;
 
               console.log("Auction Draft Data");
               const [draftData] = await tx
@@ -157,6 +158,7 @@ const paymentWorker = new Worker(
                   })
                   .returning();
                 savedItemId = savedValue.id;
+                currentBid= savedValue.price;
               } else if (draftData.itemType === "NUMBERPLATE") {
                 console.log(
                   "Moving NumberPlate Auction Item from draft to Listing"
@@ -178,6 +180,7 @@ const paymentWorker = new Worker(
                   })
                   .returning();
                 savedItemId = numberPlateRow.id;
+                currentBid= numberPlateRow.plate_value;
               }
               console.log("Moving Auction from draft to listing");
               const [savedAuction] = await tx
@@ -188,6 +191,7 @@ const paymentWorker = new Worker(
                   itemType: draftData.itemType,
                   itemId: savedItemId,
                   sellerId: draftData.sellerId,
+                  currentBid: currentBid,
                   startDate: draftData.startDate,
                   endDate: draftData.endDate,
                   startingPrice: draftData.startingPrice,

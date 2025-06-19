@@ -22,7 +22,9 @@ import { verifyToken } from "../middleware/authMiddleware";
 import { userSessionSchema } from "../utils/session";
 import { notificationQueue, cleanupQueue } from "../worker/queue";
 import { vehicleEditSchema } from "../../shared/zodSchema/vehicleSchema";
-import { deleteImagesFromS3 } from "../utils/s3";
+import { auctionCountdownIntervals } from "../lib/auctionCountdownStore";
+
+
 
 const userRouter = Router();
 
@@ -336,7 +338,7 @@ userRouter.get("/listings/auction", verifyToken, async (req, res) => {
             ? {
                 type: "NUMBERPLATE",
                 plate_number: plate.plate_number,
-                document_url: plate.docuemnt_url,
+                document_url: plate.document_url,
               }
             : null,
         };
@@ -582,6 +584,53 @@ userRouter.patch(
     return res
       .status(200)
       .json({ message: "Classified listing marked as sold" });
+  }
+);
+
+userRouter.patch(
+  "/auction/mark-sold/:listingId",
+  verifyToken,
+  async (req, res) => {
+    if (!req.userId) return res.status(401).json({ error: "No user found" });
+    const userId = req.userId;
+    const { listingId } = req.params;
+    const listingIdNum = parseInt(listingId);
+    if (!listingIdNum || isNaN(listingIdNum))
+      return res.status(400).json({ error: "invalid input" });
+    const auctionListingRow = await db
+      .select()
+      .from(auctions)
+      .where(eq(auctions.id, listingIdNum));
+
+    if (auctionListingRow.length === 0)
+      return res.status(404).json({ error: "auction not found" });
+    const auctionListing = auctionListingRow[0];
+    if (auctionListing.sellerId !== userId)
+      return res.status(403).json({ error: "You cannot update this auction" });
+    if (auctionListing.status !== "RUNNING") {
+      return res.status(200).json({ message: "auction  is not RUNNING" });
+    }
+
+    const result = await db
+      .update(auctions)
+      .set({ status: "SOLD" })
+      .where(
+        and(
+          eq(auctions.id, listingIdNum),
+          eq(auctions.sellerId, userId),
+          eq(auctions.status, "RUNNING")
+        )
+      )
+      .returning();
+    if (result.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "Could not mark as SOLD. Maybe already expired/sold?" });
+    }
+    const auctionIdStr = listingIdNum.toString();
+    const redisClient= await RedisClientSingleton.getRedisClient();
+    await redisClient.publish("STOP_AUCTION_TIMER", JSON.stringify({ auctionId: auctionIdStr }));
+    return res.status(200).json({ message: "auction listing marked as sold" });
   }
 );
 

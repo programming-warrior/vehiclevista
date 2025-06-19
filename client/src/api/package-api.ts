@@ -3,7 +3,7 @@ import { BACKEND_URL } from "@/lib/constants";
 
 export async function getPackagesWithAmount(
   type: string,
-  vehicle_price: number
+  item_value: number,
 ) {
   try {
     const sessionId = localStorage.getItem("sessionId");
@@ -11,7 +11,7 @@ export async function getPackagesWithAmount(
       `${BACKEND_URL}/api/package/evaluate-price`,
       {
         type,
-        vehicle_price,
+        item_value,
       },
       {
         withCredentials: true,
@@ -56,7 +56,7 @@ export async function verifyPayment(
 
 export async function selectPackage(
   packageId: number,
-  type: "CLASSIFIED" | "AUCTION",
+  type: "CLASSIFIED" | "AUCTION-VEHICLE" | "AUCTION-NUMBERPLATE",
   draftId: number
 ) {
   try {

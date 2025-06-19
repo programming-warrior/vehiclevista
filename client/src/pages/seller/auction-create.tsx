@@ -157,10 +157,12 @@ export default function SellerAuctionUpload() {
                   />
                 ))}
 
-              {auctionData.itemType === "REGISTRATION_PLATE" && (
+              {auctionData.itemType === "NUMBERPLATE" && (
                 <NumberPlateForm
                   auctionDraftId={auctionData.draftId}
                   pullData={(data) => {
+                    console.log(data);
+                    console.log(auctionData);
                     setItemData(data);
                     setStage(3);
                   }}
@@ -171,8 +173,8 @@ export default function SellerAuctionUpload() {
 
           {stage === 3 && auctionData && itemData && (
             <Packages
-              type="AUCTION"
-              vehiclePrice={itemData.price}
+              type= {auctionData.itemType==='VEHICLE' ? 'AUCTION-VEHICLE' : 'AUCTION-NUMBERPLATE'}
+              itemPrice={auctionData.itemType==='NUMBERPLATE' ? itemData.plateValue : itemData.price}
               draftId={auctionData.draftId}
               pullData={(data) => {
                 setStage(4);

@@ -51,6 +51,7 @@ export const auctionStatus = [
   "NEED_APPROVAL",
   "BLACKLISTED",
   "UPCOMING",
+  "SOLD",
   "ENDED",
 ] as const;
 export const auctinStatusEnum = pgEnum("auction_status", auctionStatus);
@@ -113,12 +114,11 @@ export const auctionDrafts = pgTable("auction_drafts", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  auctionItem: text("auction_item").notNull().default('VEHICLE'), // VEHICLE, NUMBER_PLATE
   startingPrice: real("starting_price").notNull(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   itemId: integer("item_id"),
-  itemType: text("item_type").notNull().default("VEHICLE"),
+  itemType: text("item_type").notNull().default("VEHICLE"), //VEHICLE, NUMBERPLATE
   sellerId: integer("seller_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -389,8 +389,9 @@ export const auctions = pgTable("auctions", {
 
 export const numberPlate = pgTable("number_plate",{
   id: serial("id").primaryKey(),
-  plate_number: text().notNull(),
-  docuemnt_url: text().array().notNull(),
+  plate_number: text("plate_number").notNull(),
+  document_url: text("document_url").array().notNull(),
+  plate_value: real("plate_value").notNull(), 
   sellerId: integer("seller_id").references(()=>users.id),
   status: text().notNull().default('PENDING'), //PENDING, ACTIVE, EXPIRED
   created_at: timestamp().defaultNow()

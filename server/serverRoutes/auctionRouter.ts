@@ -14,7 +14,7 @@ import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
 import axios from "axios";
 import { vehicleUploadSchema } from "../../shared/zodSchema/vehicleSchema";
-import { z } from "zod";
+import { number, z } from "zod";
 import { verifyToken } from "../middleware/authMiddleware";
 import { parseCsvFile, extractVehicles } from "../utils/helper";
 import multer from "multer";
@@ -42,7 +42,8 @@ auctionRouter.get("/get", async (req, res) => {
 
     const conditions = [eq(auctions.status, "RUNNING")];
 
-    if (!itemType || ["VEHICLES", "NUMBERPLATE"].includes(String(itemType)))
+    console.log(itemType);
+    if (!itemType || !["VEHICLE", "NUMBERPLATE"].includes(String(itemType)))
       return res.status(400).json({ error: "itemType not specified" });
 
     conditions.push(eq(auctions.itemType, String(itemType).toUpperCase()));
@@ -143,7 +144,9 @@ auctionRouter.get("/get", async (req, res) => {
           remainingTime: new Date(auction.endDate).getTime() - Date.now(),
           numberPlate: {
             id: numberPlate.id,
-            document_urls: numberPlate.docuemnt_url,
+            document_urls: numberPlate.document_url,
+            plate_number: numberPlate.plate_number,
+            plate_value: numberPlate.plate_value,
           },
         };
       });
@@ -190,42 +193,52 @@ auctionRouter.get("/get/:id", async (req, res) => {
     }
 
     const result = await db
-      .select({
-        auction: auctions,
-        vehicle: vehicles,
-      })
+      .select()
       .from(auctions)
-      .innerJoin(vehicles, eq(auctions.itemId, vehicles.id))
       .where(eq(auctions.id, auctionId));
 
     if (!result.length) {
       return res.status(404).json({ error: "Auction not found" });
     }
 
-    const row = result[0];
-    const auction = row.auction as any;
-    const vehicle = row.vehicle as Vehicle;
+    const auction = result[0];
 
-    const auctionWithVehicleDetails = {
-      ...auction,
-      remainingTime: new Date(auction.endDate).getTime() - Date.now(),
-      vehicle: {
-        id: vehicle.id,
-        make: vehicle.make,
-        model: vehicle.model,
-        year: vehicle.year,
-        color: vehicle.color,
-        registration_num: vehicle.registration_num,
-        bodyType: vehicle.bodyType,
-        mileage: vehicle.mileage,
-        fuelType: vehicle.fuelType,
-        transmission: vehicle.transmission,
-        price: vehicle.price,
-        images: vehicle.images,
-      },
-    };
-
-    res.status(200).json(auctionWithVehicleDetails);
+    if (auction.itemType === "VEHICLE") {
+      const [vehicle]= await db.select().from(vehicles).where(eq(vehicles.id, Number(auction.itemId)))
+      const auctionWithVehicleDetails = {
+        ...auction,
+        remainingTime: new Date(auction.endDate).getTime() - Date.now(),
+        vehicle: {
+          id: vehicle.id,
+          make: vehicle.make,
+          model: vehicle.model,
+          year: vehicle.year,
+          color: vehicle.color,
+          registration_num: vehicle.registration_num,
+          bodyType: vehicle.bodyType,
+          mileage: vehicle.mileage,
+          fuelType: vehicle.fuelType,
+          transmission: vehicle.transmission,
+          price: vehicle.price,
+          images: vehicle.images,
+        },
+      };
+      res.status(200).json(auctionWithVehicleDetails);
+    }
+    else if(auction.itemType==='NUMBERPLATE'){
+       const [numberPlateDetail]= await db.select().from(numberPlate).where(eq(numberPlate.id, Number(auction.itemId)))
+      const auctionWithNumberPlateDetails = {
+        ...auction,
+        remainingTime: new Date(auction.endDate).getTime() - Date.now(),
+        numberPlate: {
+          id: numberPlateDetail.id,
+          document_url: numberPlateDetail.document_url,
+          plate_value: numberPlateDetail.plate_value,
+          plate_number: numberPlateDetail.plate_number
+        },
+      };
+      res.status(200).json(auctionWithNumberPlateDetails);
+    }
   } catch (err: any) {
     console.error("Error fetching auction:", err);
     res
@@ -324,7 +337,7 @@ auctionRouter.post(
         metadata: {
           auctionId: auctionId.toString(),
           userId: req.userId.toString(),
-          bidAmount: bidAmount
+          bidAmount: bidAmount,
         },
       });
       const redis = await RedisClientSingleton.getRedisClient();
@@ -509,11 +522,16 @@ auctionRouter.post("/numberplate/create", verifyToken, async (req, res) => {
       return res.status(400).json({ error: "Invalid input" });
     }
 
+    //add logic for getting plate value
+    const plateValue = 1000; //in pounds
+
     const newNumberPlate = {
       plate_number: plate_number,
-      docuemnt_url: document_url,
+      document_url: document_url,
       sellerId: req.userId,
+      plate_value: plateValue,
     };
+
     const dbReturnData = await db
       .insert(numberPlate)
       .values(newNumberPlate)
@@ -524,6 +542,7 @@ auctionRouter.post("/numberplate/create", verifyToken, async (req, res) => {
     return res.status(200).json({
       message: "NumberPlate created successfully",
       draftId: savedNumberPlateDetails.id,
+      plateValue,
     });
   } catch (e: any) {
     console.error("Error creating auction:", e);
@@ -548,9 +567,7 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
       !title.trim() ||
       !description.trim() ||
       !durationDays ||
-      !["3", "5", "7"].includes(durationDays) ||
-      !startingPrice ||
-      isNaN(parseFloat(startingPrice))
+      !["3", "5", "7"].includes(durationDays) 
     ) {
       return res.status(400).json({ error: "Invalid input" });
     }
@@ -558,7 +575,7 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
     const durationDaysNum = parseInt(durationDays);
     // Calculate start and end dates
     const now = new Date();
-    const startDate = new Date(now.getTime() + 60 * 60 * 1000); // Start 1 hr from now
+    const startDate = new Date(now.getTime() + 60 * 1000); // Start 1 min from now
     const endDate = new Date(
       startDate.getTime() + durationDaysNum * 24 * 60 * 60 * 1000
     );
@@ -578,7 +595,7 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
       itemType: itemType,
       title,
       description,
-      startingPrice: parseFloat(startingPrice),
+      startingPrice: parseFloat(startingPrice) ?? 0,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       status: "UPCOMING" as typeof auctions.$inferInsert.status,
@@ -631,6 +648,7 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
     return res.status(200).json({
       message: "Auction created successfully",
       draftId: savedAuctionDetails.id,
+      itemType: savedAuctionDetails.itemType,
       startTime: savedAuctionDetails.startDate,
       scheduledAt: new Date(Date.now() + delay),
     });

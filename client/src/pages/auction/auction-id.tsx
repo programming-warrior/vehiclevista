@@ -15,8 +15,15 @@ import {
   Calendar,
   Gauge,
   Palette,
+  FileText,
+  Hash,
 } from "lucide-react";
-import { getAuctionById, placeLiveBid, getBidsForAuction, verifyBidPayment} from "@/api";
+import {
+  getAuctionById,
+  placeLiveBid,
+  getBidsForAuction,
+  verifyBidPayment,
+} from "@/api";
 import {
   Dialog,
   DialogContent,
@@ -50,7 +57,7 @@ export default function AuctionIdPage() {
 
   const [bids, setBids] = useState<any>([]);
 
-  const currentBid = auction?.currentBid ?? auction?.startingPrice ?? 0;
+  const currentBid = auction?.currentBid ?? auction?.startingPrice  ?? 0;
   const totalBids = bids.length;
 
   function handleBidInput(e: React.ChangeEvent<HTMLInputElement>) {
@@ -140,7 +147,7 @@ export default function AuctionIdPage() {
   if (loading) {
     return (
       <div className="container mx-auto p-8 flex items-center justify-center min-h-[50vh]">
-        <div className="text-xl font-medium">Loading vehicle details...</div>
+        <div className="text-xl font-medium">Loading auction details...</div>
       </div>
     );
   }
@@ -153,7 +160,8 @@ export default function AuctionIdPage() {
     );
   }
 
-  
+  const isVehicleAuction = auction.itemType === "VEHICLE";
+  const isNumberplateAuction = auction.itemType === "NUMBERPLATE";
 
   return (
     <div className="container mx-auto p-4 md:p-6 bg-gray-50">
@@ -209,20 +217,47 @@ export default function AuctionIdPage() {
             <div className="mb-8">
               <h1 className="text-3xl font-bold mb-2">
                 {auction.title ||
-                  `${auction.vehicle?.make} ${auction.vehicle?.model} ${auction.vehicle?.year}`}
+                  (isVehicleAuction
+                    ? `${auction.vehicle?.make} ${auction.vehicle?.model} ${auction.vehicle?.year}`
+                    : isNumberplateAuction
+                    ? `Number Plate: ${auction.numberPlate?.plate_number}`
+                    : "Auction Item")}
               </h1>
-              <div className="flex items-center gap-2 text-gray-600">
-                <MapPin size={16} />
-                <span>{auction.location || "Location not specified"}</span>
+              <div className="flex items-center gap-4 text-gray-600">
+                <div className="flex items-center gap-2">
+                  <MapPin size={16} />
+                  <span>{auction.location || "Location not specified"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tag size={16} />
+                  <span className="capitalize">
+                    {auction.itemType.toLowerCase()}
+                  </span>
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Left column - Gallery */}
+              {/* Left column - Gallery/Images */}
               <div className="lg:col-span-2">
-                {auction.vehicle?.images &&
+                {isVehicleAuction &&
+                auction.vehicle?.images &&
                 auction.vehicle.images.length > 0 ? (
                   <ImageGallery images={auction.vehicle.images} />
+                ) : isNumberplateAuction ? (
+                  <div className="flex items-center justify-center h-full">
+                    <span
+                      className="bg-yellow-300 border-2 border-black rounded-md px-6 py-2 text-2xl font-bold tracking-widest text-black shadow-inner"
+                      style={{
+                        letterSpacing: "0.2em",
+                        fontFamily: "monospace",
+                        minWidth: "120px",
+                        display: "inline-block",
+                      }}
+                    >
+                      {auction.numberPlate.plate_number}
+                    </span>
+                  </div>
                 ) : (
                   <div className="aspect-[4/3] bg-gray-200 flex items-center justify-center rounded-md mb-6">
                     <p>No images available</p>
@@ -233,7 +268,11 @@ export default function AuctionIdPage() {
                 <div className="mt-8">
                   <h2 className="text-xl font-bold mb-4 flex items-center">
                     <Info size={20} className="mr-2" />
-                    Vehicle Description
+                    {isVehicleAuction
+                      ? "Vehicle Description"
+                      : isNumberplateAuction
+                      ? "Number Plate Description"
+                      : "Item Description"}
                   </h2>
                   <div className="border rounded-md p-4 bg-gray-50">
                     <ReactQuill
@@ -243,70 +282,164 @@ export default function AuctionIdPage() {
                     />
                   </div>
                 </div>
+
+                {/* Number Plate Documents */}
+                {isNumberplateAuction &&
+                  auction.numberPlate?.document_urls &&
+                  auction.numberPlate.document_urls.length > 0 && (
+                    <div className="mt-6">
+                      <h2 className="text-xl font-bold mb-4 flex items-center">
+                        <FileText size={20} className="mr-2" />
+                        Documents
+                      </h2>
+                      <div className="border rounded-md p-4 bg-gray-50">
+                        {auction.numberPlate.document_urls.map(
+                          (url: string, index: number) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-white rounded border mb-2"
+                            >
+                              <div className="flex items-center">
+                                <FileText
+                                  size={20}
+                                  className="mr-3 text-blue-600"
+                                />
+                                <span>Document {index + 1}</span>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(url, "_blank")}
+                              >
+                                View
+                              </Button>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
               </div>
 
-              {/* Right column - Vehicle details & Bid history */}
+              {/* Right column - Item details & Bid history */}
               <div className="lg:col-span-1 space-y-6">
-                {/* Vehicle details card */}
+                {/* Item details card */}
                 <div className="bg-gray-50 border rounded-lg p-5 shadow-sm">
                   <h2 className="text-xl font-bold mb-4 border-b pb-2">
-                    Vehicle Details
+                    {isVehicleAuction
+                      ? "Vehicle Details"
+                      : isNumberplateAuction
+                      ? "Number Plate Details"
+                      : "Item Details"}
                   </h2>
 
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center text-gray-700">
-                        <Tag size={18} className="mr-2" />
-                        <span>Make</span>
-                      </div>
-                      <span className="font-medium">
-                        {auction.vehicle?.make || "N/A"}
-                      </span>
-                    </div>
+                    {isVehicleAuction && auction.vehicle && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-700">
+                            <Tag size={18} className="mr-2" />
+                            <span>Make</span>
+                          </div>
+                          <span className="font-medium">
+                            {auction.vehicle.make || "N/A"}
+                          </span>
+                        </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center text-gray-700">
-                        <Tag size={18} className="mr-2" />
-                        <span>Model</span>
-                      </div>
-                      <span className="font-medium">
-                        {auction.vehicle?.model || "N/A"}
-                      </span>
-                    </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-700">
+                            <Tag size={18} className="mr-2" />
+                            <span>Model</span>
+                          </div>
+                          <span className="font-medium">
+                            {auction.vehicle.model || "N/A"}
+                          </span>
+                        </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center text-gray-700">
-                        <Calendar size={18} className="mr-2" />
-                        <span>Year</span>
-                      </div>
-                      <span className="font-medium">
-                        {auction.vehicle?.year || "N/A"}
-                      </span>
-                    </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-700">
+                            <Calendar size={18} className="mr-2" />
+                            <span>Year</span>
+                          </div>
+                          <span className="font-medium">
+                            {auction.vehicle.year || "N/A"}
+                          </span>
+                        </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center text-gray-700">
-                        <Gauge size={18} className="mr-2" />
-                        <span>Mileage</span>
-                      </div>
-                      <span className="font-medium">
-                        {auction.vehicle?.mileage || "N/A"} km
-                      </span>
-                    </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-700">
+                            <Gauge size={18} className="mr-2" />
+                            <span>Mileage</span>
+                          </div>
+                          <span className="font-medium">
+                            {auction.vehicle.mileage || "N/A"} km
+                          </span>
+                        </div>
 
-                    <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-700">
+                            <Palette size={18} className="mr-2" />
+                            <span>Color</span>
+                          </div>
+                          <span className="font-medium">
+                            {auction.vehicle.color || "N/A"}
+                          </span>
+                        </div>
+                      </>
+                    )}
+
+                    {isNumberplateAuction && auction.numberPlate && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-700">
+                            <Hash size={18} className="mr-2" />
+                            <span>Plate Number</span>
+                          </div>
+                          <span className="font-medium">
+                            {auction.numberPlate.plate_number || "N/A"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-700">
+                            <DollarSign size={18} className="mr-2" />
+                            <span>Plate Value</span>
+                          </div>
+                          <span className="font-medium">
+                            $
+                            {auction.numberPlate.plate_value ||
+                              auction.startingPrice ||
+                              "N/A"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-700">
+                            <FileText size={18} className="mr-2" />
+                            <span>Documents</span>
+                          </div>
+                          <span className="font-medium">
+                            {auction.numberPlate.document_urls?.length || 0}{" "}
+                            file(s)
+                          </span>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="flex items-center justify-between border-t pt-3">
                       <div className="flex items-center text-gray-700">
-                        <Palette size={18} className="mr-2" />
-                        <span>Color</span>
+                        <DollarSign size={18} className="mr-2" />
+                        <span>Starting Price</span>
                       </div>
                       <span className="font-medium">
-                        {auction.vehicle?.color || "N/A"}
+                        ${auction.startingPrice}
                       </span>
                     </div>
                   </div>
+
                   <Button
                     variant="destructive"
-                    className="mt-2 w-full"
+                    className="mt-4 w-full"
                     size="lg"
                     onClick={() => setReportOpen(true)}
                   >
@@ -367,6 +500,7 @@ export default function AuctionIdPage() {
           </div>
         </div>
       )}
+
       <Dialog open={paymentformOpen} onOpenChange={setPaymentformOpen}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
@@ -383,9 +517,13 @@ export default function AuctionIdPage() {
               )}
             </DialogDescription>
           </DialogHeader>
-          <PaymentFormWrapper verifyPayment={verifyBidPayment} clientSecret={paymentInfo.clientSecret} />
+          <PaymentFormWrapper
+            verifyPayment={verifyBidPayment}
+            clientSecret={paymentInfo.clientSecret}
+          />
         </DialogContent>
       </Dialog>
+
       <Dialog open={bidOpen} onOpenChange={setBidOpen}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
@@ -398,11 +536,24 @@ export default function AuctionIdPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-4">
             <div className="space-y-4">
               <div className="rounded-md overflow-hidden">
-                <img
-                  src={auction.vehicle?.images?.[0]}
-                  alt="Vehicle"
-                  className="w-full aspect-video object-cover"
-                />
+                {isVehicleAuction && auction.vehicle?.images?.[0] ? (
+                  <img
+                    src={auction.vehicle.images[0]}
+                    alt="Vehicle"
+                    className="w-full aspect-video object-cover"
+                  />
+                ) : isNumberplateAuction ? (
+                  <div className="w-full aspect-video bg-gradient-to-br from-blue-50 to-blue-100 flex flex-col items-center justify-center border-2 border-dashed border-blue-300">
+                    <Hash size={32} className="text-blue-600 mb-2" />
+                    <div className="text-xl font-bold text-blue-900">
+                      {auction.numberPlate?.plate_number}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full aspect-video bg-gray-200 flex items-center justify-center">
+                    <span>No image available</span>
+                  </div>
+                )}
               </div>
 
               <div className="bg-gray-50 p-4 rounded-md space-y-3">
@@ -498,6 +649,7 @@ export default function AuctionIdPage() {
           </div>
         </DialogContent>
       </Dialog>
+
       <ReportDialog
         isOpen={reportOpen}
         onOpenChange={setReportOpen}

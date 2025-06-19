@@ -154,6 +154,20 @@ export default function Home() {
         <LiveAuctionSection itemType="VEHICLE" auctionVehicleType="" />
       </section>
 
+           {/* Live Auction Section */}
+      <section className="px-12 mx-auto w-full">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold">NumerPlate Auctions</h2>
+          <Link
+            href="/auction"
+            className="text-sm bg-gray-100 px-4 py-1 rounded-full hover:bg-gray-200"
+          >
+            View All
+          </Link>
+        </div>
+        <LiveAuctionSection itemType="NUMBERPLATE" />
+      </section>
+
       {/* Explore Categories Section */}
       <section className="  mx-auto w-full">
         <ExploreCategories />

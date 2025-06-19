@@ -14,12 +14,12 @@ import { getPackagesWithAmount, selectPackage } from "@/api";
 
 export default function Packages({
   type,
-  vehiclePrice,
+  itemPrice,
   draftId,
   pullData,
 }: {
-  type: "AUCTION" | "CLASSIFIED";
-  vehiclePrice?: number;
+  type: "AUCTION-VEHICLE" | "CLASSIFIED" | "AUCTION-NUMBERPLATE";
+  itemPrice?: number;
   draftId?: number;
   pullData?: (data: any) => void;
 }) {
@@ -33,9 +33,9 @@ export default function Packages({
     const fetchPackages = async () => {
       try {
         setIsLoading(true);
-        if (vehiclePrice !== undefined && vehiclePrice > 0) {
+        if (itemPrice !== undefined && itemPrice > 0) {
           console.log("fetchingpackages ");
-          const packages = await getPackagesWithAmount(type, vehiclePrice);
+          const packages = await getPackagesWithAmount(type, itemPrice);
           console.log("Fetched packages:", packages);
           setPackages(packages);
         }
@@ -104,7 +104,7 @@ export default function Packages({
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {packages.map((pkg) => {
-        const currentPrice = vehiclePrice ? getPriceForVehicle(pkg, vehiclePrice) : pkg.amount;
+        const currentPrice = itemPrice ? getPriceForVehicle(pkg, itemPrice) : pkg.amount;
         
         return (
           <Card 
@@ -155,7 +155,7 @@ export default function Packages({
                         <div 
                           key={index} 
                           className={`text-xs py-1 px-2 rounded mb-1 ${
-                            vehiclePrice && vehiclePrice >= min && (max === -1 || vehiclePrice <= max)
+                            itemPrice && itemPrice >= min && (max === -1 || itemPrice <= max)
                               ? "bg-blue-100 text-blue-800 font-medium"
                               : "bg-gray-100 text-gray-600"
                           }`}

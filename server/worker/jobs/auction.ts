@@ -3,8 +3,23 @@ import { connection } from "../workerRedis";
 // import { WebSocketServer } from './websocket'; // assume you have a pub function
 import { db } from "../../db";
 import { auctions, auctionWinner, bids, users } from "../../../shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { auctionQueue } from "../queue";
+import { auctionCountdownIntervals } from "../../lib/auctionCountdownStore";
+// redisConnection.ts
+import IORedis from "ioredis";
+import dotenv from "dotenv";
+dotenv.config();
+
+export const subscribeClient = new IORedis({
+  host: process.env.REDIS_HOSTNAME,
+  port: 6379,
+  username: "default",
+  password: process.env.REDIS_PASSWORD,
+  connectTimeout: 30000,
+  maxRetriesPerRequest: null,
+  retryStrategy: (retries) => Math.min(retries * 100, 3000),
+});
 
 // Add additional debug logging for Redis connection
 connection.on("connect", () => {
@@ -36,7 +51,7 @@ const auctionWorker = new Worker(
           console.error(`Auction with ID ${auctionId} not found`);
           return;
         }
-        if (auction.status === "RUNNING" || auction.status === "ENDED") {
+        if (auction.status !== "UPCOMING") {
           console.log(`Auction ${auctionId} is already ${auction.status}`);
           return;
         }
@@ -61,7 +76,7 @@ const auctionWorker = new Worker(
           console.error(`Auction with ID ${auctionId} not found`);
           return;
         }
-        if (auction.status === "ENDED") {
+        if (auction.status !== "RUNNING") {
           console.log(`Auction ${auctionId} is already ${auction.status}`);
           return;
         }
@@ -96,7 +111,9 @@ const auctionWorker = new Worker(
         await db
           .update(auctions)
           .set({ status: "ENDED" })
-          .where(eq(auctions.id, auctionId));
+          .where(
+            and(eq(auctions.id, auctionId), eq(auctions.status, "RUNNING"))
+          );
         console.log(`Updated auction ${auctionId} status to ENDED`);
       }
     } catch (e) {
@@ -136,8 +153,6 @@ auctionWorker.on("stalled", (jobId) => {
 auctionWorker.on("active", (job) => {
   console.log(`Job ${job.id} has started processing`);
 });
-
-const auctionCountdownIntervals = new Map<string, NodeJS.Timeout>();
 
 function startCountdown(auctionId: string, endTime: string) {
   console.log(`Starting countdown for auction ${auctionId} until ${endTime}`);
@@ -243,6 +258,32 @@ async function initActiveAuctionsCountdowns() {
         }
       }
     }
+    await subscribeClient.subscribe("STOP_AUCTION_TIMER", async (message: any) => {
+      if (!message) {
+        console.warn("❗ Received empty message on AUCTION_STOP channel.");
+        return;
+      }
+      let parsed: any;
+      try {
+        parsed = JSON.parse(message);
+      } catch (err) {
+        console.error("❌ Failed to parse message as JSON:", message);
+        return;
+      }
+      const { auctionId } = parsed;
+      if (!auctionId) {
+        console.warn("⚠️ 'auctionId' not found in parsed message:", parsed);
+        return;
+      }
+      const interval = auctionCountdownIntervals.get(auctionId);
+      if (interval) {
+        clearInterval(interval);
+        auctionCountdownIntervals.delete(auctionId);
+        console.log(`⛔️ Countdown manually stopped for auction ${auctionId}`);
+      } else {
+        console.log(`⚠️ No active countdown found for auction ${auctionId}`);
+      }
+    });
   } catch (e: any) {
     console.error("Error in initActiveAuctionsCountdowns:", e);
     throw e;

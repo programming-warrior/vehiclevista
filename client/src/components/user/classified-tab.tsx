@@ -261,7 +261,7 @@ const ProfileClassifiedTab = () => {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          {listing.status === "EXPIRED" &&
+                          {/* {listing.status === "EXPIRED" &&
                             listing.isRebookable && (
                               <DropdownMenuItem
                                 // onClick={handleRebook}
@@ -270,8 +270,8 @@ const ProfileClassifiedTab = () => {
                                 <Calendar className="mr-2 h-4 w-4" />
                                 Rebook
                               </DropdownMenuItem>
-                            )}
-                          {listing.status === "EXPIRED" &&
+                            )} */}
+                          {/* {listing.status === "EXPIRED" &&
                             !listing.isRebookable && (
                               <DropdownMenuItem
                                 // onClick={handleRebuy}
@@ -280,7 +280,7 @@ const ProfileClassifiedTab = () => {
                                 <ShoppingCart className="mr-2 h-4 w-4" />
                                 Re-new
                               </DropdownMenuItem>
-                            )}
+                            )} */}
 
                           <DropdownMenuItem
                             onClick={(e)=>{

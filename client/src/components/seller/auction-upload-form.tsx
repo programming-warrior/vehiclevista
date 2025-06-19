@@ -49,7 +49,7 @@ import { useToast } from "@/hooks/use-toast";
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
-  itemType: z.enum(["VEHICLE", "REGISTRATION_PLATE"], {
+  itemType: z.enum(["VEHICLE", "NUMBERPLATE"], {
     required_error: "Please select an item type",
   }),
   startingPrice: z.number().min(1, "Starting price must be greater than 0"),
@@ -125,7 +125,7 @@ export default function AuctionUploadForm({
       description: "Cars, motorcycles, trucks, and other vehicles",
     },
     {
-      value: "REGISTRATION_PLATE",
+      value: "NUMBERPLATE",
       label: "Registration Plate",
       icon: CreditCard,
       description: "Custom or premium registration plates",

@@ -26,7 +26,6 @@ import {
 // Schema for number plate registration
 const formSchema = z.object({
   plate_number: z.string().min(1, "Plate number is required"),
-  seller_id: z.number().min(1, "Seller ID is required"),
   documents: z
     .array(z.instanceof(File))
     .min(1, "At least one document is required"),
@@ -48,7 +47,6 @@ const NumberPlateForm = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       plate_number: "",
-      seller_id: undefined,
       documents: [],
     },
   });
@@ -113,7 +111,7 @@ const NumberPlateForm = ({
           "NUMBERPLATE"
         );
       if (pullData && typeof pullData === "function") {
-        pullData({ ...plateData, draftId: res.draftId });
+        pullData({ ...plateData, draftId: res.draftId, plateValue: res.plateValue });
       }
 
       toast({
@@ -160,26 +158,6 @@ const NumberPlateForm = ({
                       onChange={(e) =>
                         field.onChange(e.target.value.toUpperCase())
                       }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="seller_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-blue-800">Seller ID</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Enter seller ID"
-                      className="border-blue-200 focus:ring-blue-500 focus:border-blue-500"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />

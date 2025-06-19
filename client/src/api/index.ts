@@ -17,6 +17,7 @@ import {
   getUsersAuctionListings,
   getUsersClassifiedListings,
   markClassifiedListingSold,
+  markAuctionListingSold,
   editClassifiedListing,
 } from "./user-api";
 import {
@@ -204,6 +205,7 @@ export {
   getUsersClassifiedListings,
   getUsersAuctionListings,
   markClassifiedListingSold,
+  markAuctionListingSold,
   editClassifiedListing,
 
   getRunningRaffle,
