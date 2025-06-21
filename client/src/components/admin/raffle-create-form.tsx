@@ -210,6 +210,7 @@ export default function RaffleForm() {
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [registrationNumError, setRegistrationNumError] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLocationFocus = () => {
     if (vehicleForm.getValues("location").length >= 2) {
@@ -376,7 +377,7 @@ export default function RaffleForm() {
   };
 
   const onSubmit = async (values: any) => {
-    // setSubmitting(true);
+    setIsSubmitting(true);
     try {
       console.log(values);
       const startDateTime = new Date(
@@ -457,7 +458,7 @@ export default function RaffleForm() {
         description: "Something went wrong",
       });
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -527,16 +528,15 @@ export default function RaffleForm() {
                               Registration Number
                             </FormLabel>
                             <div className="relative">
-                            <FormControl>
-                              <Input
-                                type="text"
-                                placeholder="e.g. ABC-1234"
-                                className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
-                                {...field}
-                              />
-                             
-                            </FormControl>
-                             {registrationNumError && (
+                              <FormControl>
+                                <Input
+                                  type="text"
+                                  placeholder="e.g. ABC-1234"
+                                  className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                                  {...field}
+                                />
+                              </FormControl>
+                              {registrationNumError && (
                                 <X className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-red-500" />
                               )}
                               {registrationSuccess && (
@@ -1437,8 +1437,11 @@ export default function RaffleForm() {
               disabled={submitting}
               className="bg-blue-600 hover:bg-blue-700 text-white flex items-center"
             >
-              {submitting ? (
-                <>Creating...</>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
               ) : (
                 <>
                   <Check className="h-4 w-4 mr-2" />
