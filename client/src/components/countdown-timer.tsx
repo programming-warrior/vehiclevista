@@ -1,41 +1,39 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useWebSocket } from "@/hooks/use-store";
-import { set } from "date-fns";
 
-export default function CountdownTimer({ auction, setAuction }: { auction: any, setAuction:any }) {
+export default function CountdownTimer({
+  auction,
+  setAuction,
+}: {
+  auction: any;
+  setAuction: any;
+}) {
   const [timeLeft, setTimeLeft] = useState<string>("00:00:00:00");
   const { socket } = useWebSocket();
-
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isSubscribedRef = useRef<boolean>(false);
   // console.log(timeLeft);
 
   useEffect(() => {
-    const initialDistance = auction.remainingTime;
-
-    updateTimerDisplay(initialDistance);
-
     // Set up timer to decrease remainingTime locally every second
-    let timerId: NodeJS.Timeout | null = null;
-
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      console.log("Socket is not open, not starting timer.");
-      timerId = setInterval(() => {
-        // console.log("timer running: " + auction.id);
-        const now = new Date().getTime();
-        const endTimeDate = new Date(auction.endDate).getTime();
-        let distance = endTimeDate - now;
-        updateTimerDisplay(distance);
-      }, 1000);
-    } else {
-      socket.send(
-        JSON.stringify({
-          type: "subscribe",
-          payload: {
-            auctionId: auction.id,
-          },
-        })
-      );
+    if (
+      !socket ||
+      socket.readyState !== WebSocket.OPEN ||
+      isSubscribedRef.current
+    ) {
+      return;
     }
 
+    socket.send(
+      JSON.stringify({
+        type: "subscribe",
+        payload: {
+          auctionId: auction.id,
+        },
+      })
+    );
+
+    isSubscribedRef.current = true;
     // Handle WebSocket messages
     const handleWebSocketMessage = (event: MessageEvent) => {
       try {
@@ -52,8 +50,39 @@ export default function CountdownTimer({ auction, setAuction }: { auction: any, 
       }
     };
 
-    if (socket) {
-      socket.addEventListener("message", handleWebSocketMessage);
+    socket.addEventListener("message", handleWebSocketMessage);
+
+    return () => {
+      console.log("WebSocket cleanup");
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(
+          JSON.stringify({
+            type: "unsubscribe",
+            payload: {
+              auctionId: auction.id,
+            },
+          })
+        );
+      }
+      socket.removeEventListener("message", handleWebSocketMessage);
+      isSubscribedRef.current = false;
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    const initialDistance = auction.remainingTime || 0;
+
+    updateTimerDisplay(initialDistance);
+
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      console.log("Socket is not open, not starting timer.");
+      timerRef.current = setInterval(() => {
+        // console.log("timer running: " + auction.id);
+        const now = new Date().getTime();
+        const endTimeDate = new Date(auction.endDate).getTime();
+        let distance = endTimeDate - now;
+        updateTimerDisplay(distance);
+      }, 1000);
     }
 
     function updateTimerDisplay(distance: number) {
@@ -76,24 +105,18 @@ export default function CountdownTimer({ auction, setAuction }: { auction: any, 
           .padStart(2, "0")}`
       );
     }
-    return () => {
-      if (timerId) {
-        clearInterval(timerId);
-      }
-      if (socket && socket.readyState === WebSocket.OPEN) {
-          socket.send(
-            JSON.stringify({
-              type: "unsubscribe",
-              payload: auction.id,
-            })
-          );
-      }
 
-      if (socket) {
-        socket.removeEventListener("message", handleWebSocketMessage);
+    return () => {};
+  }, [auction.remainingTime, socket]);
+
+  useEffect(() => {
+    return () => {
+      console.log("Component unmount cleanup");
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
       }
     };
-  }, [auction.remainingTime, socket]);
+  }, []);
 
   return (
     <span>{timeLeft}</span>

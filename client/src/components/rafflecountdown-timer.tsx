@@ -1,49 +1,38 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useWebSocket } from "@/hooks/use-store";
-import { set } from "date-fns";
 
-export default function RaffleCountDownTimer({ raffle, setRaffle }: { raffle: any, setRaffle:any }) {
+export default function RaffleCountDownTimer({ raffle, setRaffle }: { raffle: any, setRaffle: any }) {
   const [timeLeft, setTimeLeft] = useState<string>("00:00:00:00");
   const { socket } = useWebSocket();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isSubscribedRef = useRef<boolean>(false);
 
-  // console.log(timeLeft);
-
+  // Effect 1: Handle WebSocket subscription (only runs when socket or raffle.id changes)
   useEffect(() => {
-    const initialDistance = raffle.remainingTime ;
-
-    updateTimerDisplay(initialDistance);
-
-    // Set up timer to decrease remainingTime locally every second
-    let timerId: NodeJS.Timeout | null = null;
-
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      console.log("Socket is not open, not starting timer.");
-      timerId = setInterval(() => {
-        // console.log("timer running: " + raffle.id);
-        const now = new Date().getTime();
-        const endTimeDate = new Date(raffle.endDate).getTime();
-        let distance = endTimeDate - now;
-        updateTimerDisplay(distance);
-      }, 1000);
-    } else {
-      socket.send(
-        JSON.stringify({
-          type: "subscribe",
-          payload: {
-            raffleId: raffle.id,
-          },
-        })
-      );
+    if (!socket || socket.readyState !== WebSocket.OPEN || isSubscribedRef.current) {
+      return;
     }
+
+    console.log("subscribing to raffle");
+    socket.send(
+      JSON.stringify({
+        type: "subscribe",
+        payload: {
+          raffleId: raffle.id,
+        },
+      })
+    );
+    isSubscribedRef.current = true;
 
     // Handle WebSocket messages
     const handleWebSocketMessage = (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data);
-        console.log(data)
+        console.log(data);
         if (data.event === "RAFFLE_TIMER") {
+          console.log("updating remainignt time");
           setRaffle((prev: any) =>
-            prev.id == data.message.raffleId
+            prev.id.toString() === data.message.raffleId
               ? { ...prev, remainingTime: data.message.remainingTime }
               : prev
           );
@@ -53,11 +42,31 @@ export default function RaffleCountDownTimer({ raffle, setRaffle }: { raffle: an
       }
     };
 
-    if (socket) {
-      socket.addEventListener("message", handleWebSocketMessage);
-    }
+    socket.addEventListener("message", handleWebSocketMessage);
 
-    function updateTimerDisplay(distance: number) {
+    // Cleanup function for WebSocket
+    return () => {
+      console.log("WebSocket cleanup");
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(
+          JSON.stringify({
+            type: "unsubscribe",
+            payload:{
+              raffleId: raffle.id,
+            }
+          })
+        );
+      }
+      socket.removeEventListener("message", handleWebSocketMessage);
+      isSubscribedRef.current = false;
+    };
+  }, [socket]); // Only depend on socket and raffle.id
+
+
+  // Effect 2: Handle timer display updates
+  useEffect(() => {
+    console.log('side effect of raffle remaining time udpate')
+    const updateTimerDisplay = (distance: number) => {
       if (distance <= 0) {
         setTimeLeft("Ended");
         return;
@@ -76,29 +85,44 @@ export default function RaffleCountDownTimer({ raffle, setRaffle }: { raffle: an
           .toString()
           .padStart(2, "0")}`
       );
-    }
-    return () => {
-      if (timerId) {
-        clearInterval(timerId);
-      }
-      if (socket && socket.readyState === WebSocket.OPEN) {
-          socket.send(
-            JSON.stringify({
-              type: "unsubscribe",
-              payload: raffle.id,
-            })
-          );
-      }
+    };
 
-      if (socket) {
-        socket.removeEventListener("message", handleWebSocketMessage);
+    // Initial display update
+    const initialDistance = raffle.remainingTime || 0;
+    updateTimerDisplay(initialDistance);
+
+    // Set up local timer if WebSocket is not available
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      console.log("Socket is not open, starting local timer.");
+      timerRef.current = setInterval(() => {
+        const now = new Date().getTime();
+        const endTimeDate = new Date(raffle.endDate).getTime();
+        const distance = endTimeDate - now;
+        updateTimerDisplay(distance);
+      }, 1000);
+    } else {
+      // WebSocket is available, just update display when remainingTime changes
+      updateTimerDisplay(raffle.remainingTime || 0);
+    }
+
+    // Cleanup timer
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
-  }, [raffle.remainingTime, socket]);
+  }, [raffle.remainingTime, socket]); // This can safely depend on remainingTime now
 
-  return (
-    <span>{timeLeft}</span>
-    // <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-center py-2 px-4">
-    // </div>
-  );
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      console.log("Component unmount cleanup");
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  return <span>{timeLeft}</span>;
 }
