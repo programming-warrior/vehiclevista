@@ -15,9 +15,7 @@ import RaffleCountDownTimer from "./rafflecountdown-timer";
 import { useLocation } from "wouter";
 
 export default function RaffleHomeSection() {
-  const [raffle, setRaffle] = useState<any>({
-    remainingTime: "0:0:0"
-  });
+  const [raffle, setRaffle] = useState<any>();
   const [loading, setLoading] = useState(true);
   const [location,setLocation] = useLocation();
 

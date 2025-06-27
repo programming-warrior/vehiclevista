@@ -143,7 +143,7 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
 
         // Only add if not already subscribed
         if (!raffleClients[raffleId].includes(ws_id)) {
-          console.log("adding " + ws_id + "into raffleClients: " + raffleId)
+          console.log("adding " + ws_id + "into raffleClients: " + raffleId);
           raffleClients[raffleId].push(ws_id);
         }
 
@@ -155,6 +155,16 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
             event: "RAFFLE_TIMER_SUBSCRIBED",
             raffleId: data.payload.raffleId,
           })
+        );
+      } else if (data.type === "unsubscribe" && data.payload.raffleId) {
+        const raffleId = data.payload.raffleId.toString();
+        raffleClients[raffleId] = auctionClients[raffleId].filter(
+          (id) => id !== ws_id
+        );
+      } else if (data.type === "unsubscribe" && data.payload.auctionId) {
+        const auctionId = data.payload.auctionId.toString();
+        auctionClients[auctionId] = auctionClients[auctionId].filter(
+          (id) => id !== ws_id
         );
       }
     } catch (error) {
@@ -201,8 +211,6 @@ async function subscribeToBidPlace() {
     sendToClient(userId, wsData);
   });
 }
-
-
 
 async function subscribeToReceiveNofication() {
   const channel = "RECEIVE_NOTIFICATION";
@@ -273,7 +281,7 @@ async function subscribeToRaffleTimer(raffleId: string) {
   await subscribeOnce(channel, (message, channel) => {
     console.log(`Message received from ${channel}: ${message}`);
     const data = JSON.parse(message);
-    if (data.raffleId !== raffleId) return; 
+    if (data.raffleId !== raffleId) return;
 
     const wsData = {
       event: "RAFFLE_TIMER",
@@ -283,7 +291,7 @@ async function subscribeToRaffleTimer(raffleId: string) {
       ? [...raffleClients[raffleId]]
       : [];
     console.log("raffle clients");
-    console.log(clientsSnapshot)
+    console.log(clientsSnapshot);
     // Send to all clients subscribed to this raffle
     clientsSnapshot.forEach((userId) => {
       sendToClient(userId, wsData);
