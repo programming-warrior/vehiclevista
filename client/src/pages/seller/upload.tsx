@@ -109,7 +109,7 @@ export default function SellerVehicleUpload() {
         {stage == 3 && (
           <Packages
             type="CLASSIFIED"
-            vehiclePrice={100}
+            itemPrice={vehicleData?.price}
             draftId={vehicleData?.draftId}
             pullData={(data) => {
               setPaymentData(data);
