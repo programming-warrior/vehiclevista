@@ -64,11 +64,6 @@ export const vehicleUploadSchema = z.object({
 
 
 export const vehicleEditSchema = z.object({
-  price: z
-    .string()
-    .refine((val) => !isNaN(parseFloat(val)), {
-      message: "Price must be a valid number",
-    }),
   title: z.string().min(1, { message: "Title is required" }),
   description: z.string().min(1, { message: "Description is required" }),
   location: z.string().min(1, { message: "Location is required" }),

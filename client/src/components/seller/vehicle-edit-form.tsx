@@ -65,7 +65,6 @@ const VehicleEditForm = ({
     resolver: zodResolver(vehicleEditSchema),
     defaultValues: {
       title: vehicleData.title,
-      price: vehicleData.price.toString(),
       description: vehicleData.description,
       location: vehicleData.location,
       images: vehicleData.images,
@@ -492,35 +491,11 @@ const VehicleEditForm = ({
               {/* Pricing and Location Section */}
               <div className="space-y-6">
                 <h3 className="text-xl font-semibold text-blue-900 border-b border-blue-200 pb-2">
-                  Pricing & Location
+                  Location
                 </h3>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-blue-800 font-medium text-base">
-                          Price
-                        </FormLabel>
-                        <div className="relative">
-                          <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-600 text-lg font-medium">
-                            £
-                          </span>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="15000"
-                              className="pl-8 h-12 text-base border-blue-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              {...field}
-                            />
-                          </FormControl>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  
 
                   <FormField
                     control={form.control}

@@ -502,7 +502,6 @@ userRouter.patch(
       .update(vehicles)
       .set({
         title: payload.data.title,
-        price: parseFloat(payload.data.price),
         description: payload.data.description,
         location: payload.data.location,
         images: payload.data.images,
