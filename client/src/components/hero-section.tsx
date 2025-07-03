@@ -62,7 +62,7 @@ export default function HeroSection() {
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     console.log("Search with parameters:", data);
-    setSearch({ color: "", fuelType: "", ...data });
+    setSearch({ color: "", fuelType: "",  ...data });
     setLocation("/vehicle");
   };
 

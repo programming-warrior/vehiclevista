@@ -154,7 +154,7 @@ export default function Home() {
       </section>
 
       {/* Live Auction Section */}
-      <section className="px-12 mx-auto w-full">
+      <section className="px-12 mx-auto w-full" id="live-auctions">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">Live Auctions</h2>
           <Link
@@ -182,9 +182,9 @@ export default function Home() {
       </section>
 
       {/* Explore Categories Section */}
-      <section className="  mx-auto w-full">
+      {/* <section className="  mx-auto w-full">
         <ExploreCategories />
-      </section>
+      </section> */}
 
       {/* Search Makes Section */}
       <section className=" mx-auto w-full">
