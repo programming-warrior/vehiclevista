@@ -19,7 +19,7 @@ export default function QualityBikesSection() {
               Explore Rare And Collectible Fine Bikes, With New Listings Added Daily.
             </p>
             <div className="flex gap-4">
-              <Link href="/auction">
+              <Link href="/auction?itemType=VEHICLE&vehicleAuctionType=bike">
                 <Button 
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8"
                   size="lg"
@@ -27,7 +27,7 @@ export default function QualityBikesSection() {
                   Live Auction
                 </Button>
               </Link>
-              <Link href="/bikes">
+              {/* <Link href="/bikes">
                 <Button 
                   variant="outline"
                   className="border-2 px-8"
@@ -35,7 +35,7 @@ export default function QualityBikesSection() {
                 >
                   View All Bikes
                 </Button>
-              </Link>
+              </Link> */}
             </div>
           </div>
           <div className="relative">

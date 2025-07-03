@@ -54,7 +54,7 @@ type AuctionResponse = {
 
 export default function LiveAuctionSection({
   itemType = "",
-  auctionVehicleType = "",
+  vehicleAuctionType = "",
 }: any) {
   const { socket } = useWebSocket();
   const [auctions, setAuctions] = useState<Auction[]>([]);
@@ -69,7 +69,7 @@ export default function LiveAuctionSection({
       try {
         setLoading(true);
         const data: AuctionResponse = await getActiveAuctions(
-          `itemType=${itemType}&type=${auctionVehicleType}`
+          `itemType=${itemType}&type=${vehicleAuctionType}`
         );
 
         setAuctions(data.auctions);

@@ -259,8 +259,10 @@ async function subscribeToAuctionTimer(auctionId: string) {
   const channel = `AUCTION_TIMER:${auctionId}`;
   await subscribeOnce(channel, (message, channel) => {
     const data = JSON.parse(message);
-    if (data.auctionId !== auctionId) return;
+    if (data.auctionId != auctionId) return;
 
+    console.log("Recived data from auction channel");
+    console.log(data);
     const wsData = {
       event: "AUCTION_TIMER",
       message: data,

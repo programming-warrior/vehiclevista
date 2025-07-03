@@ -261,9 +261,8 @@ export default function Navbar() {
               {unReadCount > 0 && (
                 <Badge
                   variant="destructive"
-                  className="absolute -top-2 -right-2 h-5 w-5  flex items-center justify-center p-[1px] text-xs bg-red-500 hover:bg-red-500"
+                  className="absolute -top-0 -right-0 h-3 w-3  flex items-center justify-center p-[1px] text-xs bg-red-500 hover:bg-red-500"
                 >
-                 
                 </Badge>
               )}
             </Button>
@@ -288,7 +287,10 @@ export default function Navbar() {
                       return (
                         <div
                           key={notification.id}
-                          onClick={() => setLocation("/notifications")}
+                          onClick={() =>{
+                            setNotificationMenuOpen(false);
+                            setLocation("/notifications")
+                          }}
                         >
                           <div className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer">
                             <div className="flex   gap-3">
@@ -297,7 +299,7 @@ export default function Navbar() {
                                 <p className="text-sm text-gray-900 font-medium">
                                   {messageData.title}
                                 </p>
-                                <p className="text-sm text-gray-700 font-medium">
+                                <p className="text-sm text-gray-500 ">
                                   {messageData.body}
                                 </p>
                                 <p className="flex items-center justify-between text-xs text-gray-500 ">

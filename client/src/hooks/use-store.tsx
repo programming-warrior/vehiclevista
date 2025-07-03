@@ -80,7 +80,7 @@ export const useNotification = create<{
   updateNotification: (id, updates) =>
     set((state) => ({
       notifications: state.notifications.map((notif) =>
-        notif.id === id ? { ...notif, ...updates } : notif
+        notif.id == id ? { ...notif, ...updates } : notif
       ),
     })),
 }));

@@ -202,13 +202,13 @@ export default function Home() {
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">Bikes Collection</h2>
           <Link
-            href="/auctions"
+            href="/auction?itemType=VEHICLE&vehicleAuctionType=bike"
             className="text-sm bg-gray-100 px-4 py-1 rounded-full hover:bg-gray-200"
           >
             View All
           </Link>
         </div>
-        <LiveAuctionSection auctionVehicleType="bike" />
+        <LiveAuctionSection vehicleAuctionType="bike" itemType="VEHICLE" />
       </section>
 
       {/* Vans Collection Section */}
@@ -216,13 +216,13 @@ export default function Home() {
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">Vans Collection</h2>
           <Link
-            href="/auctions"
+            href="/auction?itemType=VEHICLE&vehicleAuctionType=van"
             className="text-sm bg-gray-100 px-4 py-1 rounded-full hover:bg-gray-200"
           >
             View All
           </Link>
         </div>
-        <LiveAuctionSection auctionVehicleType="van" />
+        <LiveAuctionSection auctionVehicleType="van" itemType="VEHICLE" />
       </section>
     </div>
   );

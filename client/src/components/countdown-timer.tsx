@@ -39,8 +39,9 @@ export default function CountdownTimer({
       try {
         const data = JSON.parse(event.data);
         if (data.event === "AUCTION_TIMER") {
+          console.log("received auction timer update");
           setAuction((prevAuction: any) =>
-            prevAuction.id.toString() === data.message.auctionId
+            prevAuction.id.toString() == data.message.auctionId
               ? { ...prevAuction, remainingTime: data.message.remainingTime }
               : prevAuction
           );
