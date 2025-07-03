@@ -62,12 +62,12 @@ const VehicleUploadForm = ({
     resolver: zodResolver(vehicleUploadSchema),
     defaultValues: {
       title: "",
-      type: prefetchedData?.result?.basic_vehicle_info?.autotrader_asset_type ?? "car",
+      type: prefetchedData?.result?.basic_vehicle_info?.autotrader_asset_type?.toLowerCase() ?? "car",
       make: prefetchedData?.result?.basic_vehicle_info?.manufacturer_desc ?? "",
       model: prefetchedData?.result?.basic_vehicle_info?.model_range_desc ?? "",
       price: "",
       year:  "",
-      mileage: prefetchedData?.mileage ?? 0,
+      mileage: prefetchedData?.mileage.toString() ?? "",
       fuelType: prefetchedData?.result?.basic_vehicle_info?.autotrader_fuel_type_desc?.toLowerCase() ?? "",
       transmission: prefetchedData?.result?.basic_vehicle_info?.autotrader_transmission_desc?.toLowerCase() ?? "",
       bodyType: prefetchedData?.result?.basic_vehicle_info?.autotrader_body_type_desc?.toLowerCase() ?? "",
@@ -111,22 +111,22 @@ const VehicleUploadForm = ({
     };
   }, []);
 
-  useEffect(() => {
-    if (debouncedRegistrationNum) {
-      setRegistrationNumError("");
-      setRegistrationSuccess(false);
+  // useEffect(() => {
+  //   if (debouncedRegistrationNum) {
+  //     setRegistrationNumError("");
+  //     setRegistrationSuccess(false);
 
-      dvsaApi(debouncedRegistrationNum)
-        .then((data) => {
-          console.log(data);
-          setRegistrationSuccess(true);
-          // Here you could auto-fill form fields with vehicle data
-        })
-        .catch((e) => {
-          setRegistrationNumError("Vehicle not found in DVSA");
-        });
-    }
-  }, [debouncedRegistrationNum]);
+  //     dvsaApi(debouncedRegistrationNum)
+  //       .then((data) => {
+  //         console.log(data);
+  //         setRegistrationSuccess(true);
+  //         // Here you could auto-fill form fields with vehicle data
+  //       })
+  //       .catch((e) => {
+  //         setRegistrationNumError("Vehicle not found in DVSA");
+  //       });
+  //   }
+  // }, [debouncedRegistrationNum]);
 
   // Fetch location suggestions when location input changes
   useEffect(() => {

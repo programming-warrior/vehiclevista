@@ -396,7 +396,7 @@ vehicleRouter.post("/increase-clicks", async (req, res) => {
 });
 
 vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
-  if (!req.userId || !req.card_verified) {
+  if (!req.userId) {
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {

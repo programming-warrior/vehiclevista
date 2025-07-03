@@ -454,7 +454,7 @@ auctionRouter.get("/seller/listings", verifyToken, async (req, res) => {
 });
 
 auctionRouter.patch("/update-draft/:draftId", verifyToken, async (req, res) => {
-  if (!req.userId || !req.card_verified) {
+  if (!req.userId ) {
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {
@@ -512,7 +512,7 @@ auctionRouter.patch("/update-draft/:draftId", verifyToken, async (req, res) => {
 });
 
 auctionRouter.post("/numberplate/create", verifyToken, async (req, res) => {
-  if (!req.userId || !req.card_verified) {
+  if (!req.userId ) {
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {
@@ -551,7 +551,7 @@ auctionRouter.post("/numberplate/create", verifyToken, async (req, res) => {
 });
 
 auctionRouter.post("/create", verifyToken, async (req, res) => {
-  if (!req.userId || !req.card_verified) {
+  if (!req.userId ) {
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {
