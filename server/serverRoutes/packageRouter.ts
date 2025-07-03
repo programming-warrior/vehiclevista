@@ -154,6 +154,9 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
         if (price[1] > -1 && price[1] >= compareFeature) {
           acc = price[2] ?? compareFeature;
         }
+        else if(price[1] === -1) {
+          acc = price[2] ?? compareFeature;
+        }
       }
       return acc;
     }, 0);

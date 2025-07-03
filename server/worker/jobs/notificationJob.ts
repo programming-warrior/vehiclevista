@@ -9,6 +9,7 @@ import {
   auctions,
   raffle,
   bids,
+  packages
 } from "../../../shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -322,6 +323,112 @@ const notificationWorker = new Worker(
           `RECEIVE_NOTIFICATION`,
           JSON.stringify({
             type: "RAFFLE-TICKET-PURCHASE",
+            notificationId: notification.id,
+            to: userId,
+            message: formattedMessage,
+            createdAt: notification.createdAt,
+          })
+        );
+        console.log("notification published");
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    else if (job.name === "listing-creation-success") {
+      const { userId, listingId, packageId } = job.data;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId));
+
+        const [packageDetails] = await db
+          .select()
+          .from(packages)
+          .where(eq(packages.id, parseInt(packageId)));
+
+        // const [bid] = await db.select().from(bids).where(eq(bids.id, bidId));
+
+        if (!packageDetails || !user) throw new Error("Invalid data");
+
+        const formattedMessage = {
+          title: `Listing created successfully`,
+          from: {
+            name: `system-generated`,
+            email: `system-generated`,
+          },
+          body: `Your listing for package *${packageDetails.name}* has been created successfully!`,
+        };
+        console.log(formattedMessage);
+
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "LISTING-CREATION-SUCCESS",
+            sentTo: user.id,
+            message: formattedMessage,
+          })
+          .returning();
+
+        console.log("notification saved");
+        await connection.publish(
+          `RECEIVE_NOTIFICATION`,
+          JSON.stringify({
+            type: "LISTING-CREATION-SUCCESS",
+            notificationId: notification.id,
+            to: userId,
+            message: formattedMessage,
+            createdAt: notification.createdAt,
+          })
+        );
+        console.log("notification published");
+      } catch (e) {
+        console.log(e);
+      }
+    }
+      else if (job.name === "listing-creation-failed") {
+      const { userId, draftId, packageId } = job.data;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId));
+
+        const [packageDetails] = await db
+          .select()
+          .from(packages)
+          .where(eq(packages.id, parseInt(packageId)));
+
+        // const [bid] = await db.select().from(bids).where(eq(bids.id, bidId));
+
+        if (!packageDetails || !user) throw new Error("Invalid data");
+
+        const formattedMessage = {
+          title: `Listing Creation Failed`,
+          from: {
+            name: `system-generated`,
+            email: `system-generated`,
+          },
+          body: `Your listing for package *${packageDetails.name}* has failed to create. Refund would be initiated`,
+        };
+        console.log(formattedMessage);
+
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "LISTING-CREATION-FAILED",
+            sentTo: user.id,
+            message: formattedMessage,
+          })
+          .returning();
+
+        console.log("notification saved");
+        await connection.publish(
+          `RECEIVE_NOTIFICATION`,
+          JSON.stringify({
+            type: "LISTING-CREATION-FAILED",
             notificationId: notification.id,
             to: userId,
             message: formattedMessage,

@@ -38,6 +38,8 @@ const paymentWorker = new Worker(
         console.log("Payment session status " + session[0].status);
         if (!session || session[0].status !== "PENDING") return;
 
+        let listing_id: number | undefined = undefined;
+
         await db.transaction(async (tx) => {
           //update the payment session
           const updated = await tx
@@ -64,7 +66,6 @@ const paymentWorker = new Worker(
             const expires_at = new Date(
               Date.now() + packageDetails.duration_days * 24 * 60 * 60 * 1000
             );
-            let listing_id;
             let globalDraftData: any;
             if (packageDetails.type == "CLASSIFIED") {
               console.log("Processing classified");
@@ -102,10 +103,10 @@ const paymentWorker = new Worker(
                 })
                 .returning();
               listing_id = savedValue.id;
-            } else if (packageDetails.type.split('-')[0] === "AUCTION") {
+            } else if (packageDetails.type.split("-")[0] === "AUCTION") {
               console.log("processing auction");
               //move auction and vehicle draftdata
-              let currentBid:number = 0;
+              let currentBid: number = 0;
 
               console.log("Auction Draft Data");
               const [draftData] = await tx
@@ -158,7 +159,7 @@ const paymentWorker = new Worker(
                   })
                   .returning();
                 savedItemId = savedValue.id;
-                currentBid= savedValue.price;
+                currentBid = savedValue.price;
               } else if (draftData.itemType === "NUMBERPLATE") {
                 console.log(
                   "Moving NumberPlate Auction Item from draft to Listing"
@@ -180,7 +181,7 @@ const paymentWorker = new Worker(
                   })
                   .returning();
                 savedItemId = numberPlateRow.id;
-                currentBid= numberPlateRow.plate_value;
+                currentBid = numberPlateRow.plate_value;
               }
               console.log("Moving Auction from draft to listing");
               const [savedAuction] = await tx
@@ -277,7 +278,21 @@ const paymentWorker = new Worker(
             }
           }
         });
+        await notificationQueue.add("listing-creation-success", {
+          userId,
+          listingId: listing_id,
+          packageId,
+        });
       } catch (e) {
+        await notificationQueue.add("listing-creation-failed", {
+          userId,
+          draftId,
+          packageId,
+        });
+        //TODO
+        //ADD REFUND LOGIC HERE
+        
+        
         console.log(e);
       }
     }
