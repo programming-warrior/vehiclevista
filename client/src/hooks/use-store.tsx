@@ -108,6 +108,14 @@ type heroSectionSearchState = {
   }) => void;
 };
 
+export const useGlobalLoading= create<{
+  globalLoading: boolean;
+  setGlobalLoading: (loading: boolean) => void;
+}>((set) => ({
+  globalLoading: false,
+  setGlobalLoading: (loading) => set({ globalLoading: loading }),
+}));
+
 export const useHeroSectionSearch = create<heroSectionSearchState>((set) => ({
   brand: "",
   model: "",

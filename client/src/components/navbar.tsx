@@ -30,8 +30,7 @@ import { logoutUser, advanceVehicleSearch, getNotifications } from "@/api";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getTime } from "date-fns";
-
+import { useGlobalLoading } from "@/hooks/use-store";
 export default function Navbar() {
   const [, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -52,6 +51,7 @@ export default function Navbar() {
     setTotalNotifications,
   } = useNotification();
   const [filteredNotification, setFilteredNotification] = useState<any>([]);
+  const { globalLoading, setGlobalLoading } = useGlobalLoading();
 
   const handleLogout = async () => {
     try {
@@ -151,14 +151,17 @@ export default function Navbar() {
     const searchParam = searchRef.current?.value;
     if (searchParam) {
       try {
+        setGlobalLoading(true);
         const res = await advanceVehicleSearch(searchParam);
         const filteredSchema = res.filterSchema;
         setSearch({
           brand: filteredSchema.brand ?? "",
           model: filteredSchema.model ?? "",
+          variant: filteredSchema.variant ?? "",
           vehicleType: filteredSchema.type ?? "",
-          color: filteredSchema.color ?? "",
           transmissionType: filteredSchema.transmissionType ?? "",
+          fuelType: filteredSchema.fuelType ?? "",
+          color: filteredSchema.color ?? "",
           minBudget: filteredSchema.minBudget ?? 0,
           maxBudget: filteredSchema.maxBudget ?? 0,
         });
@@ -170,6 +173,9 @@ export default function Navbar() {
           description: e.message,
         });
         console.log("search failed");
+      }
+      finally {
+        setGlobalLoading(false);
       }
     }
   }

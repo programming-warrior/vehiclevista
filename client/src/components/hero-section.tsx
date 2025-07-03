@@ -51,6 +51,7 @@ export default function HeroSection() {
       brand: "",
       model: "",
       type: "",
+      color: "",
       transmissionType: "",
       minBudget: 0,
       maxBudget: 0,
@@ -61,7 +62,7 @@ export default function HeroSection() {
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     console.log("Search with parameters:", data);
-    setSearch({ ...data });
+    setSearch({ color: "", fuelType: "", ...data });
     setLocation("/vehicle");
   };
 

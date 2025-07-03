@@ -19,12 +19,18 @@ import { ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import RaffleHomeSection from "@/components/raffle-home-section";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocation } from "wouter";
+import { useGlobalLoading } from "@/hooks/use-store";
+import Loader from "@/components/loader";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Car");
   const { userId, role } = useUser();
   const [featuredVehicles, setFeaturedVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
+  const [_, setLocation] = useLocation();
+  const { globalLoading, setGlobalLoading } = useGlobalLoading();
+  
 
   useEffect(() => {
     async function fetch() {
@@ -55,6 +61,12 @@ export default function Home() {
       })
       .join("")
   );
+
+  if(globalLoading) {
+    return (
+     <Loader/>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -132,6 +144,7 @@ export default function Home() {
                 size="lg"
                 variant="outline"
                 className="text-center border-blue-200 bg-white  font-normal "
+                onClick={()=>setLocation('/vehicle')}
               >
                 View More <ChevronRight className="ml-2 h-5 w-5" />
               </Button>

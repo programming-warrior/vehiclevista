@@ -544,7 +544,7 @@ vehicleRouter.post("/advance-search", async (req, res) => {
         messages: [
           {
             role: "user",
-            content: `You are a vehicle search assistant. Extract structured filter data from this string: ${searchParam}. Respond with a JSON object like:
+            content: `You are a vehicle search assistant. Try Differentiate between type and bodyType, type means vehicle type like car, bike etc. bodytype means the architecture of the vehicle for example for the type car it could be sedan, suv etc.Extract structured filter data from this string: ${searchParam}. Respond with a JSON object like:
             {
               "brand": "Audi",
               "color": "black",
