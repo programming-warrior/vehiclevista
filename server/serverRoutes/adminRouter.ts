@@ -526,6 +526,7 @@ adminRouter.get("/users", verifyToken, async (req, res) => {
       filterOptions = JSON.parse(filter as string);
       searchTerm = filterOptions.search || "";
       statusFilter = filterOptions.status || null;
+      statusFilter = statusFilter.toLowerCase();
     } catch (error) {
       console.error("Error parsing filter:", error);
     }
@@ -595,51 +596,56 @@ adminRouter.get("/users", verifyToken, async (req, res) => {
     query.where(eq(users.status, statusFilter));
   }
 
-  // Complete the query with grouping, ordering, and pagination
-  const result = await query
-    .groupBy(
-      users.id,
-      users.username,
-      users.email,
-      users.role,
-      users.createdAt,
-      users.card,
-      users.status,
-      users.blacklistReason
-    )
-    .orderBy(orderByClause)
-    .limit(limitNumber + 1)
-    .offset(offset);
-
-  let countQuery = db
-    .select({
-      count: sql<number>`count(*)`,
-    })
-    .from(users);
-
-  // Add the same filters to count query
-  if (searchTerm) {
-    countQuery.where(
-      or(
-        ilike(users.username, `%${searchTerm}%`),
-        ilike(users.email, `%${searchTerm}%`)
+  try {
+    // Complete the query with grouping, ordering, and pagination
+    const result = await query
+      .groupBy(
+        users.id,
+        users.username,
+        users.email,
+        users.role,
+        users.createdAt,
+        users.card,
+        users.status,
+        users.blacklistReason
       )
-    );
+      .orderBy(orderByClause)
+      .limit(limitNumber + 1)
+      .offset(offset);
+
+    let countQuery = db
+      .select({
+        count: sql<number>`count(*)`,
+      })
+      .from(users);
+
+    // Add the same filters to count query
+    if (searchTerm) {
+      countQuery.where(
+        or(
+          ilike(users.username, `%${searchTerm}%`),
+          ilike(users.email, `%${searchTerm}%`)
+        )
+      );
+    }
+
+    if (statusFilter) {
+      countQuery.where(eq(users.status, statusFilter));
+    }
+
+    const [{ count: totalUsers }] = await countQuery;
+
+    return res.status(200).json({
+      users: result.splice(0, limitNumber),
+      totalUsers: totalUsers,
+      totalPages: Math.ceil(totalUsers / limitNumber),
+      page: pageNumber,
+      hasNextPage: result.length > limitNumber,
+    });
+  } catch (e) {
+    console.error("Error fetching users:", e);
+    return res.status(500).json({ error: "Internal server error" });
   }
-
-  if (statusFilter) {
-    countQuery.where(eq(users.status, statusFilter));
-  }
-
-  const [{ count: totalUsers }] = await countQuery;
-
-  return res.status(200).json({
-    users: result.splice(0, limitNumber),
-    totalUsers: totalUsers,
-    totalPages: Math.ceil(totalUsers / limitNumber),
-    page: pageNumber,
-    hasNextPage: result.length > limitNumber,
-  });
 });
 
 adminRouter.get("/vehicles", verifyToken, async (req, res) => {

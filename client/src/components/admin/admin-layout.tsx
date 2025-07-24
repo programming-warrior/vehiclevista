@@ -1,23 +1,15 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { 
-  LayoutDashboard, 
-  Car, 
-  Users, 
-  Settings,
+import {
+  LayoutDashboard,
+  Car,
+  Users,
   Gavel,
-  Calendar,
-  MessageSquare,
-  Wrench,
-  PackageOpen,
-  Tag,
-  PiggyBank,
-  Database,
   Ticket,
+  MessageSquare,
 } from "lucide-react";
 import { useEffect } from "react";
 import { useUser } from "@/hooks/use-store";
-// import { useAuth } from "@/hooks/use-auth";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -27,10 +19,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
   const { userId, role } = useUser();
 
-  // Redirect if not admin
   useEffect(() => {
-    if ( role !== 'admin') {
-      window.location.href = '/';
+    if (role !== "admin") {
+      window.location.href = "/";
     }
   }, [role, userId]);
 
@@ -38,48 +29,55 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/vehicles", label: "Vehicles", icon: Car },
     { href: "/admin/users", label: "Users", icon: Users },
-    // { href: "/admin/blacklist", label: "PUblic BlackList", icon: Database },
-    // { href: "/admin/settings", label: "Settings", icon: Settings },
     { href: "/admin/auctions", label: "Auctions", icon: Gavel },
     { href: "/admin/raffle", label: "Raffle", icon: Ticket },
-    // { href: "/admin/events", label: "Events", icon: Calendar },
     { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
-    // { href: "/admin/spare-parts", label: "Spare Parts", icon: Wrench },
-    // // { href: "/admin/inventory", label: "Inventory", icon: PackageOpen },
-    // { href: "/admin/offers", label: "Offers", icon: Tag },
-    // { href: "/admin/pricing", label: "Pricing", icon: PiggyBank }
   ];
 
   return (
-    <div className="min-h-screen grid grid-cols-[240px,1fr]">
-      <aside className="bg-muted border-r p-4">
-        <Link href="/admin" className="flex items-center gap-2 text-lg font-semibold mb-8">
-          Admin Panel
-        </Link>
-        <nav className="space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md text-sm transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-accent hover:text-accent-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+    // 1. Set a fixed height for the container and hide overflow
+    <div className="h-screen flex bg-gray-50 overflow-hidden">
+      {/* The sidebar is a flex item and will not scroll */}
+      <aside className="bg-white border-r border-gray-200 w-64 flex-shrink-0 shadow-sm">
+        <div className="p-6">
+          <Link
+            href="/admin"
+            className="flex items-center gap-2 text-xl font-bold text-blue-700 hover:text-blue-800 transition-colors"
+          >
+            Admin Panel
+          </Link>
+        </div>
+        <nav className="px-4 pb-4">
+          <div className="space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-blue-100 text-blue-700 shadow-sm border border-blue-200"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
       </aside>
-      <main className="p-8 bg-background">
-        {children}
+
+    
+      <main className="flex-1 min-w-0 overflow-y-auto">
+  
+        <div className="p-6">
+          {children}
+        </div>
       </main>
     </div>
   );

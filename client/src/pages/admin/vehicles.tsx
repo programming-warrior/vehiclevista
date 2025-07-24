@@ -3,10 +3,8 @@ import {
   AlertCircle,
   ArrowUpDown,
   Car,
-  Shield,
   ShieldAlert,
   ShieldCheck,
-  UserX,
   Eye,
   MousePointer,
   MessageSquare,
@@ -14,6 +12,7 @@ import {
   Truck,
   Bus,
   CheckCircle,
+  ExternalLink,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -46,54 +45,82 @@ import AdminLayout from "@/components/admin/admin-layout";
 import { adminGetVehicles, blacklistVehicle, unBlacklistVehicle } from "@/api";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocation } from "wouter";
+
+/* Optional: For a custom scrollbar that matches the design, you can add the following
+  CSS to your global stylesheet (e.g., index.css or app.css). This will make the 
+  browser scrollbar thinner and color it to match the blue theme.
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #eff6ff; // blue-50
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3b82f6; // blue-500
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2563eb; // blue-600
+  }
+*/
 
 export default function AdminVehicles() {
   const [vehicles, setVehicles] = useState<any>([]);
   const [filteredVehicles, setFilteredVehicles] = useState<any>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState("newest");
-  const [statusFilter, setStatusFilter] = useState("ACTIVE"); // Changed from showBlacklisted
+  const [statusFilter, setStatusFilter] = useState("ACTIVE");
   const [blacklistDialogOpen, setBlacklistDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [blacklistReason, setBlacklistReason] = useState("");
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(5);
+  const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalVehicles, setTotalVehicles] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [location, setLocation] = useLocation();
 
   const debouncedSearch = useDebounce(searchQuery, 500);
-    async function fetch(page:number) {
-      try {
-        setIsLoading(true);
-        const filter = {
-          search: debouncedSearch,
-          status: statusFilter,
-        };
-        const data = await adminGetVehicles({
-          page,
-          limit,
-          sortBy: sortOption,
-          filter: JSON.stringify(filter),
-        });
-        setVehicles(data.vehicles);
-        setFilteredVehicles(data.vehicles);
-        setTotalPages(data.totalPages);
-        setTotalVehicles(parseInt(data.totalVehicles));
-      } catch (e) {
-      } finally {
-        setIsLoading(false);
-      }
+
+  async function fetch(page: number) {
+    try {
+      setIsLoading(true);
+      const filter = {
+        search: debouncedSearch,
+        status: statusFilter,
+      };
+      const data = await adminGetVehicles({
+        page,
+        limit,
+        sortBy: sortOption,
+        filter: JSON.stringify(filter),
+      });
+      setVehicles(data.vehicles);
+      setFilteredVehicles(data.vehicles);
+      setTotalPages(data.totalPages);
+      setTotalVehicles(parseInt(data.totalVehicles));
+    } catch (e) {
+      console.error("Failed to fetch vehicles:", e);
+    } finally {
+      setIsLoading(false);
     }
+  }
+
   useEffect(() => {
     fetch(page);
   }, [page, limit, sortOption]);
-  
+
   useEffect(() => {
     fetch(1);
     setPage(1);
   }, [debouncedSearch, statusFilter]);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const handleBlacklistVehicle = (vehicle: any) => {
     setSelectedVehicle(vehicle);
@@ -101,20 +128,10 @@ export default function AdminVehicles() {
   };
 
   const confirmBlacklist = async () => {
+    if (!selectedVehicle) return;
     try {
       await blacklistVehicle(selectedVehicle.id, blacklistReason);
-      setVehicles(
-        vehicles.map((vehicle: any) =>
-          vehicle.id === selectedVehicle?.id
-            ? { ...vehicle, status: "BLACKLISTED", blacklistReason }
-            : vehicle
-        )
-      );
-      setFilteredVehicles(
-        filteredVehicles.filter(
-          (vehicle: any) => vehicle.id !== selectedVehicle?.id
-        )
-      );
+      fetch(page); // Refetch to get the updated list
       setBlacklistDialogOpen(false);
       setBlacklistReason("");
     } catch (error) {
@@ -125,16 +142,7 @@ export default function AdminVehicles() {
   const removeFromBlacklist = async (vehicleId: any) => {
     try {
       await unBlacklistVehicle(vehicleId, "");
-      setVehicles(
-        vehicles.map((vehicle: any) =>
-          vehicle.id === vehicleId
-            ? { ...vehicle, status: "ACTIVE", blacklistReason: "" }
-            : vehicle
-        )
-      );
-      setFilteredVehicles(
-        filteredVehicles.filter((vehicle: any) => vehicle.id !== vehicleId)
-      );
+      fetch(page); // Refetch to get the updated list
     } catch (error) {
       console.error("Error unblacklisting vehicle:", error);
     }
@@ -151,287 +159,223 @@ export default function AdminVehicles() {
 
   const getStatusTitle = () => {
     switch (statusFilter) {
-      case "ACTIVE":
-        return "Active Vehicles";
-      case "BLACKLISTED":
-        return "Blacklisted Vehicles";
-      case "SOLD":
-        return "Sold Vehicles";
-      default:
-        return "All Vehicles";
+      case "ACTIVE": return "Active Vehicles";
+      case "BLACKLISTED": return "Blacklisted Vehicles";
+      case "SOLD": return "Sold Vehicles";
+      default: return "All Vehicles";
     }
   };
 
   const getStatusDescription = () => {
     switch (statusFilter) {
-      case "ACTIVE":
-        return "Manage existing vehicle listings";
-      case "BLACKLISTED":
-        return "Vehicles that have been blacklisted from the platform";
-      case "SOLD":
-        return "Vehicles that have been marked as sold";
-      default:
-        return "All vehicle listings";
+      case "ACTIVE": return "Manage existing vehicle listings";
+      case "BLACKLISTED": return "Vehicles that have been blacklisted from the platform";
+      case "SOLD": return "Vehicles that have been marked as sold";
+      default: return "All vehicle listings";
     }
   };
 
   return (
     <AdminLayout>
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-semibold text-blue-700">
-            Vehicle Listing Management
-          </h2>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Search vehicles..."
-              className="w-64 border-blue-200 focus:border-blue-500"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        {/* --- Sticky Header for Controls --- */}
+        <div className="space-y-4  py-4 backdrop-blur-md dark:bg-slate-950">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold text-blue-700">
+              Vehicle Listing Management
+            </h2>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Search vehicles..."
+                className="w-64 border-blue-200 focus:border-blue-500"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between space-x-2">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-blue-600">Filter by status:</span>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48 border-blue-200">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">
+                    <span className="flex items-center">
+                      <ShieldCheck className="mr-2 h-4 w-4 text-blue-600" />
+                      Active Vehicles
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="BLACKLISTED">
+                    <span className="flex items-center">
+                      <ShieldAlert className="mr-2 h-4 w-4 text-red-600" />
+                      Blacklisted Vehicles
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="SOLD">
+                    <span className="flex items-center">
+                      <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                      Sold Vehicles
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-blue-600">Show:</span>
+                <Select value={limit.toString()} onValueChange={(val) => setLimit(parseInt(val))}>
+                  <SelectTrigger className="w-20 border-blue-200">
+                    <SelectValue placeholder="Entries" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-blue-600">Sort by:</span>
+                <Select value={sortOption} onValueChange={setSortOption}>
+                  <SelectTrigger className="w-40 border-blue-200">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="oldest">Oldest</SelectItem>
+                    <SelectItem value="reports">Reports (High to Low)</SelectItem>
+                    <SelectItem value="views">Views (High to Low)</SelectItem>
+                    <SelectItem value="leads">Leads (High to Low)</SelectItem>
+                    <SelectItem value="clicks">Clicks (High to Low)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-between items-center space-x-2">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant={statusFilter === "ACTIVE" ? "default" : "outline"}
-              className={
-                statusFilter === "ACTIVE" ? "bg-blue-600 hover:bg-blue-700" : ""
-              }
-              onClick={() => setStatusFilter("ACTIVE")}
-            >
-              <ShieldCheck className="mr-2 h-4 w-4" />
-              Active Vehicles
-            </Button>
-            <Button
-              variant={statusFilter === "BLACKLISTED" ? "default" : "outline"}
-              className={statusFilter === "BLACKLISTED" ? "bg-blue-600 hover:bg-blue-700" : ""}
-              onClick={() => setStatusFilter("BLACKLISTED")}
-            >
-              <ShieldAlert className="mr-2 h-4 w-4" />
-              Blacklisted Vehicles
-            </Button>
-            <Button
-              variant={statusFilter === "SOLD" ? "default" : "outline"}
-              className={statusFilter === "SOLD" ? "bg-blue-600 hover:bg-blue-700" : ""}
-              onClick={() => setStatusFilter("SOLD")}
-            >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Sold Vehicles
-            </Button>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-blue-600">Sort by:</span>
-            <Select value={sortOption} onValueChange={setSortOption}>
-              <SelectTrigger className="w-40 border-blue-200">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="oldest">Oldest</SelectItem>
-                <SelectItem value="reports">Reports (High to Low)</SelectItem>
-                <SelectItem value="views">Views (High to Low)</SelectItem>
-                <SelectItem value="leads">Leads (High to Low)</SelectItem>
-                <SelectItem value="clicks">Clicks (High to Low)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {((statusFilter === "BLACKLISTED" && filteredVehicles.length === 0) ||
-          (statusFilter === "SOLD" && filteredVehicles.length === 0)) && (
+        {/* --- Main Content Area --- */}
+        {!isLoading && filteredVehicles.length === 0 && (
           <Alert className="border-blue-200 bg-blue-50">
             <AlertCircle className="h-4 w-4 text-blue-600" />
             <AlertTitle className="text-blue-700">
-              No {statusFilter.toLowerCase()} vehicles
+              No vehicles found
             </AlertTitle>
             <AlertDescription className="text-blue-600">
-              There are currently no {statusFilter.toLowerCase()} vehicles in the system.
+              There are no vehicles matching the current filters.
             </AlertDescription>
           </Alert>
         )}
 
-        <Card className="border-blue-200">
+        <Card className="border-blue-200 ">
           <CardHeader className="bg-blue-50">
-            <CardTitle className="text-blue-700">
-              {getStatusTitle()}
-            </CardTitle>
+            <CardTitle className="text-blue-700">{getStatusTitle()}</CardTitle>
             <CardDescription className="text-blue-600">
               {getStatusDescription()}
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
+          {/* --- The table no longer has a fixed height or internal scroll --- */}
+          <CardContent className="p-0">
             {isLoading ? (
-              <div className="py-2 flex flex-col gap-4 border-blue-200">
-                <Skeleton className="w-full h-16 bg-blue-100" />
-                <Skeleton className="w-full h-16 bg-blue-100" />
-                <Skeleton className="w-full h-16 bg-blue-100" />
-                <Skeleton className="w-full h-16 bg-blue-100" />
+              <div className="flex flex-col gap-2 p-6">
+                <Skeleton className="h-16 w-full bg-blue-100" />
+                <Skeleton className="h-16 w-full bg-blue-100" />
+                <Skeleton className="h-16 w-full bg-blue-100" />
+                <Skeleton className="h-16 w-full bg-blue-100" />
+                <Skeleton className="h-16 w-full bg-blue-100" />
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-blue-100">
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Vehicle
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Type
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Make & Model
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Location
-                      </th>
-                      <th className="text-center py-3 px-4 font-medium text-blue-700">
+                <table className="w-full text-sm">
+                  <thead className="bg-white dark:bg-slate-900">
+                    <tr className="border-b border-blue-200">
+                      <th className="px-4 py-3 text-left font-medium text-blue-700">Vehicle</th>
+                      <th className="px-4 py-3 text-left font-medium text-blue-700">Type</th>
+                      <th className="px-4 py-3 text-left font-medium text-blue-700">Make & Model</th>
+                      <th className="px-4 py-3 text-center font-medium text-blue-700">
                         <div className="flex items-center justify-center">
-                          Reports
-                          <ArrowUpDown className="ml-1 h-4 w-4" />
+                          Reports <ArrowUpDown className="ml-1 h-4 w-4" />
                         </div>
                       </th>
-                      <th className="text-center py-3 px-4 font-medium text-blue-700">
-                        Stats
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Listed On
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-blue-700">
-                        Status
-                      </th>
-                      <th className="text-right py-3 px-4 font-medium text-blue-700">
-                        Actions
-                      </th>
+                      <th className="px-4 py-3 text-center font-medium text-blue-700">Stats</th>
+                      <th className="px-4 py-3 text-left font-medium text-blue-700">Listed On</th>
+                      <th className="px-4 py-3 text-left font-medium text-blue-700">Status</th>
+                      <th className="px-4 py-3 text-right font-medium text-blue-700">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredVehicles.map((vehicle: any) => (
-                      <tr
-                        key={vehicle.id}
-                        className="border-b border-blue-100 hover:bg-blue-50"
-                      >
-                        <td className="py-4 px-4 ">
-                          <div className="flex items-center font-medium">
+                      <tr key={vehicle.id} className="border-b border-blue-100 hover:bg-blue-50">
+                        <td className="px-4 py-4 font-medium">
+                          <div
+                            onClick={() => setLocation("/vehicle/" + vehicle.id)}
+                            className="flex cursor-pointer items-center border-b border-transparent hover:border-b-blue-600 w-fit"
+                          >
                             {vehicle.title}
+                            <ExternalLink className="ml-1 h-3 w-3 text-gray-500" />
                           </div>
                         </td>
-                        <td className="py-4 px-4 ">
-                          <div className="flex items-center">
-                            {vehicle.type === "car" ? (
-                              <Car size={30} className="stroke-blue-500 mr-1" />
-                            ) : vehicle.type === "bike" ? (
-                              <Bike
-                                size={30}
-                                className="stroke-blue-500 mr-1"
-                              />
-                            ) : vehicle.type == "truck" ? (
-                              <Truck
-                                size={30}
-                                className="stroke-blue-500 mr-1"
-                              />
-                            ) : vehicle.type == "van" ? (
-                              <Bus size={30} className="stroke-blue-500 mr-1" />
-                            ) : (
-                              ""
-                            )}
+                        <td className="px-4 py-4">
+                          <div className="flex items-center capitalize">
+                            {vehicle.type === "car" ? (<Car size={24} className="stroke-blue-500 mr-2" />)
+                            : vehicle.type === "bike" ? (<Bike size={24} className="stroke-blue-500 mr-2" />)
+                            : vehicle.type == "truck" ? (<Truck size={24} className="stroke-blue-500 mr-2" />)
+                            : vehicle.type == "van" ? (<Bus size={24} className="stroke-blue-500 mr-2" />)
+                            : null}
                             {vehicle.type}
                           </div>
                         </td>
-                        <td className="py-4 px-4">
-                          {vehicle.make} {vehicle.model}
-                        </td>
-                        <td className="py-4 px-4 max-w-xs truncate">
-                          {vehicle.location}
-                        </td>
-                        <td className="py-4 px-4 text-center">
+                        <td className="px-4 py-4">{vehicle.make} {vehicle.model}</td>
+                        <td className="px-4 py-4 text-center">
                           {parseInt(vehicle.reports_count) > 0 ? (
-                            <Badge variant="destructive">
-                              {vehicle.reports_count}
-                            </Badge>
+                            <Badge variant="destructive">{vehicle.reports_count}</Badge>
                           ) : (
                             <span className="text-muted-foreground">0</span>
                           )}
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="px-4 py-4">
                           <div className="flex items-center justify-center space-x-2">
-                            <Badge
-                              variant="secondary"
-                              className="text-xs flex items-center"
-                            >
+                            <Badge variant="secondary" className="flex items-center text-xs">
                               <Eye className="mr-1 h-3 w-3" /> {vehicle.views}
                             </Badge>
-                            <Badge
-                              variant="secondary"
-                              className="text-xs flex items-center"
-                            >
-                              <MessageSquare className="mr-1 h-3 w-3" />{" "}
-                              {vehicle.leads}
+                            <Badge variant="secondary" className="flex items-center text-xs">
+                              <MessageSquare className="mr-1 h-3 w-3" /> {vehicle.leads}
                             </Badge>
-                            <Badge
-                              variant="secondary"
-                              className="text-xs flex items-center"
-                            >
-                              <MousePointer className="mr-1 h-3 w-3" />{" "}
-                              {vehicle.clicks}
+                            <Badge variant="secondary" className="flex items-center text-xs">
+                              <MousePointer className="mr-1 h-3 w-3" /> {vehicle.clicks}
                             </Badge>
                           </div>
                         </td>
-                        <td className="py-4 px-4">
-                          {formatDate(vehicle.createdAt)}
-                        </td>
-                        <td className="py-4 px-4">
+                        <td className="px-4 py-4">{formatDate(vehicle.createdAt)}</td>
+                        <td className="px-4 py-4">
                           <Badge
-                            variant={
-                              vehicle.status === "ACTIVE"
-                                ? "outline"
-                                : vehicle.status === "SOLD"
-                                ? "secondary"
-                                : "destructive"
-                            }
+                            variant={vehicle.status === "ACTIVE" ? "outline" : vehicle.status === "SOLD" ? "secondary" : "destructive"}
                             className={
-                              vehicle.status === "ACTIVE"
-                                ? "border-blue-500 text-blue-600"
-                                : vehicle.status === "SOLD"
-                                ? "bg-green-100 text-green-700 border-green-200"
-                                : ""
+                                vehicle.status === "ACTIVE" ? "border-blue-500 text-blue-600"
+                              : vehicle.status === "SOLD" ? "bg-green-100 text-green-700 border-green-200"
+                              : ""
                             }
                           >
-                            {vehicle.status === "BLACKLISTED"
-                              ? "Blacklisted"
-                              : vehicle.status === "SOLD"
-                              ? "Sold"
-                              : "Active"}
+                            {vehicle.status === "BLACKLISTED" ? "Blacklisted" : vehicle.status}
                           </Badge>
                         </td>
-                        <td className="py-4 px-4 text-right">
+                        <td className="px-4 py-4 text-right">
                           {vehicle.status === "ACTIVE" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                              onClick={() => handleBlacklistVehicle(vehicle)}
-                            >
-                              <ShieldAlert className="mr-2 h-4 w-4" />
-                              Blacklist
+                            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={() => handleBlacklistVehicle(vehicle)}>
+                              <ShieldAlert className="mr-2 h-4 w-4" /> Blacklist
                             </Button>
                           ) : vehicle.status === "BLACKLISTED" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                              onClick={() => removeFromBlacklist(vehicle.id)}
-                            >
-                              <ShieldCheck className="mr-2 h-4 w-4" />
-                              Restore
+                            <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700" onClick={() => removeFromBlacklist(vehicle.id)}>
+                              <ShieldCheck className="mr-2 h-4 w-4" /> Restore
                             </Button>
                           ) : (
-                            <span className="text-sm text-muted-foreground">
-                              No actions available
-                            </span>
+                            <span className="text-sm text-muted-foreground">No actions</span>
                           )}
                         </td>
                       </tr>
@@ -441,61 +385,42 @@ export default function AdminVehicles() {
               </div>
             )}
           </CardContent>
-          <CardFooter className="pt-2 flex justify-between bg-blue-50">
+          <CardFooter className="flex justify-between border-t border-blue-200 bg-blue-50 pt-4">
             <div className="text-sm text-blue-600">
-              Showing {filteredVehicles.length} of {totalVehicles} vehicles
+                Showing{" "}
+                <strong>{(page - 1) * limit + 1}</strong>
+                {" "}-{" "}
+                <strong>{Math.min(page * limit, totalVehicles)}</strong>
+                {" "}of <strong>{totalVehicles}</strong> vehicles
             </div>
             {totalPages > 1 && (
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-blue-200 hover:bg-blue-100 text-blue-700"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={page === 1 || isLoading}
-                >
+                <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-100" onClick={() => setPage((prev) => Math.max(prev - 1, 1))} disabled={page === 1 || isLoading}>
                   Previous
                 </Button>
                 <div className="flex items-center gap-1">
+                  {/* Pagination Logic Remains the Same */}
                   {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (page <= 3) {
-                      pageNum = i + 1;
-                    } else if (page >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = page - 2 + i;
-                    }
-
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={page === pageNum ? "default" : "outline"}
-                        size="sm"
-                        className={
-                          page === pageNum
-                            ? "w-8 h-8 p-0 bg-blue-600 hover:bg-blue-700"
-                            : "w-8 h-8 p-0 border-blue-200 text-blue-700 hover:bg-blue-100"
-                        }
-                        onClick={() => setPage(pageNum)}
-                        disabled={isLoading}
-                      >
-                        {pageNum}
-                      </Button>
-                    );
+                     let pageNum;
+                     if (totalPages <= 5) { pageNum = i + 1; } 
+                     else if (page <= 3) { pageNum = i + 1; } 
+                     else if (page >= totalPages - 2) { pageNum = totalPages - 4 + i; } 
+                     else { pageNum = page - 2 + i; }
+                     return (
+                        <Button
+                          key={pageNum}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          className={page === pageNum ? "h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700" : "h-8 w-8 p-0 border-blue-200 text-blue-700 hover:bg-blue-100"}
+                          onClick={() => setPage(pageNum)}
+                          disabled={isLoading}
+                        >
+                          {pageNum}
+                        </Button>
+                     );
                   })}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-blue-200 hover:bg-blue-100 text-blue-700"
-                  onClick={() =>
-                    setPage((prev) => Math.min(prev + 1, totalPages))
-                  }
-                  disabled={page === totalPages || isLoading}
-                >
+                <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-100" onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))} disabled={page === totalPages || isLoading}>
                   Next
                 </Button>
               </div>
@@ -503,51 +428,28 @@ export default function AdminVehicles() {
           </CardFooter>
         </Card>
 
-        <Dialog
-          open={blacklistDialogOpen}
-          onOpenChange={setBlacklistDialogOpen}
-        >
+        <Dialog open={blacklistDialogOpen} onOpenChange={setBlacklistDialogOpen}>
           <DialogContent className="border-blue-300">
             <DialogHeader>
-              <DialogTitle className="text-blue-700">
-                Blacklist Vehicle
-              </DialogTitle>
+              <DialogTitle className="text-blue-700">Blacklist Vehicle</DialogTitle>
               <DialogDescription className="text-blue-600">
                 Are you sure you want to blacklist this {selectedVehicle?.make}{" "}
-                {selectedVehicle?.model}? This will remove it from active
-                listings.
+                {selectedVehicle?.model}? This will remove it from active listings.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <label
-                  htmlFor="reason"
-                  className="text-sm font-medium text-blue-700"
-                >
+                <label htmlFor="reason" className="text-sm font-medium text-blue-700">
                   Reason for blacklisting
                 </label>
-                <Input
-                  id="reason"
-                  placeholder="Enter reason for blacklisting"
-                  value={blacklistReason}
-                  onChange={(e) => setBlacklistReason(e.target.value)}
-                  className="border-blue-200"
-                />
+                <Input id="reason" placeholder="Enter reason for blacklisting" value={blacklistReason} onChange={(e) => setBlacklistReason(e.target.value)} className="border-blue-200" />
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                className="border-blue-200 text-blue-700"
-                onClick={() => setBlacklistDialogOpen(false)}
-              >
+              <Button variant="outline" className="border-blue-200 text-blue-700" onClick={() => setBlacklistDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmBlacklist}
-                className="bg-red-600 hover:bg-red-700"
-              >
+              <Button variant="destructive" onClick={confirmBlacklist} className="bg-red-600 hover:bg-red-700">
                 Blacklist Vehicle
               </Button>
             </DialogFooter>

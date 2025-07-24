@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -16,7 +11,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, Car, DollarSign, Calendar, User, BarChart2 } from "lucide-react";
+import {
+  Loader2,
+  Eye,
+  Car,
+  DollarSign,
+  Calendar,
+  User,
+  ExternalLink,
+  BarChart2,
+} from "lucide-react";
 import { getTopListings } from "@/api";
 import {
   Dialog,
@@ -26,6 +30,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+
+import { useLocation } from "wouter";
 
 interface TopListingType {
   vehicleId: number;
@@ -50,9 +56,12 @@ interface TopListingType {
 const TopListing = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [topListings, setTopListings] = useState<TopListingType[]>([]);
-  const [selectedListing, setSelectedListing] = useState<TopListingType | null>(null);
+  const [selectedListing, setSelectedListing] = useState<TopListingType | null>(
+    null
+  );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [location, setLocation] = useLocation();
 
   useEffect(() => {
     async function fetchTopListings() {
@@ -80,9 +89,9 @@ const TopListing = () => {
   };
 
   const formatCurrency = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       maximumFractionDigits: 0,
     }).format(price);
   };
@@ -91,14 +100,16 @@ const TopListing = () => {
     <Card className="shadow-lg border-t-4 border-t-blue-500">
       <CardHeader className="bg-gradient-to-r from-blue-50 to-white">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-2xl font-bold text-blue-900">Top Listings</CardTitle>
+          <CardTitle className="text-2xl font-bold text-blue-900">
+            Top Listings
+          </CardTitle>
           {isLoading && <Loader2 className="animate-spin text-blue-500" />}
         </div>
         <p className="text-gray-500 font-medium">
           Highest performing vehicle listings based on user engagement
         </p>
       </CardHeader>
-      
+
       <CardContent className="p-0">
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
@@ -118,34 +129,63 @@ const TopListing = () => {
                   <TableHead className="font-semibold">Details</TableHead>
                   <TableHead className="font-semibold">Listing Type</TableHead>
                   <TableHead className="font-semibold">Seller</TableHead>
-                  <TableHead className="font-semibold text-center">Views</TableHead>
-                  <TableHead className="font-semibold text-center">Clicks</TableHead>
+                  <TableHead className="font-semibold text-center">
+                    Views
+                  </TableHead>
+                  <TableHead className="font-semibold text-center">
+                    Clicks
+                  </TableHead>
                   <TableHead className="font-semibold">Listed On</TableHead>
-                  <TableHead className="font-semibold w-24 text-center">Actions</TableHead>
+                  <TableHead className="font-semibold w-24 text-center">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {topListings.map((listing, i) => (
                   <TableRow
                     key={i}
-                    id={listing.auctionId ? listing.auctionId.toString() : listing.vehicleId.toString()}
+                    id={
+                      listing.auctionId
+                        ? listing.auctionId.toString()
+                        : listing.vehicleId.toString()
+                    }
                     className="hover:bg-blue-50 transition-colors duration-150"
                   >
                     <TableCell className="font-medium">
-                      {listing.year} {listing.make} {listing.model}
+                      <div
+                        onClick={() =>
+                          setLocation("/vehicle/" + listing.vehicleId)
+                        }
+                        className="cursor-pointer flex  items-center border-b border-transparent hover:border-b-blue-600 w-fit"
+                      >
+                        {listing.year} {listing.make} {listing.model}
+                        <ExternalLink className="ml-1 h-3 w-3 text-gray-500" />
+                      </div>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
-                      <div className="font-medium">{listing.title}</div>
-                      <div className="text-sm text-gray-500 truncate">{listing.description}</div>
+                      <div className="text-sm  truncate">{listing.title}</div>
+                      <div className="text-sm text-gray-500 truncate">
+                        {listing.description}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={listing.type === "auction" ? "secondary" : "default"} className="capitalize">
+                      <Badge
+                        variant={
+                          listing.type === "auction" ? "secondary" : "default"
+                        }
+                        className="capitalize"
+                      >
                         {listing.type}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">{listing.sellerUsername}</div>
-                      <div className="text-xs text-gray-500">{listing.sellerEmail}</div>
+                      <div className="font-medium">
+                        {listing.sellerUsername}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {listing.sellerEmail}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center font-medium">
                       <div className="flex flex-col items-center">
@@ -168,8 +208,8 @@ const TopListing = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-center">
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           className="flex items-center gap-1 hover:bg-blue-100 hover:text-blue-700 transition-colors"
                           onClick={() => handleViewDetails(listing)}
@@ -195,21 +235,31 @@ const TopListing = () => {
               <DialogHeader>
                 <DialogTitle className="text-2xl flex items-center gap-2 text-blue-900">
                   <Car className="h-6 w-6" />
-                  {selectedListing.year} {selectedListing.make} {selectedListing.model}
+                  {selectedListing.year} {selectedListing.make}{" "}
+                  {selectedListing.model}
                 </DialogTitle>
                 <DialogDescription>
-                  <Badge variant={selectedListing.type === "auction" ? "secondary" : "default"} className="mb-2 capitalize">
+                  <Badge
+                    variant={
+                      selectedListing.type === "auction"
+                        ? "secondary"
+                        : "default"
+                    }
+                    className="mb-2 capitalize"
+                  >
                     {selectedListing.type}
                   </Badge>
-                  <div className="text-lg font-medium text-gray-800 mt-1">{selectedListing.title}</div>
+                  <div className="text-lg font-medium text-gray-800 mt-1">
+                    {selectedListing.title}
+                  </div>
                 </DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-6 py-4">
                 {selectedListing.image_url && (
                   <div className="aspect-video bg-gray-100 rounded-md overflow-hidden">
-                    <img 
-                      src="/api/placeholder/640/360" 
+                    <img
+                      src="/api/placeholder/640/360"
                       alt={`${selectedListing.year} ${selectedListing.make} ${selectedListing.model}`}
                       className="w-full h-full object-cover"
                     />
@@ -219,7 +269,9 @@ const TopListing = () => {
                 <div className="space-y-4">
                   <div className="space-y-1">
                     <h4 className="font-medium text-gray-500">Description</h4>
-                    <p className="text-gray-800">{selectedListing.description}</p>
+                    <p className="text-gray-800">
+                      {selectedListing.description}
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -227,7 +279,9 @@ const TopListing = () => {
                       <DollarSign className="h-5 w-5 text-green-600" />
                       <div>
                         <div className="text-sm text-gray-500">Price</div>
-                        <div className="font-semibold">{formatCurrency(selectedListing.price)}</div>
+                        <div className="font-semibold">
+                          {formatCurrency(selectedListing.price)}
+                        </div>
                       </div>
                     </div>
 
@@ -236,7 +290,9 @@ const TopListing = () => {
                       <div>
                         <div className="text-sm text-gray-500">Listed On</div>
                         <div className="font-semibold">
-                          {new Date(selectedListing.createdAt).toLocaleDateString("en-US", {
+                          {new Date(
+                            selectedListing.createdAt
+                          ).toLocaleDateString("en-US", {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
@@ -249,8 +305,12 @@ const TopListing = () => {
                       <User className="h-5 w-5 text-purple-600" />
                       <div>
                         <div className="text-sm text-gray-500">Seller</div>
-                        <div className="font-semibold">{selectedListing.sellerUsername}</div>
-                        <div className="text-xs text-gray-500">{selectedListing.sellerEmail}</div>
+                        <div className="font-semibold">
+                          {selectedListing.sellerUsername}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {selectedListing.sellerEmail}
+                        </div>
                       </div>
                     </div>
 
@@ -258,8 +318,12 @@ const TopListing = () => {
                       <BarChart2 className="h-5 w-5 text-orange-600" />
                       <div>
                         <div className="text-sm text-gray-500">Performance</div>
-                        <div className="font-semibold">{selectedListing.views} views</div>
-                        <div className="text-xs text-gray-500">{selectedListing.clicks} clicks</div>
+                        <div className="font-semibold">
+                          {selectedListing.views} views
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {selectedListing.clicks} clicks
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -267,8 +331,8 @@ const TopListing = () => {
               </div>
 
               <DialogFooter>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setIsDialogOpen(false)}
                 >
                   Close
