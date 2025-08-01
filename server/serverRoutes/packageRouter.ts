@@ -21,7 +21,7 @@ const packageRouter = Router();
 packageRouter.post("/evaluate-price", verifyToken, async (req, res) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
-    let { type, item_value} = req.body;
+    let { type, item_value } = req.body;
     if (!type || !item_value) {
       return res
         .status(400)
@@ -80,7 +80,11 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
     let { package_id, draft_id, type } = req.body;
-    if (!package_id || !draft_id || !["CLASSIFIED", "AUCTION-VEHICLE", "AUCTION-NUMBERPLATE"].includes(type)) {
+    if (
+      !package_id ||
+      !draft_id ||
+      !["CLASSIFIED", "AUCTION-VEHICLE", "AUCTION-NUMBERPLATE"].includes(type)
+    ) {
       return res
         .status(400)
         .json({ message: "Package ID and Draft ID are required" });
@@ -108,7 +112,7 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
         return res.status(404).json({ message: "Draft vehicle not found" });
       }
       vehiclePrice = draft_vehicle.price;
-    } else if (type.split('-')[0] === "AUCTION") {
+    } else if (type.split("-")[0] === "AUCTION") {
       const [draft_auction] = await db
         .select()
         .from(auctionDrafts)
@@ -153,8 +157,7 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
       if (price[0] <= compareFeature) {
         if (price[1] > -1 && price[1] >= compareFeature) {
           acc = price[2] ?? compareFeature;
-        }
-        else if(price[1] === -1) {
+        } else if (price[1] === -1) {
           acc = price[2] ?? compareFeature;
         }
       }
@@ -237,31 +240,36 @@ packageRouter.post("/verify-payment", verifyToken, async (req, res) => {
     `paymentSession:${paymentIntentId}`
   );
 
-  if (payment_session_redis) {
-    const parsedPaymentSession = JSON.parse(payment_session_redis);
-    if (parsedPaymentSession.userId != req.userId) {
-      return res.status(401).json({
-        error: "You are not authorized to validate this payment",
-      });
-    }
-    packageId = parsedPaymentSession.packageId;
-    draftId = parsedPaymentSession.draftId;
-  } else {
-    const [payment_session_db] = await db
-      .select()
-      .from(paymentSession)
-      .where(eq(paymentSession.paymentIntentId, paymentIntentId));
-    if (payment_session_db.userId !== req.userId) {
-      return res.status(401).json({
-        error: "You are not authorized to validate this payment",
-      });
-    }
-    packageId = payment_session_db.packageId;
-    draftId = payment_session_db.draftId;
-  }
-
   try {
+    //check if the payment session exists in our system and if it belongs to the user
+    if (payment_session_redis) {
+      const parsedPaymentSession = JSON.parse(payment_session_redis);
+      if (parsedPaymentSession.userId != req.userId) {
+        //fraud attempt
+        return res.status(401).json({
+          error: "You are not authorized to validate this payment",
+        });
+      }
+    } else {
+      const [payment_session_db] = await db
+        .select()
+        .from(paymentSession)
+        .where(eq(paymentSession.paymentIntentId, paymentIntentId));
+      if (payment_session_db.status !== "PENDING")
+        return res
+          .status(400)
+          .json({ error: "Payment Expired or Already Processed" });
+      if (payment_session_db.userId !== req.userId) {
+        //fraud attempt
+        return res.status(401).json({
+          error: "You are not authorized to validate this payment",
+        });
+      }
+    }
+
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    draftId = parseInt(paymentIntent.metadata.draftId);
+    packageId = parseInt(paymentIntent.metadata.packageId);
 
     if (paymentIntent.status === "succeeded") {
       await redis.del(`paymentSession:${paymentIntentId}`);

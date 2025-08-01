@@ -7,9 +7,11 @@ import {
   bids,
   raffle,
   raffleTicketSale,
+  paymentSession,
   users,
+  Raffle
 } from "../../../shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createRefund } from "../../utils/stripe";
 import { notificationQueue } from "../queue";
 import { create } from "node:domain";
@@ -22,140 +24,174 @@ const bidWorker = new Worker(
     if (job.name === "processBid") {
       const { auctionId, userId, bidAmount, paymentIntentId } = job.data;
       let insertedBids: any;
-      console.log("processing bid for amount " + bidAmount);
-      await db.transaction(async (trx) => {
-        const result = await trx
-          .select({
-            auction: auctions,
-          })
-          .from(auctions)
-          .where(eq(auctions.id, auctionId));
+      try {
+        console.log("processing bid for amount " + bidAmount);
+        await db.transaction(async (trx) => {
+          const result = await trx
+            .select({
+              auction: auctions,
+            })
+            .from(auctions)
+            .where(eq(auctions.id, auctionId));
 
-        const row = result[0] ?? null;
-        if (!row) throw new Error("auction not found");
+          const row = result[0] ?? null;
+          if (!row) throw new Error("auction not found");
 
-        console.log("Auction found");
-        if ((row.auction.currentBid ?? 0) >= bidAmount) {
-          const refund = await createRefund(
-            paymentIntentId,
-            "requested_by_customer"
-          );
-          console.log(refund);
-          await notificationQueue.add("auctionBid-placed-failed", {
-            userId,
-            auctionId,
-            bidAmount,
-            refund,
-          });
-          throw new Error(
-            JSON.stringify("Bid amount needs to be greater than the currentBid")
-          );
-        }
-        insertedBids = await trx
-          .insert(bids)
-          .values({
-            auctionId: auctionId,
-            userId: Number(userId),
-            bidAmount: bidAmount,
-            createdAt: new Date(),
-          })
-          .returning();
+          console.log("Auction found");
+          if ((row.auction.currentBid ?? 0) >= bidAmount) {
+            throw new Error(
+              JSON.stringify(
+                "Bid amount needs to be greater than the currentBid"
+              )
+            );
+          }
+          insertedBids = await trx
+            .insert(bids)
+            .values({
+              auctionId: auctionId,
+              userId: Number(userId),
+              bidAmount: bidAmount,
+              createdAt: new Date(),
+            })
+            .returning();
 
-        await trx
-          .update(auctions)
+          await trx
+            .update(paymentSession)
+            .set({
+              status: "COMPLETED",
+              updatedAt: new Date(),
+            })
+            .where(eq(paymentSession.paymentIntentId, paymentIntentId));
+
+          await trx
+            .update(auctions)
+            .set({
+              currentBid: bidAmount,
+              totalBids: (row.auction.totalBids ?? 0) + 1,
+            })
+            .where(eq(auctions.id, auctionId));
+        });
+        console.log("bid added to the db and auction upadted");
+        const bidId = insertedBids[0]?.id;
+
+        await notificationQueue.add("auctionBid-placed-success", {
+          userId,
+          auctionId,
+          bidAmount,
+          bidId,
+        });
+
+        console.log("bid published to redis");
+      } catch (e) {
+        const refund = await createRefund(
+          paymentIntentId,
+          "requested_by_customer"
+        );
+        console.log(refund);
+        await db
+          .update(paymentSession)
           .set({
-            currentBid: bidAmount,
-            totalBids: (row.auction.totalBids ?? 0) + 1,
+            status: "FAILED",
+            updatedAt: new Date(),
           })
-          .where(eq(auctions.id, auctionId));
-      });
-      console.log("bid added to the db and auction upadted");
-      const bidId = insertedBids[0]?.id;
+          .where(eq(paymentSession.paymentIntentId, paymentIntentId));
 
-      await notificationQueue.add("auctionBid-placed-success", {
-        userId,
-        auctionId,
-        bidAmount,
-        bidId,
-      });
-
-      console.log("bid published to redis");
+        await notificationQueue.add("auctionBid-placed-failed", {
+          userId,
+          auctionId,
+          bidAmount,
+          refund,
+        });
+        console.log(e);
+      }
     } else if (job.name == "processRaffleTicket") {
       const { raffleId, userId, ticketQuantity, paymentIntentId } = job.data;
       let insertedBids: any;
       console.log("received raffle ticket request");
-      if (!paymentIntentId) throw new Error("paymentIntentId invalid");
-      await db.transaction(async (trx) => {
-        const result = await trx
+      try {
+        if (!paymentIntentId) throw new Error("paymentIntentId invalid");
+        await db.transaction(async (trx) => {
+          const result = await trx.execute(sql`
+              SELECT * FROM ${raffle} WHERE ${raffle.id} = ${raffleId} FOR UPDATE
+          `);
+          const row : Raffle = result?.rows[0] as Raffle ?? null;
+          if (!row) throw new Error("raffle not found");
+
+          const now = new Date();
+
+          if (
+            row.status !== "RUNNING" ||
+            now < row.startDate ||
+            now > row.endDate
+          ) {
+            throw new Error("Raffle not running");
+          }
+
+          if (row.ticketQuantity - row.soldTicket < ticketQuantity) {
+            throw new Error(
+              JSON.stringify("Ticket quantity exceeds issued remaining tickets")
+            );
+          }
+
+          insertedBids = await trx
+            .insert(raffleTicketSale)
+            .values({
+              raffleId: raffleId,
+              userId: Number(userId),
+              ticketQtn: Number(ticketQuantity),
+              createdAt: new Date(),
+            })
+            .returning();
+
+          await trx
+            .update(raffle)
+            .set({
+              soldTicket: row.soldTicket + ticketQuantity,
+            })
+            .where(eq(raffle.id, raffleId));
+        });
+        console.log("ticket added to the db and raffle updated");
+        const bidId = insertedBids[0]?.id;
+        await notificationQueue.add("raffle-ticketpurchase-success", {
+          userId,
+          raffleId,
+          ticketQuantity,
+        });
+        const [userDetail] = await db
           .select()
-          .from(raffle)
-          .where(eq(raffle.id, raffleId));
-
-        const row = result[0] ?? null;
-        if (!row) throw new Error("raffle not found");
-
-        const now = new Date();
-
-        if (
-          row.status !== "RUNNING" ||
-          now < row.startDate ||
-          now > row.endDate
-        ) {
-          throw new Error("Raffle not running");
-        }
-
-        if (row.ticketQuantity - row.soldTicket < ticketQuantity) {
-          const refund = await createRefund(
-            paymentIntentId,
-            "requested_by_customer"
-          );
-          await notificationQueue.add("raffle-ticketpurchase-failed", {
-            userId,
-            raffleId,
-            ticketQuantity,
-            refund,
-          });
-          throw new Error(
-            JSON.stringify("Ticket quantity exceeds issued remaining tickets")
-          );
-        }
-
-        insertedBids = await trx
-          .insert(raffleTicketSale)
-          .values({
+          .from(users)
+          .where(eq(users.id, userId));
+        await connection.publish(
+          `RAFFLE_TICKET_PURCHASED`,
+          JSON.stringify({
             raffleId: raffleId,
-            userId: Number(userId),
-            ticketQtn: Number(ticketQuantity),
-            createdAt: new Date(),
+            ticketQuantity: ticketQuantity,
+            userId: userId,
+            username: userDetail?.username || "",
+            createdAt: insertedBids[0]?.createdAt,
           })
-          .returning();
-
-        await trx
-          .update(raffle)
+        );
+        console.log("bid published to redis");
+      } catch (e) {
+        const refund = await createRefund(
+          paymentIntentId,
+          "requested_by_customer"
+        );
+        await db
+          .update(paymentSession)
           .set({
-            soldTicket: row.soldTicket + ticketQuantity,
+            status: "FAILED",
+            updatedAt: new Date(),
           })
-          .where(eq(raffle.id, raffleId));
-      });
-      console.log("ticket added to the db and raffle upadted");
-      const bidId = insertedBids[0]?.id;
-      await notificationQueue.add("raffle-ticketpurchase-success", {
-        userId,
-        raffleId,
-        ticketQuantity,
-      });
-      const [userDetail] = await db.select().from(users).where(eq(users.id, userId));
-      await connection.publish(
-        `RAFFLE_TICKET_PURCHASED`,
-        JSON.stringify({
-          raffleId: raffleId,
-          ticketQuantity: ticketQuantity,
-          userId: userId,
-          username: userDetail?.username || "",
-          createdAt: insertedBids[0]?.createdAt,
-        })
-      );
-      console.log("bid published to redis");
+          .where(eq(paymentSession.paymentIntentId, paymentIntentId));
+        await notificationQueue.add("raffle-ticketpurchase-failed", {
+          userId,
+          raffleId,
+          ticketQuantity,
+          refund,
+        });
+        console.log(e);
+      }
     }
   },
   { connection }

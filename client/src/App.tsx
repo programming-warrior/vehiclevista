@@ -52,6 +52,7 @@ import SellerAuctionUpload from "@/pages/seller/auction-create";
 import ScrollToTop from "./components/scroll-to-top";
 import VehicleEditPage from "./pages/vehicle/vehicle-edit";
 import RunningRafflePage from "./pages/raffle/raffle";
+import AdminPaymentHistory from "./pages/admin/payment-history";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -201,6 +202,9 @@ export default function App() {
             </Route>
             <Route path="/admin/feedback">
               <ProtectedRoute component={AdminFeedback} adminOnly />
+            </Route>
+            <Route path="/admin/payment-history">
+              <ProtectedRoute component={AdminPaymentHistory} adminOnly />
             </Route>
             <Route path="/admin/spare-parts">
               <ProtectedRoute component={AdminSpareParts} adminOnly />

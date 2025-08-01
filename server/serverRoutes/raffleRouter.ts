@@ -8,6 +8,7 @@ import {
   users,
   raffle,
   raffleTicketSale,
+  paymentSession,
 } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
@@ -99,12 +100,14 @@ raffleRouter.post("/purchase-ticket", verifyToken, async (req, res) => {
 
     console.log(result[0].status);
 
-    const RAFFLE_TICKET_CHARGE_PERCENTAGE = 0.03; //thiry percent of the raffled vehicle value
+    const RAFFLE_TICKET_CHARGE_PERCENTAGE = 0.3; //thirty percent of the raffled vehicle value
 
     let totalChargedAmount =
       RAFFLE_TICKET_CHARGE_PERCENTAGE * ticketQuantity * result[0].ticketPrice;
     totalChargedAmount = Math.ceil(totalChargedAmount);
+    // Ensure minimum charge is 2
     totalChargedAmount = Math.max(2, totalChargedAmount);
+
     const amountInPence = Math.round(totalChargedAmount * 100);
     //create payment session
     const paymentIntent = await stripe.paymentIntents.create({
@@ -132,6 +135,17 @@ raffleRouter.post("/purchase-ticket", verifyToken, async (req, res) => {
       }),
       { EX: 60 * 2 } // 2 minutes
     );
+
+    await db.insert(paymentSession).values({
+      userId: req.userId,
+      amount: totalChargedAmount,
+      currency: CURRENCY,
+      status: "PENDING",
+      paymentIntentId: paymentIntent.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+    });
 
     return res.status(202).json({
       message: "success",
@@ -171,18 +185,32 @@ raffleRouter.post("/purchase/verify-payment", verifyToken, async (req, res) => {
     const payment_session_redis = await redis.get(
       `paymentSession:${paymentIntentId}`
     );
-    // if (!payment_session_redis) {
-    //   return res.status(400).json({ error: "Payment Portal Expired" });
-    // }
-    // const parsedPaymentSession = JSON.parse(payment_session_redis);
-    // if (parsedPaymentSession.userId != req.userId) {
-    //   return res.status(401).json({
-    //     error: "You are not authorized to validate this payment",
-    //   });
-    // }
+    //check if the payment session exists in our system and if it belongs to the user
+    if (payment_session_redis) {
+      const parsedPaymentSession = JSON.parse(payment_session_redis);
+      if (parsedPaymentSession.userId != req.userId) {
+        //fraud attempt
+        return res.status(401).json({
+          error: "You are not authorized to validate this payment",
+        });
+      }
+    } else {
+      const [payment_session_db] = await db
+        .select()
+        .from(paymentSession)
+        .where(eq(paymentSession.paymentIntentId, paymentIntentId));
+      if (payment_session_db.status !== "PENDING")
+        return res
+          .status(400)
+          .json({ error: "Payment Expired or Already Processed" });
+      if (payment_session_db.userId !== req.userId) {
+        //fraud attempt
+        return res.status(401).json({
+          error: "You are not authorized to validate this payment",
+        });
+      }
+    }
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    if (paymentIntent.metadata.userId != req.userId.toString())
-      return res.status(403).json({ error: "unauthorized" });
 
     if (paymentIntent.status === "succeeded") {
       const { raffleId, userId, ticketQuantity, chargedAmount } =

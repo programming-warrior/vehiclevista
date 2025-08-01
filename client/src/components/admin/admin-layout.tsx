@@ -7,6 +7,7 @@ import {
   Gavel,
   Ticket,
   MessageSquare,
+  CreditCard,
 } from "lucide-react";
 import { useEffect } from "react";
 import { useUser } from "@/hooks/use-store";
@@ -32,6 +33,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/auctions", label: "Auctions", icon: Gavel },
     { href: "/admin/raffle", label: "Raffle", icon: Ticket },
     { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
+    { href: "/admin/payment-history", label: "Payment History", icon: CreditCard },
   ];
 
   return (

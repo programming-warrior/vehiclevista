@@ -9,6 +9,7 @@ import {
   auctionDrafts,
   vehicleDrafts,
   numberPlate,
+  paymentSession,
 } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
@@ -204,7 +205,10 @@ auctionRouter.get("/get/:id", async (req, res) => {
     const auction = result[0];
 
     if (auction.itemType === "VEHICLE") {
-      const [vehicle]= await db.select().from(vehicles).where(eq(vehicles.id, Number(auction.itemId)))
+      const [vehicle] = await db
+        .select()
+        .from(vehicles)
+        .where(eq(vehicles.id, Number(auction.itemId)));
       const auctionWithVehicleDetails = {
         ...auction,
         remainingTime: new Date(auction.endDate).getTime() - Date.now(),
@@ -224,9 +228,11 @@ auctionRouter.get("/get/:id", async (req, res) => {
         },
       };
       res.status(200).json(auctionWithVehicleDetails);
-    }
-    else if(auction.itemType==='NUMBERPLATE'){
-       const [numberPlateDetail]= await db.select().from(numberPlate).where(eq(numberPlate.id, Number(auction.itemId)))
+    } else if (auction.itemType === "NUMBERPLATE") {
+      const [numberPlateDetail] = await db
+        .select()
+        .from(numberPlate)
+        .where(eq(numberPlate.id, Number(auction.itemId)));
       const auctionWithNumberPlateDetails = {
         ...auction,
         remainingTime: new Date(auction.endDate).getTime() - Date.now(),
@@ -234,7 +240,7 @@ auctionRouter.get("/get/:id", async (req, res) => {
           id: numberPlateDetail.id,
           document_url: numberPlateDetail.document_url,
           plate_value: numberPlateDetail.plate_value,
-          plate_number: numberPlateDetail.plate_number
+          plate_number: numberPlateDetail.plate_number,
         },
       };
       res.status(200).json(auctionWithNumberPlateDetails);
@@ -260,18 +266,32 @@ auctionRouter.post("/bids/verify-payment", verifyToken, async (req, res) => {
     const payment_session_redis = await redis.get(
       `paymentSession:${paymentIntentId}`
     );
-    // if (!payment_session_redis) {
-    //   return res.status(400).json({ error: "Payment Portal Expired" });
-    // }
-    // const parsedPaymentSession = JSON.parse(payment_session_redis);
-    // if (parsedPaymentSession.userId != req.userId) {
-    //   return res.status(401).json({
-    //     error: "You are not authorized to validate this payment",
-    //   });
-    // }
+
+    //check if the payment session exists in our system and if it belongs to the user
+    if (payment_session_redis) {
+      const parsedPaymentSession = JSON.parse(payment_session_redis);
+      if (parsedPaymentSession.userId != req.userId) {
+        //fraud attempt
+        return res.status(401).json({
+          error: "You are not authorized to validate this payment",
+        });
+      }
+    } else {
+      const [payment_session_db] = await db
+        .select()
+        .from(paymentSession)
+        .where(eq(paymentSession.paymentIntentId, paymentIntentId));
+      if(payment_session_db.status!=='PENDING')
+        return res.status(400).json({ error: "Payment Expired or Already Processed" });
+      if (payment_session_db.userId !== req.userId) {
+        //fraud attempt
+        return res.status(401).json({
+          error: "You are not authorized to validate this payment",
+        });
+      }
+    }
+
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    if (paymentIntent.metadata.userId != req.userId.toString())
-      return res.status(403).json({ error: "unauthorized" });
 
     if (paymentIntent.status === "succeeded") {
       const { auctionId, userId, bidAmount } = paymentIntent.metadata;
@@ -307,25 +327,8 @@ auctionRouter.post(
       if (!bidAmount || isNaN(bidAmount) || bidAmount < 0) {
         return res.status(400).json({ error: "invalid bidAmount" });
       }
-      // const result = await db
-      //   .select({
-      //     auction: auctions,
-      //   })
-      //   .from(auctions)
-      //   .where(eq(auctions.id, auctionId))
 
-      // const row = result[0] ?? null;
-      // if (!row) return res.status(404).json({error:"Auction not found"});
-
-      // const now = new Date();
-      // if (now < row.auction.startDate || now > row.auction.endDate) {
-      //   return res.status(400).json({error:"Auction not started yet"});
-      // }
-
-      // if ((row.auction.currentBid ?? 0) >= bidAmount) {
-      //    return res.status(400).json({error:"Bid amount needs to be greater than the currentBid"});
-      // }
-      const BID_REQUEST_CHARGE_AMOUNT = 2;
+      const BID_REQUEST_CHARGE_AMOUNT = 2; //2 pounds
       const amountInPence = Math.round(BID_REQUEST_CHARGE_AMOUNT * 100);
       //create payment session
       const paymentIntent = await stripe.paymentIntents.create({
@@ -340,6 +343,19 @@ auctionRouter.post(
           bidAmount: bidAmount,
         },
       });
+      const [payment_session] = await db
+        .insert(paymentSession)
+        .values({
+          userId: req.userId,
+          amount: amountInPence,
+          currency: CURRENCY,
+          status: "PENDING",
+          paymentIntentId: paymentIntent.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        })
+        .returning();
       const redis = await RedisClientSingleton.getRedisClient();
       await redis.set(
         `paymentSession:${paymentIntent.id}`,
@@ -350,17 +366,13 @@ auctionRouter.post(
           bidAmount: bidAmount,
           chargedAmount: BID_REQUEST_CHARGE_AMOUNT,
         }),
-        { EX: 60 * 2 } // 2 minutes
+        { EX: 60 * 2 } // expires in 2 minutes
       );
-      // await bidQueue.add("processBid", {
-      //   auctionId,
-      //   userId: req.userId,
-      //   bidAmount,
-      // });
+
       return res.status(202).json({
         message: "success",
         clientSecret: paymentIntent.client_secret,
-        timeout: "2 mintues",
+        timeout: "2 minutes",
         chargedAmount: BID_REQUEST_CHARGE_AMOUNT,
         currency: CURRENCY,
       });
@@ -454,7 +466,7 @@ auctionRouter.get("/seller/listings", verifyToken, async (req, res) => {
 });
 
 auctionRouter.patch("/update-draft/:draftId", verifyToken, async (req, res) => {
-  if (!req.userId ) {
+  if (!req.userId) {
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {
@@ -512,7 +524,7 @@ auctionRouter.patch("/update-draft/:draftId", verifyToken, async (req, res) => {
 });
 
 auctionRouter.post("/numberplate/create", verifyToken, async (req, res) => {
-  if (!req.userId ) {
+  if (!req.userId) {
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {
@@ -551,7 +563,7 @@ auctionRouter.post("/numberplate/create", verifyToken, async (req, res) => {
 });
 
 auctionRouter.post("/create", verifyToken, async (req, res) => {
-  if (!req.userId ) {
+  if (!req.userId) {
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {
@@ -567,7 +579,7 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
       !title.trim() ||
       !description.trim() ||
       !durationDays ||
-      !["3", "5", "7"].includes(durationDays) 
+      !["3", "5", "7"].includes(durationDays)
     ) {
       return res.status(400).json({ error: "Invalid input" });
     }

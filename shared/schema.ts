@@ -728,6 +728,7 @@ export const insertBulkUploadSchema = createInsertSchema(bulkUploads).omit({
 });
 
 // Add package-related types
+export type Raffle = typeof raffle.$inferSelect;
 export type Package = typeof packages.$inferSelect;
 export type InsertPackage = z.infer<typeof insertPackageSchema>;
 export type UserPackage = typeof userListingPackages.$inferSelect;
