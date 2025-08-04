@@ -72,6 +72,7 @@ import {
 
  import { getPackagesWithAmount, selectPackage, verifyPayment } from "./package-api";
  import { adminGetPaymentHistory } from "./admin-api/payment-api";
+ import { adminGetChatHistory } from "./admin-api/buyer-seller-chat-api";
 
 
 async function getLocationSuggestion(location:string){
@@ -240,6 +241,7 @@ export {
   unBlacklistVehicle,
   adminGetAuctions,
   adminGetPaymentHistory,
+  adminGetChatHistory,
 
   uploadListingReport,
   uploadUserReport,

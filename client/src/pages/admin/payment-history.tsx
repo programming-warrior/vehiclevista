@@ -152,7 +152,7 @@ export default function AdminPaymentHistory() {
             </h2>
             <div className="flex gap-2">
               <Input
-                placeholder="Search by user, email, or ID..."
+                placeholder="Search by TransactionId..."
                 className="w-64 border-blue-200 focus:border-blue-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

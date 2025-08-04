@@ -14,6 +14,7 @@ import {
   auctionWinner,
   auctionStatus,
   paymentSession,
+  contactAttempts,
 } from "../../shared/schema";
 import {
   eq,
@@ -1223,6 +1224,112 @@ adminRouter.get("/payment-history", verifyToken, async (req, res) => {
     paymentHistory: result.splice(0, limitNumber),
     totalPayments: totalPayments,
     totalPages: Math.ceil(totalPayments / limitNumber),
+    page: pageNumber,
+    hasNextPage: result.length > limitNumber,
+  });
+});
+
+adminRouter.get("/buyer-seller-chat", verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "admin")
+    return res.status(401).json({ error: "unauthorized access" });
+
+  const { page, limit, sortBy, filter } = req.query;
+  const pageNumber = parseInt(page as string) || 1;
+  const limitNumber = parseInt(limit as string) || 10;
+  const offset = (pageNumber - 1) * limitNumber;
+
+  let filterOptions: any = {};
+  let searchTerm = "";
+  let statusFilter = null;
+
+  let whereClause = [];
+
+  if (filter) {
+    try {
+      filterOptions = JSON.parse(filter as string);
+      searchTerm = filterOptions.search || "";
+      statusFilter = filterOptions.status || null;
+      statusFilter = statusFilter.toLowerCase();
+    } catch (error) {
+      console.error("Error parsing filter:", error);
+    }
+  }
+
+  // Determine sort order
+  let orderByClause = sql`${contactAttempts.createdAt} DESC`;
+
+  console.log(sortBy);
+  console.log(searchTerm);
+  console.log(statusFilter);
+
+  if (sortBy === "oldest") {
+    orderByClause = sql`${contactAttempts.createdAt} ASC`;
+  }
+
+  // Base query
+
+  const buyer = alias(users, "buyer");
+  const seller = alias(users, "seller");
+
+  const query = db
+    .select({
+      id: contactAttempts.id,
+      message: contactAttempts.message,
+      createdAt: contactAttempts.createdAt,
+      status: contactAttempts.deliveryStatus,
+      buyer: {
+        id: buyer.id,
+        username: buyer.username,
+        email: buyer.email,
+      },
+      seller: {
+        id: seller.id,
+        username: seller.username,
+        email: seller.email,
+      },
+    })
+    .from(contactAttempts)
+    .leftJoin(buyer, eq(buyer.id, contactAttempts.userId))
+    .leftJoin(seller, eq(seller.id, contactAttempts.sellerId));
+
+  if (searchTerm) {
+    console.log("added search where clause");
+    whereClause.push(
+      or(ilike(contactAttempts.message, `%${searchTerm}%`))
+    );
+  }
+
+  if (statusFilter) {
+    whereClause.push(eq(contactAttempts.deliveryStatus, statusFilter));
+  }
+
+  console.log(whereClause);
+
+  if (whereClause.length > 0) {
+    query.where(and(...whereClause));
+  }
+
+  const result = await query
+    .orderBy(orderByClause)
+    .limit(limitNumber + 1)
+    .offset(offset);
+
+  let countQuery = db
+    .select({
+      count: sql<number>`count(*)`,
+    })
+    .from(contactAttempts);
+
+  if (whereClause.length > 0) {
+    countQuery.where(and(...whereClause));
+  }
+
+  const [{ count: totalChats }] = await countQuery;
+
+  return res.status(200).json({
+    chatHistory: result.splice(0, limitNumber),
+    totalChats: totalChats,
+    totalPages: Math.ceil(totalChats / limitNumber),
     page: pageNumber,
     hasNextPage: result.length > limitNumber,
   });

@@ -53,6 +53,7 @@ import ScrollToTop from "./components/scroll-to-top";
 import VehicleEditPage from "./pages/vehicle/vehicle-edit";
 import RunningRafflePage from "./pages/raffle/raffle";
 import AdminPaymentHistory from "./pages/admin/payment-history";
+import AdminBuyerSellerChatHistory from "./pages/admin/buyer-seller-chat";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -205,6 +206,9 @@ export default function App() {
             </Route>
             <Route path="/admin/payment-history">
               <ProtectedRoute component={AdminPaymentHistory} adminOnly />
+            </Route>
+            <Route path="/admin/buyer-seller-chat">
+              <ProtectedRoute component={AdminBuyerSellerChatHistory} adminOnly />
             </Route>
             <Route path="/admin/spare-parts">
               <ProtectedRoute component={AdminSpareParts} adminOnly />

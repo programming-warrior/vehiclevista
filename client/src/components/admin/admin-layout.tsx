@@ -34,6 +34,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/raffle", label: "Raffle", icon: Ticket },
     { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
     { href: "/admin/payment-history", label: "Payment History", icon: CreditCard },
+    { href: "/admin/buyer-seller-chat", label: "Buyer-Seller Chats", icon: Gavel },
+
   ];
 
   return (
