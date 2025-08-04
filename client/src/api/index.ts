@@ -71,6 +71,7 @@ import {
  import { createRaffle, getRaffles } from "./admin-api/raffle-api";
 
  import { getPackagesWithAmount, selectPackage, verifyPayment } from "./package-api";
+ import { adminGetPaymentHistory } from "./admin-api/payment-api";
 
 
 async function getLocationSuggestion(location:string){
@@ -237,8 +238,8 @@ export {
   adminGetVehicles,
   blacklistVehicle,
   unBlacklistVehicle,
-
   adminGetAuctions,
+  adminGetPaymentHistory,
 
   uploadListingReport,
   uploadUserReport,

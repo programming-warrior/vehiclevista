@@ -13,6 +13,7 @@ import {
   raffleTicketSale,
   auctionWinner,
   auctionStatus,
+  paymentSession,
 } from "../../shared/schema";
 import {
   eq,
@@ -1129,6 +1130,102 @@ adminRouter.get("/raffle/get", verifyToken, async (req, res) => {
   });
 
   return res.status(200).json(responseData);
+});
+
+adminRouter.get("/payment-history", verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "admin")
+    return res.status(401).json({ error: "unauthorized access" });
+
+  const { page, limit, sortBy, filter } = req.query;
+  const pageNumber = parseInt(page as string) || 1;
+  const limitNumber = parseInt(limit as string) || 10;
+  const offset = (pageNumber - 1) * limitNumber;
+
+  let filterOptions: any = {};
+  let searchTerm = "";
+  let statusFilter = null;
+
+  let whereClause = [];
+
+  if (filter) {
+    try {
+      filterOptions = JSON.parse(filter as string);
+      searchTerm = filterOptions.search || "";
+      statusFilter = filterOptions.status || null;
+      statusFilter = statusFilter.toUpperCase();
+    } catch (error) {
+      console.error("Error parsing filter:", error);
+    }
+  }
+
+  // Determine sort order
+  let orderByClause = sql`${paymentSession.createdAt} DESC`;
+
+  console.log(sortBy);
+  console.log(searchTerm);
+  console.log(statusFilter);
+
+  if (sortBy === "oldest") {
+    orderByClause = sql`${paymentSession.createdAt} ASC`;
+  }
+
+  // Base query
+  let query = db
+    .select({
+      id: paymentSession.id,
+      status: paymentSession.status,
+      amount: paymentSession.amount,
+      currency: paymentSession.currency,
+      paymentIntentId: paymentSession.paymentIntentId,
+      username: users.username,
+      email: users.email,
+      userId: users.id,
+      createdAt: paymentSession.createdAt,
+    })
+    .from(paymentSession)
+    .leftJoin(users, eq(users.id, paymentSession.userId));
+
+  if (searchTerm) {
+    console.log("added search where clause");
+    whereClause.push(
+      or(ilike(paymentSession.paymentIntentId, `%${searchTerm}%`))
+    );
+  }
+
+  if (statusFilter) {
+    whereClause.push(eq(paymentSession.status, statusFilter));
+  }
+
+  console.log(whereClause);
+
+  if (whereClause.length > 0) {
+    query.where(and(...whereClause));
+  }
+
+  const result = await query
+    .orderBy(orderByClause)
+    .limit(limitNumber + 1)
+    .offset(offset);
+
+  let countQuery = db
+    .select({
+      count: sql<number>`count(*)`,
+    })
+    .from(paymentSession);
+
+  if (whereClause.length > 0) {
+    countQuery.where(and(...whereClause));
+  }
+
+  const [{ count: totalPayments }] = await countQuery;
+
+  return res.status(200).json({
+    paymentHistory: result.splice(0, limitNumber),
+    totalPayments: totalPayments,
+    totalPages: Math.ceil(totalPayments / limitNumber),
+    page: pageNumber,
+    hasNextPage: result.length > limitNumber,
+  });
 });
 
 // Export the router
