@@ -95,6 +95,10 @@ type heroSectionSearchState = {
   color: string;
   minBudget: number;
   maxBudget: number;
+  postalCode: string;
+  latitude: string;
+  longitude: string;
+  distance: string;
   setSearch: (search: {
     brand?: string;
     model?: string;
@@ -105,6 +109,10 @@ type heroSectionSearchState = {
     maxBudget?: number;
     minBudget?: number;
     color?: string;
+    latitude?: string;
+    longitude?: string;
+    postalCode?:string;
+    distance?: string;
   }) => void;
 };
 
@@ -117,6 +125,8 @@ export const useGlobalLoading= create<{
 }));
 
 export const useHeroSectionSearch = create<heroSectionSearchState>((set) => ({
+  postalCode: "",
+  distance: "National",
   brand: "",
   model: "",
   variant: "",
@@ -126,6 +136,8 @@ export const useHeroSectionSearch = create<heroSectionSearchState>((set) => ({
   transmissionType: "",
   fuelType: "",
   color: "",
+  latitude: "",
+  longitude: "",
   setSearch: (newSearch) =>
     set(() => ({
       ...newSearch,

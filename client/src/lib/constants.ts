@@ -14,6 +14,34 @@ export const ALL_MAKE: string[]=[
     'Ferrari',
 ]
 
+export const DISTANCES: string[] = [
+  'National', 
+  'Within 1 miles', 
+  'Within 5 miles', 
+  'Within 10 miles', 
+  'Within 15 miles', 
+  'Within 20 miles', 
+  'Within 30 miles', 
+  'Within 40 miles', 
+  'Within 50 miles', 
+  'Within 60 miles', 
+  'Within 70 miles', 
+  'Within 80 miles', 
+  'Within 90 miles', 
+  'Within 100 miles', 
+  'Within 110 miles', 
+  'Within 120 miles', 
+  'Within 130 miles', 
+  'Within 140 miles', 
+  'Within 150 miles', 
+  'Within 160 miles', 
+  'Within 170 miles', 
+  'Within 180 miles', 
+  'Within 190 miles', 
+  'Within 200 miles'
+];
+
+
 export  const MAKE_MODEL_MAP: {[key:string]:string[] }= {
     Audi: [
         'A1', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q2', 'Q3', 'Q5', 'Q7', 'Q8', 'TT', 'R8', 'e-tron', 'RS3', 'RS4', 'RS5', 'RS6', 'RS7', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'SQ5', 'SQ7', 'SQ8', 'Allroad', 'Cabriolet', 'Coupe', 'Sportback', 'Avant', 'Quattro'

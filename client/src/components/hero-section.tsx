@@ -20,23 +20,31 @@ import {
 } from "@/components/ui/form";
 import { useHeroSectionSearch } from "@/hooks/use-store";
 import { useLocation } from "wouter";
-import { ALL_MAKE, MAKE_MODEL_MAP } from "@/lib/constants";
+import { ALL_MAKE, DISTANCES, MAKE_MODEL_MAP } from "@/lib/constants";
 import { vehicleConditions, vehicleTypes } from "@shared/schema";
 import {
   vehicleTransmissionsTypes,
   vehicleFuelTypes,
 } from "@shared/zodSchema/vehicleSchema";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useEffect, useState } from "react";
+import { fetchVehicleCount, validatePostalCode } from "@/api";
+import { Loader2 } from "lucide-react";
 
 export default function HeroSection() {
   // Define complete form validation schema with Zod
   const formSchema = z
     .object({
+      postalCode: z.string(),
+      distance: z.string(),
       brand: z.string(),
       model: z.string(),
       type: z.string(),
       transmissionType: z.string(),
       minBudget: z.coerce.number(),
       maxBudget: z.coerce.number(),
+      latitude: z.string(),
+      longitude: z.string(),
     })
     .refine((data) => data.minBudget <= data.maxBudget, {
       message: "Minimum budget must be less than maximum budget",
@@ -44,27 +52,108 @@ export default function HeroSection() {
     });
 
   const [, setLocation] = useLocation();
+  const [isLoading, setisLoading] = useState(false);
+  const [countData, setCountData] = useState("");
+  const [error, setError] = useState("");
+  const [canDo, setCanDo] = useState(false);
+
+
+  useEffect(()=>{
+    console.log("can do set")
+    setCanDo(true)
+  },[])
+
   // Set up form with react-hook-form and zod resolver
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      postalCode: "",
+      distance: "National",
       brand: "",
       model: "",
       type: "",
-      color: "",
       transmissionType: "",
       minBudget: 0,
       maxBudget: 0,
+      latitude: "",
+      longitude: "",
     },
   });
 
+  const debouncedPostalCode = useDebounce(form.getValues("postalCode"));
+
   const { setSearch } = useHeroSectionSearch();
+
+  useEffect(() => {
+    let ignore = false;
+    async function fetch() {
+      try {
+        if(!debouncedPostalCode) return;
+        const res = await validatePostalCode(debouncedPostalCode);
+        form.setValue("latitude", res.data.result.latitude.toLocaleString());
+        form.setValue("longitude", res.data.result.longitude.toLocaleString());
+           form.clearErrors("postalCode");
+      } catch (e) {
+        console.log("before setting error");
+        form.setError("postalCode", {
+          type: "manual",
+          message: "Invalid UK postal code",
+        });
+      }
+    }
+    fetch();    
+    return () => {
+      ignore = true;
+    };
+  }, [debouncedPostalCode]);
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     console.log("Search with parameters:", data);
-    setSearch({ color: "", fuelType: "",  ...data });
+    setSearch({ color: "", fuelType: "", ...data });
     setLocation("/vehicle");
   };
+
+
+  useEffect(() => {
+    async function fetch() {
+      try {
+        setisLoading(true);
+        const res = await fetchVehicleCount({
+          type: form.watch("type"),
+          latitude: form.watch("latitude"),
+          longitude: form.watch("longitude"),
+          distance: form.watch("distance"),
+          make: form.watch("brand"),
+          model: form.watch("model"),
+          maxBudget: form.watch("maxBudget"),
+          minBudget: form.watch("minBudget"),
+          transmissionType: form.watch("transmissionType"),
+        });
+        setCountData(res.data.count);
+        setError("");
+      } catch (e) {
+        console.log("before setting error");
+        setError("Something went wrong");
+      } finally {
+        setisLoading(false);
+      }
+    }
+    console.log("fetch vehicle count");
+    if(canDo){
+      fetch();
+    }
+    return () => {};
+  }, [
+    form.watch("latitude"),
+    form.watch("longitude"),
+    form.watch("brand"),
+    form.watch("model"),
+    form.watch("distance"),
+    form.watch("type"),
+    form.watch("transmissionType"),
+    form.watch("maxBudget"),
+    form.watch("minBudget"),
+  ]);
 
   return (
     <div
@@ -110,9 +199,60 @@ export default function HeroSection() {
             <h2 className="text-2xl font-semibold mb-6">
               Find your vehicle with quick finder
             </h2>
+
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
+              <form onSubmit={form.handleSubmit(onSubmit, (e)=>console.log(e))}>
                 <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="postalCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            placeholder="Postal Code"
+                            className="pl-10 border-blue-200 focus:ring-blue-500"
+                            value={field.value}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="distance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Select
+                            value={field.value}
+                            disabled={!form.getValues("longitude")}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
+                              <SelectValue
+                                placeholder="Make"
+                                className="bg-white border-blue-200 focus:ring-blue-500"
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {/* <SelectItem value="All">All</SelectItem> */}
+                              {DISTANCES.map((m) => {
+                                return <SelectItem value={m}>{m}</SelectItem>;
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage className="text-xs text-red-500" />
+                      </FormItem>
+                    )}
+                  />
                   {/* Brand Select */}
                   <FormField
                     control={form.control}
@@ -126,7 +266,7 @@ export default function HeroSection() {
                           >
                             <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
                               <SelectValue
-                                placeholder="Brand"
+                                placeholder="Make"
                                 className="bg-white border-blue-200 focus:ring-blue-500"
                               />
                             </SelectTrigger>
@@ -258,7 +398,7 @@ export default function HeroSection() {
 
                   {/* Budget Range Inputs */}
                   <div className="col-span-full">
-                    <Label className="text-[14px]">Budget</Label>
+                    {/* <Label className="text-[14px]">Budget</Label> */}
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -283,7 +423,7 @@ export default function HeroSection() {
                                     .replace(/,/g, "")
                                     .replace(/\D/g, "");
                                   const numValue = Number(rawValue);
-                                  field.onChange(numValue)
+                                  field.onChange(numValue);
                                 }}
                               />
                             </FormControl>
@@ -298,7 +438,7 @@ export default function HeroSection() {
                           <FormItem>
                             <Label className="text-xs text-gray-500">Max</Label>
                             <FormControl>
-                               <Input
+                              <Input
                                 type="text"
                                 inputMode="numeric"
                                 pattern="[0-9,]*"
@@ -314,7 +454,7 @@ export default function HeroSection() {
                                     .replace(/,/g, "")
                                     .replace(/\D/g, "");
                                   const numValue = Number(rawValue);
-                                  field.onChange(numValue)
+                                  field.onChange(numValue);
                                 }}
                               />
                             </FormControl>
@@ -329,7 +469,12 @@ export default function HeroSection() {
                   type="submit"
                   className="w-full mt-6 h-12 bg-blue-600 hover:bg-blue-700 text-white text-lg"
                 >
-                  Search
+                  {error ? `something went wrong` : ""}
+                  { isLoading && (
+                    <Loader2 className="animate-spin" />
+                  )}
+                  { countData ? `Found ${countData} ${form.getValues("type")}` : "Search"}
+                  
                 </Button>
               </form>
             </Form>

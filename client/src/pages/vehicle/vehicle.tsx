@@ -21,6 +21,9 @@ import {
 } from "@shared/zodSchema/vehicleSchema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { validatePostalCode } from "@/api";
+import { useDebounce } from "@/hooks/use-debounce";
+import { DISTANCES } from "@/lib/constants";
 
 export default function VehiclePage() {
   const {
@@ -32,6 +35,10 @@ export default function VehiclePage() {
     transmissionType,
     color,
     fuelType,
+    longitude,
+    latitude,
+    postalCode,
+    distance,
     setSearch,
   } = useHeroSectionSearch();
 
@@ -45,12 +52,13 @@ export default function VehiclePage() {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const debouncedColor = useDebounce(color);
+
   useEffect(() => {
     (async () => {
       try {
         setIsLoading(true);
-        console.log(maxBudget);
-        console.log(minBudget);
+        console.log("maxBudget: ",maxBudget);
         let searchParam = `page=${page}&limit=${limit}&`;
         if (brand) {
           searchParam += `brand=${brand}&`;
@@ -67,8 +75,8 @@ export default function VehiclePage() {
         if (vehicleType) {
           searchParam += `type=${vehicleType}&`;
         }
-         if (color) {
-          searchParam += `color=${color}&`;
+        if (debouncedColor) {
+          searchParam += `color=${debouncedColor}&`;
         }
         if (transmissionType) {
           searchParam += `transmissionType=${transmissionType}&`;
@@ -76,6 +84,11 @@ export default function VehiclePage() {
         if (fuelType) {
           searchParam += `fuelType=${fuelType}&`;
         }
+        if (latitude && longitude) {
+          searchParam += `latitude=${latitude}&longitude=${longitude}&`;
+          if (distance) searchParam += `distance=${distance}&`;
+        }
+
         const res: any = await getVehicles(searchParam);
         setVehicles(res.vehicles);
         setTotalVehicles(res.totalVehicles);
@@ -99,8 +112,40 @@ export default function VehiclePage() {
     vehicleType,
     transmissionType,
     fuelType,
-    color
+    debouncedColor,
+    latitude,
+    longitude,
+    distance,
   ]);
+
+  const debouncedPostalCode = useDebounce(postalCode);
+
+  useEffect(() => {
+    let ignore = false;
+    async function fetch() {
+      try {
+        if(!debouncedPostalCode) return;
+        const res = await validatePostalCode(debouncedPostalCode);
+        if (
+          res.data.result &&
+          res.data.result.latitude &&
+          res.data.result.longitude
+        ) {
+          setSearch({
+            latitude: res.data.result.latitude,
+            longitude: res.data.result.longitude,
+          });
+        }
+      } catch (e: any) {
+        console.error("before setting error", e.message);
+      }
+    }
+    fetch();
+    return () => {
+      ignore = true;
+    };
+  }, [debouncedPostalCode]);
+
 
   return (
     <div className="flex min-h-screen">
@@ -109,6 +154,49 @@ export default function VehiclePage() {
         {/* <h2 className="text-xl font-bold mb-6 text-blue-500">Filters</h2> */}
 
         <div className="space-y-6">
+          <div>
+            <h3 className="font-medium mb-2 text-blue-800">Location Filter</h3>
+            <div className="flex gap-2">
+              <div className="w-1/2">
+                <Input
+                  type="text"
+                  placeholder="Postal Code"
+                  className="pl-2 border-blue-200 focus:ring-blue-500"
+                  value={postalCode}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    setSearch({
+                      postalCode: val,
+                    });
+                  }}
+                />
+              </div>
+
+              <div className="w-1/2">
+                <Select
+                  value={distance}
+                  disabled={!latitude}
+                  onValueChange={(val)=>setSearch({distance:val})}
+                >
+                  <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
+                    <SelectValue
+                      placeholder="Distance"
+                      className="bg-white border-blue-200 focus:ring-blue-500"
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* <SelectItem value="All">All</SelectItem> */}
+                    {DISTANCES.map((m) => {
+                      return <SelectItem value={m}>{m}</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+    
+            </div>
+          </div>
+
           <div>
             <h3 className="font-medium mb-2 text-blue-800">Price Range</h3>
             <div className="flex gap-2">
@@ -341,8 +429,8 @@ export default function VehiclePage() {
       </div>
 
       {isLoading ? (
-        <div className="py-2 flex flex-col gap-4 border-blue-200">
-          <Skeleton className="w-full h-16 bg-blue-100" />
+        <div className="w-full  p-4 flex flex-col gap-4 border-blue-200">
+          <Skeleton className="w-[90%] h-16 bg-blue-100" />
           <Skeleton className="w-full h-16 bg-blue-100" />
           <Skeleton className="w-full h-16 bg-blue-100" />
           <Skeleton className="w-full h-16 bg-blue-100" />

@@ -22,6 +22,102 @@ const upload = multer();
 
 const vehicleRouter = Router();
 
+vehicleRouter.get("/get-vehicle-count", async (req, res) => {
+  try {
+    console.log(req.query);
+    const {
+      longitude,
+      latitude,
+      distance,
+      make,
+      model,
+      type,
+      transmissionType,
+      color,
+      bodyType,
+      fuelType,
+      minBudget,
+      maxBudget,
+    } = req.query;
+
+    const conditions = [];
+
+    if (make && String(make).toLowerCase() !== "all")
+      conditions.push(eq(vehicles.make, String(make)));
+    if (model && String(model).toLowerCase() !== "all")
+      conditions.push(eq(vehicles.model, String(model)));
+    if (
+      type &&
+      String(type).toLowerCase() !== "all" &&
+      (type as (typeof vehicleTypesEnum.enumValues)[number])
+    )
+      conditions.push(
+        eq(vehicles.type, type as (typeof vehicleTypesEnum.enumValues)[number])
+      );
+    if (transmissionType && String(transmissionType).toLowerCase() !== "all")
+      conditions.push(eq(vehicles.transmission, String(transmissionType)));
+    if (fuelType && String(fuelType).toLowerCase() !== "all")
+      conditions.push(eq(vehicles.fuelType, String(fuelType)));
+    if (bodyType && String(bodyType).toLowerCase() !== "all")
+      conditions.push(eq(vehicles.bodyType, String(bodyType)));
+    if (color && String(color).toLowerCase() !== "all")
+      conditions.push(ilike(vehicles.color, String(color)));
+    if (!isNaN(Number(minBudget)) && Number(minBudget) > 0)
+      conditions.push(gte(vehicles.price, Number(minBudget)));
+    if (!isNaN(Number(maxBudget)) && Number(maxBudget) > 0)
+      conditions.push(lte(vehicles.price, Number(maxBudget)));
+
+    //logic to fetch vehicles based on the postal code and distance
+    if (
+      latitude &&
+      longitude &&
+      !isNaN(parseFloat(latitude as string)) &&
+      !isNaN(parseFloat(longitude as string))
+    ) {
+      const distanceString: string = distance || (distance as string).toLowerCase()!=='national'
+        ? (distance as string).toLowerCase()
+        : "";
+      const match = distanceString.match(/^within\s+(\d+)\s+miles$/i);
+      if (match) {
+        const distanceValue = parseInt(match[1], 10);
+        console.log("Extracted number:", distanceValue);
+        const lat = parseFloat(latitude as string);
+        const lon = parseFloat(longitude as string);
+        //haversine formula
+        //3969 ---> Earth's radius in miles
+        conditions.push(sql`
+      3959 * acos(
+        cos(radians(${lat})) *
+        cos(radians(${vehicles.latitude})) *
+        cos(radians(${vehicles.longitude}) - radians(${lon})) +
+        sin(radians(${lat})) *  
+        sin(radians(${vehicles.latitude}))
+      ) <= ${distanceValue}
+    `);
+      } else {
+        console.log(distanceString)
+        console.log("Invalid format: expected 'within <number> miles'");
+      }
+    }
+
+    console.log(conditions);
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(vehicles)
+      .where(conditions.length ? and(...conditions) : undefined);
+
+    res.status(200).json({
+      count,
+    });
+  } catch (err: any) {
+    console.error("Error fetching vehicles:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching vehicle list", error: err.message });
+  }
+});
+
 vehicleRouter.get("/", async (req, res) => {
   try {
     console.log(req.query);
