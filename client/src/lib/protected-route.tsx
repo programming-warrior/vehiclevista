@@ -1,4 +1,3 @@
-import { useAuth } from "@/hooks/use-auth";
 import { Route, useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { useUser } from "@/hooks/use-store";

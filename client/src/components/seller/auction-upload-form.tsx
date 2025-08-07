@@ -44,6 +44,10 @@ import {
 } from "lucide-react";
 import { createAuction } from "@/api";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/hooks/use-store";
+import { useAuctionDraftCache } from "@/hooks/use-store";
+import { useRedirectStore } from "@/hooks/use-store";
+import { useLocation } from "wouter";
 
 // Create the form schema for auction creation
 const formSchema = z.object({
@@ -65,6 +69,11 @@ export default function AuctionUploadForm({
 }) {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const { userId } = useUser();
+  const { auctionCache, setAuctionCache, clearAuctionCache } =
+    useAuctionDraftCache();
+  const { setRedirectUrl } = useRedirectStore();
+  const [location, setLocation] = useLocation();
 
   // Setup form with default values
   const form = useForm({
@@ -87,12 +96,32 @@ export default function AuctionUploadForm({
     const auctionData = {
       itemType: values.itemType,
       durationDays: values.durationDays,
-      startingPrice: values.startingPrice,
       description: values.description,
       title: values.title,
     };
 
     try {
+      //if user is not logged in, save the data in the local cache
+      if (!userId) {
+        if (pullData && typeof pullData === "function") {
+          clearAuctionCache();
+          setAuctionCache(auctionData);
+          const currentAuctionCache =
+            useAuctionDraftCache.getState().auctionCache;
+          setRedirectUrl(location);
+
+          pullData({
+            ...auctionData,
+            draftId: currentAuctionCache.draftId,
+          });
+          toast({
+            title: "Success",
+            description: "Auction details saved! Now add your item details.",
+            className: "bg-blue-50 border-blue-200",
+          });
+          return;
+        }
+      }
       setUploading(true);
       const res = await createAuction(auctionData);
       if (pullData && typeof pullData === "function") {
@@ -167,34 +196,49 @@ export default function AuctionUploadForm({
                         {itemTypes.map((type) => {
                           const Icon = type.icon;
                           const isSelected = field.value === type.value;
-                          
+
                           return (
                             <div
                               key={type.value}
                               className={`
                                 relative border-2 rounded-xl p-6 cursor-pointer transition-all duration-200
-                                ${isSelected 
-                                  ? 'border-blue-500 bg-blue-50 shadow-md' 
-                                  : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
+                                ${
+                                  isSelected
+                                    ? "border-blue-500 bg-blue-50 shadow-md"
+                                    : "border-gray-200 hover:border-blue-300 hover:shadow-sm"
                                 }
                               `}
                               onClick={() => field.onChange(type.value)}
                             >
                               <div className="flex items-start space-x-4">
-                                <div className={`
+                                <div
+                                  className={`
                                   p-3 rounded-lg 
-                                  ${isSelected ? 'bg-blue-100' : 'bg-gray-100'}
-                                `}>
-                                  <Icon className={`
+                                  ${isSelected ? "bg-blue-100" : "bg-gray-100"}
+                                `}
+                                >
+                                  <Icon
+                                    className={`
                                     h-6 w-6 
-                                    ${isSelected ? 'text-blue-600' : 'text-gray-600'}
-                                  `} />
+                                    ${
+                                      isSelected
+                                        ? "text-blue-600"
+                                        : "text-gray-600"
+                                    }
+                                  `}
+                                  />
                                 </div>
                                 <div className="flex-1">
-                                  <h3 className={`
+                                  <h3
+                                    className={`
                                     font-semibold mb-2 
-                                    ${isSelected ? 'text-blue-900' : 'text-gray-900'}
-                                  `}>
+                                    ${
+                                      isSelected
+                                        ? "text-blue-900"
+                                        : "text-gray-900"
+                                    }
+                                  `}
+                                  >
                                     {type.label}
                                   </h3>
                                   <p className="text-sm text-gray-600">

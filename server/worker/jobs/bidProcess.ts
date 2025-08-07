@@ -1,6 +1,5 @@
 import { Worker } from "bullmq";
 import { connection } from "../workerRedis";
-// import { WebSocketServer } from './websocket'; // assume you have a pub function
 import { db } from "../../db";
 import {
   auctions,
@@ -9,7 +8,8 @@ import {
   raffleTicketSale,
   paymentSession,
   users,
-  Raffle
+  Raffle,
+  Auction,
 } from "../../../shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { createRefund } from "../../utils/stripe";
@@ -27,18 +27,23 @@ const bidWorker = new Worker(
       try {
         console.log("processing bid for amount " + bidAmount);
         await db.transaction(async (trx) => {
-          const result = await trx
-            .select({
-              auction: auctions,
-            })
-            .from(auctions)
-            .where(eq(auctions.id, auctionId));
+          // const result = await trx
+          //   .select({
+          //     auction: auctions,
+          //   })
+          //   .from(auctions)
+          //   .where(eq(auctions.id, auctionId));
 
-          const row = result[0] ?? null;
+          const result = await trx.execute(sql`
+              SELECT * FROM ${auctions} WHERE ${auctions.id} = ${auctionId} FOR UPDATE
+          `);
+          console.log(result);
+          const row: Auction = (result?.rows[0] as Auction) ?? null;
+          if (!row) throw new Error("raffle not found");
           if (!row) throw new Error("auction not found");
 
           console.log("Auction found");
-          if ((row.auction.currentBid ?? 0) >= bidAmount) {
+          if ((row.currentBid ?? 0) >= bidAmount) {
             throw new Error(
               JSON.stringify(
                 "Bid amount needs to be greater than the currentBid"
@@ -67,7 +72,7 @@ const bidWorker = new Worker(
             .update(auctions)
             .set({
               currentBid: bidAmount,
-              totalBids: (row.auction.totalBids ?? 0) + 1,
+              totalBids: (row.totalBids ?? 0) + 1,
             })
             .where(eq(auctions.id, auctionId));
         });
@@ -114,7 +119,7 @@ const bidWorker = new Worker(
           const result = await trx.execute(sql`
               SELECT * FROM ${raffle} WHERE ${raffle.id} = ${raffleId} FOR UPDATE
           `);
-          const row : Raffle = result?.rows[0] as Raffle ?? null;
+          const row: Raffle = (result?.rows[0] as Raffle) ?? null;
           if (!row) throw new Error("raffle not found");
 
           const now = new Date();

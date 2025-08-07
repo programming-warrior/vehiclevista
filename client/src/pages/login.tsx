@@ -19,6 +19,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_URL } from "@/lib/constants";
 import axios from "axios";
+import { useRedirectStore } from "@/hooks/use-store";
 
 interface LoginForm {
   username: string;
@@ -29,6 +30,7 @@ export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { userId, role, setUser } = useUser();
   const { toast } = useToast();
+  const { redirectUrl } = useRedirectStore();
 
   const {
     register,
@@ -66,7 +68,9 @@ export default function LoginPage() {
         title: "Welcome back!",
         description: "You have been successfully logged in.",
       });
-      setLocation("/");
+      console.log(redirectUrl);
+      if (redirectUrl) setLocation(redirectUrl);
+      else setLocation("/");
     } catch (error: any) {
       console.error("Login error:", error);
       setError("root", {

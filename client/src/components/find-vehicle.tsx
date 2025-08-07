@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -39,6 +39,12 @@ const FindVehicleCard = ({
     },
   });
 
+  useEffect(()=>{
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  },[])
+
+  
   async function onSubmit(data: any) {
     setIsLoading(true);
     try {

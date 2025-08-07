@@ -16,24 +16,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import AuctionUploadForm from "@/components/seller/auction-upload-form";
 import VehicleUploadForm from "@/components/seller/vehicle-upload-form";
 import { useState } from "react";
@@ -42,6 +25,11 @@ import PaymentFormWrapper from "@/components/payment-form";
 import FindVehicleCard from "@/components/find-vehicle";
 import NumberPlateForm from "@/components/numberplate-create-form";
 import { verifyPayment } from "@/api";
+import { useEffect } from "react";
+import { useUser } from "@/hooks/use-store";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { useAuctionDraftCache } from "@/hooks/use-store";
 
 export default function SellerAuctionUpload() {
   const [auctionData, setAuctionData] = useState<any | null>(null);
@@ -49,6 +37,10 @@ export default function SellerAuctionUpload() {
   const [itemData, setItemData] = useState<any | null>(null);
   const [paymentData, setPaymentData] = useState<any | null>(null);
   const [numberplateData, setNumberplateData] = useState<any | null>(null);
+  const { userId } = useUser();
+  const [location, setLocation] = useLocation();
+  const { toast } = useToast();
+  const { auctionCache } = useAuctionDraftCache();
 
   const [stage, setStage] = useState<number>(1);
 
@@ -62,6 +54,32 @@ export default function SellerAuctionUpload() {
   const getProgressPercentage = () => {
     return ((stage - 1) / (stages.length - 1)) * 100;
   };
+
+  //fetch the auctionData from localcache
+  useEffect(() => {
+    console.log(auctionCache);
+    if (auctionCache.draftId && auctionCache.item.draftId) {
+      setAuctionData(auctionCache);
+      setItemData(auctionCache.item);
+      setStage(3);
+    } else if (auctionCache.draftId) {
+      setAuctionData(auctionCache);
+      setStage(2);
+    }
+  }, []);
+
+  useEffect(() => {
+    //before the payment page is opened check if the user is logged in if not redirect to login
+    if (stage === 4) {
+      if (!userId) {
+        // toast({
+        //   variant: "destructive",
+        //   description: "You are not logged in",
+        // });
+        // setLocation('/login');
+      }
+    }
+  }, [stage]);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -173,13 +191,22 @@ export default function SellerAuctionUpload() {
 
           {stage === 3 && auctionData && itemData && (
             <Packages
-              type= {auctionData.itemType==='VEHICLE' ? 'AUCTION-VEHICLE' : 'AUCTION-NUMBERPLATE'}
-              itemPrice={auctionData.itemType==='NUMBERPLATE' ? itemData.plateValue : itemData.price}
+              type={
+                auctionData.itemType === "VEHICLE"
+                  ? "AUCTION-VEHICLE"
+                  : "AUCTION-NUMBERPLATE"
+              }
+              itemPrice={
+                auctionData.itemType === "NUMBERPLATE"
+                  ? itemData.plate_value
+                  : itemData.price
+              }
               draftId={auctionData.draftId}
               pullData={(data) => {
                 setStage(4);
                 setPaymentData(data);
               }}
+              setStage={setStage}
             />
           )}
 
@@ -193,7 +220,7 @@ export default function SellerAuctionUpload() {
           )}
 
           {/* Navigation */}
-          {stage > 1 && (
+          {/* {stage > 1 && (
             <div className="mt-8 flex justify-between">
               <Button
                 variant="outline"
@@ -205,7 +232,7 @@ export default function SellerAuctionUpload() {
               </Button>
               <div></div>
             </div>
-          )}
+          )} */}
         </div>
       </main>
     </div>

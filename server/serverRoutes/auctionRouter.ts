@@ -528,20 +528,21 @@ auctionRouter.post("/numberplate/create", verifyToken, async (req, res) => {
     return res.status(403).json({ error: "Unauthorized" });
   }
   try {
-    const { plate_number, document_url } = req.body;
+    const { plate_number, document_url, plate_value } = req.body;
     console.log(req.body);
-    if (!plate_number || !plate_number.trim() || !document_url) {
+    if (!plate_number || !plate_number.trim() || !document_url || !plate_value) {
       return res.status(400).json({ error: "Invalid input" });
     }
 
     //add logic for getting plate value
-    const plateValue = 1000; //in pounds
+    //DEPRECATED -> NOW GETTING THE PLATE_VALUE FROM THE USER
+    // const plateValue = 1000; //in pounds
 
     const newNumberPlate = {
       plate_number: plate_number,
       document_url: document_url,
       sellerId: req.userId,
-      plate_value: plateValue,
+      plate_value: plate_value,
     };
 
     const dbReturnData = await db
@@ -554,7 +555,7 @@ auctionRouter.post("/numberplate/create", verifyToken, async (req, res) => {
     return res.status(200).json({
       message: "NumberPlate created successfully",
       draftId: savedNumberPlateDetails.id,
-      plateValue,
+      plate_value,
     });
   } catch (e: any) {
     console.error("Error creating auction:", e);
@@ -571,7 +572,7 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
     // if (result.error) {
     //   return res.status(401).json({ error: result.error });
     // }
-    const { itemType, title, description, durationDays, startingPrice } =
+    const { itemType, title, description, durationDays } =
       req.body;
     console.log(req.body);
     if (
@@ -607,7 +608,7 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
       itemType: itemType,
       title,
       description,
-      startingPrice: parseFloat(startingPrice) ?? 0,
+      startingPrice: 0,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       status: "UPCOMING" as typeof auctions.$inferInsert.status,

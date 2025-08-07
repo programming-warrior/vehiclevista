@@ -124,6 +124,106 @@ export const useGlobalLoading= create<{
   setGlobalLoading: (loading) => set({ globalLoading: loading }),
 }));
 
+
+export type AuctionData = {
+  draftId: string
+  title: string
+  description: string
+  durationDays: string
+  itemType: string
+  item: Record<string, any>
+}
+
+export type AuctionDraftCacheStore = {
+  auctionCache: AuctionData
+  setAuctionCache: (newData: Partial<AuctionData>) => void
+  clearAuctionItemCache: () => void
+  clearAuctionCache: () => void
+}
+
+export const useAuctionDraftCache = create<AuctionDraftCacheStore>((set) => ({
+  auctionCache: {
+    draftId: "",
+    title: '',
+    description: '',
+    durationDays: '',
+    itemType: '',
+    item: {},
+  },
+  setAuctionCache: (newData) => {
+    set((state) => ({
+      auctionCache: {
+        ...state.auctionCache,
+        ...newData,
+        draftId: state.auctionCache.draftId  || crypto.randomUUID(), 
+      },
+    }))
+  },
+  clearAuctionItemCache: () => {
+    set((state) => ({
+      auctionCache: {
+        ...state.auctionCache,
+        item: {},
+      },
+    }))
+  },
+  clearAuctionCache: () => {
+    set(() => ({
+      auctionCache: {
+        draftId: "",
+        title: '',
+        description: '',
+        durationDays: '',
+        itemType: '',
+        item: {},
+      },
+    }))
+  },
+}))
+
+
+
+
+export type vehicleDraftCacheStore = {
+  vehicleCache: any
+  setVehicleCache: (newData: Partial<AuctionData>) => void
+  clearVehicleCache: () => void
+}
+
+export const useVehicleDraftCache = create<vehicleDraftCacheStore>((set) => ({
+  vehicleCache: {},
+  setVehicleCache: (newData) => {
+    set((state) => ({
+      vehicleCache: {
+        ...state.vehicleCache,
+        ...newData,
+        draftId: state.vehicleCache.draftId  || crypto.randomUUID(), 
+      },
+    }))
+  },
+  clearVehicleCache: () => {
+    set(() => ({
+      vehicleCache: {
+ 
+      },
+    }))
+  },
+}))
+
+
+type RedirectStore = {
+  redirectUrl: string | null;
+  setRedirectUrl: (url: string) => void;
+  clearRedirectUrl: () => void;
+};
+
+export const useRedirectStore = create<RedirectStore>((set) => ({
+  redirectUrl: null,
+  setRedirectUrl: (url) => set({ redirectUrl: url }),
+  clearRedirectUrl: () => set({ redirectUrl: null }),
+}));
+
+
 export const useHeroSectionSearch = create<heroSectionSearchState>((set) => ({
   postalCode: "",
   distance: "National",

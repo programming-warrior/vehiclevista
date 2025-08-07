@@ -231,14 +231,14 @@ export default function App() {
                 />
               </Route> */}
             <Route path="/seller/auction/create">
-              <ProtectedRoute component={SellerAuctionUpload} />
+              <SellerAuctionUpload/>
             </Route>
             <Route path="/seller/vehicle/upload">
-              <ProtectedRoute component={SellerVehicleUpload} />
+              <SellerVehicleUpload/>
             </Route>
-            <Route path="/seller/vehicle/bulk-upload">
+            {/* <Route path="/seller/vehicle/bulk-upload">
               <ProtectedRoute component={SellerVehilceBulkUpload} />
-            </Route>
+            </Route> */}
 
             {/* Trader Routes */}
             <Route path="/trader/dashboard">

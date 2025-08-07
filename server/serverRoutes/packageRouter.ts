@@ -18,9 +18,10 @@ import { paymentQueue } from "../worker/queue";
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 const packageRouter = Router();
 
-packageRouter.post("/evaluate-price", verifyToken, async (req, res) => {
+//this would be an open endpoint, should be GET but POST is working fine...
+packageRouter.post("/evaluate-price", async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    // if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
     let { type, item_value } = req.body;
     if (!type || !item_value) {
       return res
@@ -220,8 +221,8 @@ packageRouter.post("/select", verifyToken, async (req, res) => {
       isFree: false,
     });
   } catch (err: any) {
-    console.error("Error fetching packages:", err);
-    res.status(500).json({ message: "Error fetching packages" });
+    console.error("Error Selecting packages:", err);
+    res.status(500).json({ message: "Error selecting packages" });
   }
 });
 

@@ -7,6 +7,8 @@ import VehicleCard from "@/components/vehicle-card";
 import PaymentFormWrapper from "@/components/payment-form";
 import FindVehicleCard from "@/components/find-vehicle";
 import { verifyPayment } from "@/api";
+import { useEffect } from "react";
+import { useVehicleDraftCache } from "@/hooks/use-store";
 
 export default function SellerVehicleUpload() {
   const [vehicleData, setVehicleData] = useState<any | null>(null);
@@ -19,10 +21,19 @@ export default function SellerVehicleUpload() {
     { id: 3, name: "Package", icon: CheckCircle },
     { id: 4, name: "Payment", icon: CheckCircle },
   ];
+  const { vehicleCache, setVehicleCache, clearVehicleCache } =
+    useVehicleDraftCache();
 
   const getProgressPercentage = () => {
     return ((stage - 1) / (stages.length - 1)) * 100;
   };
+
+  useEffect(() => {
+    if (vehicleCache.draftId) {
+      setVehicleData(vehicleData);
+      setStage(3);
+    }
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -48,7 +59,7 @@ export default function SellerVehicleUpload() {
                 const StageIcon = stageItem.icon;
                 const isCompleted = stage > stageItem.id;
                 const isCurrent = stage === stageItem.id;
-                
+
                 return (
                   <div
                     key={stageItem.id}
@@ -115,10 +126,14 @@ export default function SellerVehicleUpload() {
               setPaymentData(data);
               setStage(4);
             }}
+            setStage={setStage}
           />
         )}
         {paymentData && stage == 4 ? (
-          <PaymentFormWrapper verifyPayment={verifyPayment} clientSecret={paymentData.clientSecret} />
+          <PaymentFormWrapper
+            verifyPayment={verifyPayment}
+            clientSecret={paymentData.clientSecret}
+          />
         ) : null}
       </main>
     </div>

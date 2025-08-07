@@ -34,7 +34,7 @@ export async function verifyPayment(
   try {
     const sessionId = localStorage.getItem("sessionId");
     const response = await axios.post(
-      `${BACKEND_URL}/api/package//verify-payment`,
+      `${BACKEND_URL}/api/package/verify-payment`,
       {
         paymentIntentId
       },

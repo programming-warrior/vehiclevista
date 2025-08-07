@@ -38,6 +38,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useDebounce } from "@/hooks/use-debounce";
 import { dvsaApi, getLocationSuggestion } from "@/api";
+import {
+  useAuctionDraftCache,
+  useVehicleDraftCache,
+  useRedirectStore,
+} from "@/hooks/use-store";
+import { useUser } from "@/hooks/use-store";
 
 const VehicleUploadForm = ({
   pullData,
@@ -57,23 +63,35 @@ const VehicleUploadForm = ({
   const locationRef = useRef<HTMLDivElement | null>(null);
   const suggestionBoxRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
+  const { userId } = useUser();
 
   const form = useForm({
     resolver: zodResolver(vehicleUploadSchema),
     defaultValues: {
       title: "",
-      type: prefetchedData?.result?.basic_vehicle_info?.autotrader_asset_type?.toLowerCase() ?? "car",
+      type:
+        prefetchedData?.result?.basic_vehicle_info?.autotrader_asset_type?.toLowerCase() ??
+        "car",
       make: prefetchedData?.result?.basic_vehicle_info?.manufacturer_desc ?? "",
       model: prefetchedData?.result?.basic_vehicle_info?.model_range_desc ?? "",
       price: "",
-      year:  "",
+      year: "",
       mileage: prefetchedData?.mileage.toString() ?? "",
-      fuelType: prefetchedData?.result?.basic_vehicle_info?.autotrader_fuel_type_desc?.toLowerCase() ?? "",
-      transmission: prefetchedData?.result?.basic_vehicle_info?.autotrader_transmission_desc?.toLowerCase() ?? "",
-      bodyType: prefetchedData?.result?.basic_vehicle_info?.autotrader_body_type_desc?.toLowerCase() ?? "",
-      registration_num: prefetchedData?.result?.basic_vehicle_info?.vehicle_registration_mark ?? "",
+      fuelType:
+        prefetchedData?.result?.basic_vehicle_info?.autotrader_fuel_type_desc?.toLowerCase() ??
+        "",
+      transmission:
+        prefetchedData?.result?.basic_vehicle_info?.autotrader_transmission_desc?.toLowerCase() ??
+        "",
+      bodyType:
+        prefetchedData?.result?.basic_vehicle_info?.autotrader_body_type_desc?.toLowerCase() ??
+        "",
+      registration_num:
+        prefetchedData?.result?.basic_vehicle_info?.vehicle_registration_mark ??
+        "",
       color: prefetchedData?.result?.basic_vehicle_info?.colour ?? "",
-      description: prefetchedData?.result?.basic_vehicle_info?.vehicle_desc ?? "",
+      description:
+        prefetchedData?.result?.basic_vehicle_info?.vehicle_desc ?? "",
       location: "",
       images: [],
       condition: "clean",
@@ -85,14 +103,21 @@ const VehicleUploadForm = ({
     },
   });
 
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const debouncedRegistrationNum = useDebounce(
     form.getValues("registration_num")
   );
   const debouncedLocationQuery = useDebounce(form.getValues("location"), 500);
   const [registrationNumError, setRegistrationNumError] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const { auctionCache, setAuctionCache, clearAuctionCache } =
+    useAuctionDraftCache();
 
+  const { vehicleCache, setVehicleCache, clearVehicleCache } =
+    useVehicleDraftCache();
+  const { setRedirectUrl } = useRedirectStore();
+
+  console.log(auctionCache);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -104,7 +129,7 @@ const VehicleUploadForm = ({
         setShowLocationSuggestions(false);
       }
     };
-    window.scrollTo(0,0)
+    window.scrollTo(0, 0);
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -199,6 +224,45 @@ const VehicleUploadForm = ({
 
   async function onSubmit(data: any) {
     console.log("Form submission started", data);
+    //if the user is not logged in store the data in the cache
+    if (!userId) {
+      if (pullData && typeof pullData === "function") {
+        const vehicleCacheData = {
+          ...data,
+          draftId: crypto.randomUUID(),
+          images: selectedFiles,
+        };
+        //if auctionDraftId is present, the user is filling vehicle form for the auction item
+        if (auctionDraftId) {
+          setAuctionCache({
+            item: {
+              ...vehicleCacheData,
+            },
+          });
+          console.log(useAuctionDraftCache.getState().auctionCache);
+          pullData({
+            ...vehicleCacheData,
+          });
+        } else {
+          clearVehicleCache();
+          setVehicleCache({
+            ...vehicleCacheData,
+          });
+          setRedirectUrl(location);
+          console.log(useVehicleDraftCache.getState().vehicleCache);
+          pullData({
+            ...vehicleCacheData,
+          });
+        }
+        toast({
+          title: "Success",
+          description: "item details saved.",
+          className: "bg-blue-50 border-blue-200",
+        });
+        return;
+      }
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
 
@@ -243,7 +307,7 @@ const VehicleUploadForm = ({
       vehicleData.draftId = response.draftId;
 
       //send the api request to update the auction draft
-      if(auctionDraftId)
+      if (auctionDraftId)
         await UpdateDraftAuctionWithItemDraft(
           auctionDraftId,
           response.draftId,

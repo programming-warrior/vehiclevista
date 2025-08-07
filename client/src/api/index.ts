@@ -81,6 +81,11 @@ import {
 } from "./package-api";
 import { adminGetPaymentHistory } from "./admin-api/payment-api";
 import { adminGetChatHistory } from "./admin-api/buyer-seller-chat-api";
+import {
+  AuctionData,
+  AuctionDraftCacheStore,
+  vehicleDraftCacheStore,
+} from "@/hooks/use-store";
 
 async function getLocationSuggestion(location: string) {
   try {
@@ -230,6 +235,181 @@ export async function fetchVehicleCount(
   } catch (e) {
     console.error("Error validating postcal code: ", e);
     throw e;
+  }
+}
+
+import { useAuctionDraftCache, useVehicleDraftCache } from "@/hooks/use-store";
+
+export async function pushListingDraftCacheToServer({
+  auctionCache,
+  clearAuctionCache,
+  vehicleCache,
+  clearVehicleCache,
+}: {
+  auctionCache: AuctionData;
+  clearAuctionCache: () => void;
+  vehicleCache: any;
+  clearVehicleCache: () => void;
+}): Promise<number> {
+  try {
+    if (vehicleCache && vehicleCache.draftId) {
+      let imageUrls: string[] = [];
+
+      console.log(vehicleCache);
+      const fileKeys = vehicleCache.images.map((file: File) => ({
+        fileName: `${Date.now()}-${file.name.split(" ").join("")}`,
+        contentType: file.type,
+      }));
+      console.log("fetching presgined urls");
+      const presignedUrlsResponse = await getPresignedUrls(fileKeys);
+      const presignedUrls = presignedUrlsResponse.data.urls;
+
+      console.log("uploading vehicle images to the s3");
+      const uploadPromises = vehicleCache.images.map(
+        (file: File, index: number) =>
+          uploadToPresignedUrl(file, presignedUrls[index])
+      );
+
+      for (const promise of uploadPromises) {
+        await promise.then((url: string) => {
+          imageUrls.push(url);
+        });
+      }
+      console.log("uploaded ");
+      const vehicleData = {
+        ...vehicleCache,
+        images: imageUrls,
+      };
+      const vehicleDraftResponse = await axios.post(
+        `${BACKEND_URL}/api/vehicles/upload-single`,
+        { ...vehicleData },
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+          },
+        }
+      );
+      clearVehicleCache();
+      return vehicleDraftResponse.data.draftId;
+    } else if (auctionCache && auctionCache.draftId) {
+      console.log("uploading auction draft");
+      const auctionResponse = await axios.post(
+        `${BACKEND_URL}/api/auction/create`,
+        { ...auctionCache },
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+          },
+        }
+      );
+      const auctionDraftId = auctionResponse.data.draftId;
+      console.log("auctionDraftId ", auctionDraftId);
+      let itemDraftId: number | null = null;
+      let itemResponse: any;
+      console.log(auctionCache);
+      if (auctionCache.itemType === "VEHICLE") {
+        let imageUrls: string[] = [];
+
+        const fileKeys = auctionCache.item.images.map((file: File) => ({
+          fileName: `${Date.now()}-${file.name.split(" ").join("")}`,
+          contentType: file.type,
+        }));
+        console.log("generating vehicle presigned url");
+        const presignedUrlsResponse = await getPresignedUrls(fileKeys);
+        const presignedUrls = presignedUrlsResponse.data.urls;
+
+        const uploadPromises = auctionCache.item.images.map(
+          (file: File, index: number) =>
+            uploadToPresignedUrl(file, presignedUrls[index])
+        );
+
+        for (const promise of uploadPromises) {
+          await promise.then((url: string) => {
+            imageUrls.push(url);
+          });
+        }
+        console.log("images uploaded: vehicle");
+        const vehicleData = {
+          ...auctionCache.item,
+          images: imageUrls,
+        };
+        itemResponse = await axios.post(
+          `${BACKEND_URL}/api/vehicles/upload-single`,
+          { ...vehicleData },
+          {
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+            },
+          }
+        );
+        itemDraftId = itemResponse.data.draftId;
+      } else if (auctionCache.itemType === "NUMBERPLATE") {
+        let documentUrls: string[] = [];
+
+        const fileKeys = auctionCache.item.document_url.map((file: File) => ({
+          fileName: `${Date.now()}-${file.name.split(" ").join("")}`,
+          contentType: file.type,
+        }));
+        console.log("generating presgined url: numberplate");
+        const presignedUrlsResponse = await getPresignedUrls(fileKeys);
+        const presignedUrls = presignedUrlsResponse.data.urls;
+
+        const uploadPromises = auctionCache.item.document_url.map(
+          (file: File, index: number) =>
+            uploadToPresignedUrl(file, presignedUrls[index])
+        );
+
+        for (const promise of uploadPromises) {
+          await promise.then((url: string) => {
+            documentUrls.push(url);
+          });
+        }
+        console.log("document uploaded");
+        const numberPlateData = {
+          ...auctionCache.item,
+          document_url: documentUrls,
+        };
+        itemResponse = await axios.post(
+          `${BACKEND_URL}/api/auction/numberplate/create`,
+          { ...numberPlateData },
+          {
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+            },
+          }
+        );
+        itemDraftId = itemResponse.data.draftId;
+      }
+      console.log("itemDraftId: ", itemDraftId);
+      if (itemDraftId && auctionDraftId) {
+        const response = await axios.patch(
+          `${BACKEND_URL}/api/auction/update-draft/${auctionDraftId}`,
+          { itemId: itemDraftId, itemType: auctionCache.itemType },
+          {
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+            },
+          }
+        );
+      }
+      clearAuctionCache();
+      console.log("auction cache draft pushed to the server");
+      return auctionDraftId;
+    }
+    return NaN
+  } catch (e: any) {
+    console.error("Error pushing draft cache: ", e);
+    throw new Error(e.message || "Previous saved data lost!");
   }
 }
 

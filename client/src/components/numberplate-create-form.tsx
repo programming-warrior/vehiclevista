@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,13 +19,14 @@ import {
   getPresignedUrls,
   uploadToPresignedUrl,
   createNumberPlate,
-  UpdateDraftAuctionWithItemDraft
+  UpdateDraftAuctionWithItemDraft,
 } from "@/api";
-
+import { useUser, useAuctionDraftCache } from "@/hooks/use-store";
 
 // Schema for number plate registration
 const formSchema = z.object({
   plate_number: z.string().min(1, "Plate number is required"),
+  plate_value: z.number(),
   documents: z
     .array(z.instanceof(File))
     .min(1, "At least one document is required"),
@@ -41,6 +42,9 @@ const NumberPlateForm = ({
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const { toast } = useToast();
+  const { userId } = useUser();
+  const { auctionCache, setAuctionCache, clearAuctionCache } =
+    useAuctionDraftCache();
 
   type FormSchemaType = z.infer<typeof formSchema>;
   const form = useForm<FormSchemaType>({
@@ -48,8 +52,13 @@ const NumberPlateForm = ({
     defaultValues: {
       plate_number: "",
       documents: [],
+      plate_value: 0,
     },
   });
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -67,6 +76,34 @@ const NumberPlateForm = ({
   };
 
   async function onSubmit(data: any) {
+    if (!userId) {
+      if (pullData && typeof pullData === "function") {
+        const plateCacheData = {
+          draftId: crypto.randomUUID(),
+          plate_number: data.plate_number,
+          plate_value: data.plate_value,
+          document_url: data.documents,
+        };
+        if (auctionDraftId) {
+          setAuctionCache({
+            item: {
+              ...plateCacheData,
+            },
+          });
+          console.log(useAuctionDraftCache.getState().auctionCache);
+          pullData({
+            ...plateCacheData,
+          });
+        }
+        toast({
+          title: "Success",
+          description: "item details saved.",
+          className: "bg-blue-50 border-blue-200",
+        });
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       let documentUrls: string[] = [];
@@ -100,6 +137,7 @@ const NumberPlateForm = ({
       const plateData = {
         plate_number: data.plate_number,
         document_url: documentUrls,
+        plate_value: data.plate_value,
       };
 
       const res = await createNumberPlate(plateData);
@@ -111,7 +149,10 @@ const NumberPlateForm = ({
           "NUMBERPLATE"
         );
       if (pullData && typeof pullData === "function") {
-        pullData({ ...plateData, draftId: res.draftId, plateValue: res.plateValue });
+        pullData({
+          ...plateData,
+          draftId: res.draftId,
+        });
       }
 
       toast({
@@ -157,6 +198,28 @@ const NumberPlateForm = ({
                       {...field}
                       onChange={(e) =>
                         field.onChange(e.target.value.toUpperCase())
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="plate_value"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-blue-800">Plate Value</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter plate number (e.g., ABC-123)"
+                      type="number"
+                      className="border-blue-200 focus:ring-blue-500 focus:border-blue-500 uppercase"
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(parseFloat(e.target.value))
                       }
                     />
                   </FormControl>
