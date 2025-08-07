@@ -14,7 +14,6 @@ import {
 import { eq, sql } from "drizzle-orm";
 import { createRefund } from "../../utils/stripe";
 import { notificationQueue } from "../queue";
-import { create } from "node:domain";
 
 const bidWorker = new Worker(
   "bid",
@@ -27,19 +26,11 @@ const bidWorker = new Worker(
       try {
         console.log("processing bid for amount " + bidAmount);
         await db.transaction(async (trx) => {
-          // const result = await trx
-          //   .select({
-          //     auction: auctions,
-          //   })
-          //   .from(auctions)
-          //   .where(eq(auctions.id, auctionId));
-
           const result = await trx.execute(sql`
               SELECT * FROM ${auctions} WHERE ${auctions.id} = ${auctionId} FOR UPDATE
           `);
           console.log(result);
           const row: Auction = (result?.rows[0] as Auction) ?? null;
-          if (!row) throw new Error("raffle not found");
           if (!row) throw new Error("auction not found");
 
           console.log("Auction found");
@@ -56,7 +47,6 @@ const bidWorker = new Worker(
               auctionId: auctionId,
               userId: Number(userId),
               bidAmount: bidAmount,
-              createdAt: new Date(),
             })
             .returning();
 
@@ -77,8 +67,19 @@ const bidWorker = new Worker(
             .where(eq(auctions.id, auctionId));
         });
         console.log("bid added to the db and auction upadted");
-        const bidId = insertedBids[0]?.id;
 
+        const bidId = insertedBids[0]?.id;
+        //publish a bid created event to the redis for websocket server
+        await connection.publish(
+          `BID_PLACED`,
+          JSON.stringify({
+            auctionId: auctionId,
+            bidAmount: bidAmount,
+            userId: Number(userId),
+            bidId:insertedBids[0]?.id,
+            createdAt: insertedBids[0]?.createdAt,
+          })
+        );
         await notificationQueue.add("auctionBid-placed-success", {
           userId,
           auctionId,
@@ -86,7 +87,6 @@ const bidWorker = new Worker(
           bidId,
         });
 
-        console.log("bid published to redis");
       } catch (e) {
         const refund = await createRefund(
           paymentIntentId,

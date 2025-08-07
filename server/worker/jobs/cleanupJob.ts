@@ -30,18 +30,6 @@ cleanupWorker.on("failed", (job, err: any) => {
   console.log("bid failed");
   console.log(job);
 
-  connection.publish(
-    `BID_PLACED_ERROR`,
-    JSON.stringify({
-      error: err.message,
-      payload: {
-        auctionId: job?.data.auctionId,
-        userId: job?.data.userId, 
-        bidAmount: job?.data.bidAmount, 
-        raffleId: job?.data.raffleId,
-        ticketQuantity: job?.data.ticketQuantity
-      },
-    })
-  );
+ 
   console.log(err);
 });

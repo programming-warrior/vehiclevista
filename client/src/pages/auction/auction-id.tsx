@@ -35,7 +35,7 @@ import {
 import ImageGallery from "@/components/image-gallery";
 import { Button } from "@/components/ui/button";
 import CountdownTimer from "@/components/countdown-timer";
-import { useUser } from "@/hooks/use-store";
+import { useUser, useWebSocket } from "@/hooks/use-store";
 import { useToast } from "@/hooks/use-toast";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.bubble.css";
@@ -54,10 +54,14 @@ export default function AuctionIdPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [paymentformOpen, setPaymentformOpen] = useState(false);
   const [paymentInfo, setPaymentInfo] = useState<any>({});
+  const { socket } = useWebSocket();
 
   const [bids, setBids] = useState<any>([]);
+  const [newBidId, setNewBidId] = useState<string | null>(null);
+  const [bidPlacedEffect, setBidPlacedEffect] = useState(false);
+  const [currentBidPulse, setCurrentBidPulse] = useState(false);
 
-  const currentBid = auction?.currentBid ?? auction?.startingPrice  ?? 0;
+  const currentBid = auction?.currentBid ?? auction?.startingPrice ?? 0;
   const totalBids = bids.length;
 
   function handleBidInput(e: React.ChangeEvent<HTMLInputElement>) {
@@ -74,6 +78,57 @@ export default function AuctionIdPage() {
       setBidError("");
     }
   }
+
+  useEffect(() => {
+    const handleBidPlaceEvent = (msg: any) => {
+      const newBid = {
+        ...msg,
+      };
+      
+      setBids((prev: any) => {
+        const updatedBids = [...prev, newBid].sort((a,b)=>b.bidAmount-a.bidAmount);
+        return updatedBids;
+      });
+
+      // Update auction current bid if this is the highest
+      if (auction && msg.bidAmount > auction.currentBid) {
+        setAuction((prev:any) => ({ ...prev, currentBid: msg.bidAmount }));
+        setCurrentBidPulse(true);
+        setTimeout(() => setCurrentBidPulse(false), 2000);
+      }
+
+      // Trigger visual effects
+      setNewBidId(newBid.id);
+      setBidPlacedEffect(true);
+      
+      // Remove effects after animation
+      setTimeout(() => {
+        setNewBidId(null);
+        setBidPlacedEffect(false);
+      }, 5000);
+
+      toast({
+        title: "New Bid Placed! 🎯",
+        description: `New bid of $${msg.bidAmount} has been placed!`,
+        duration: 4000,
+      });
+    };
+
+    const handleSocketMessage = (e: any) => {
+      const data = JSON.parse(e.data);
+      if (data.event === "BID_PLACED") {
+        handleBidPlaceEvent(data.message);
+      }
+    };
+    
+    if (socket && socket.OPEN) {
+      socket.addEventListener("message", handleSocketMessage);
+    }
+
+    return () => {
+      socket?.removeEventListener("message", handleSocketMessage);
+    };
+  }, [auction, socket, toast]);
 
   async function handlePlaceBid() {
     if (!bidError && bidAmount) {
@@ -103,7 +158,7 @@ export default function AuctionIdPage() {
           setPaymentformOpen(true);
           toast({
             title: "Pay the fees to make your bid",
-            description: "You have 2 minutes!",
+            description: "It will expire in 2 minutes!",
           });
         }
       } catch (e: any) {
@@ -170,14 +225,14 @@ export default function AuctionIdPage() {
       ) : (
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
           {/* Auction Status Bar */}
-          <div className="bg-gray-800 text-white p-4">
+          <div className={`bg-gray-800 text-white p-4 transition-all duration-500 ${bidPlacedEffect ? 'bg-gradient-to-r from-green-600 to-blue-600 shadow-lg transform scale-[1.02]' : ''}`}>
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div className="flex items-center gap-6">
                 <div className="flex flex-col">
                   <span className="text-sm uppercase tracking-wide">
                     Current Bid
                   </span>
-                  <span className="text-2xl font-bold flex items-center">
+                  <span className={`text-2xl font-bold flex items-center transition-all duration-500 ${currentBidPulse ? 'text-green-400 scale-110 animate-pulse' : ''}`}>
                     <DollarSign size={20} className="mr-1" />
                     {auction.currentBid}
                   </span>
@@ -197,7 +252,7 @@ export default function AuctionIdPage() {
                   <span className="text-sm uppercase tracking-wide">
                     Total Bids
                   </span>
-                  <span className="text-2xl font-medium flex items-center">
+                  <span className={`text-2xl font-medium flex items-center transition-all duration-300 ${bidPlacedEffect ? 'text-yellow-400 scale-110' : ''}`}>
                     <Users size={20} className="mr-1" />
                     {bids.length}
                   </span>
@@ -206,7 +261,7 @@ export default function AuctionIdPage() {
 
               <Button
                 onClick={() => setBidOpen(true)}
-                className="bg-green-600 hover:bg-green-700 text-white py-3 px-8 rounded-md"
+                className={`bg-green-600 hover:bg-green-700 text-white py-3 px-8 rounded-md transition-all duration-300 ${bidPlacedEffect ? 'animate-bounce shadow-lg' : ''}`}
               >
                 Place Bid
               </Button>
@@ -449,10 +504,15 @@ export default function AuctionIdPage() {
                 </div>
 
                 {/* Bid history card */}
-                <div className="bg-gray-50 border rounded-lg p-5 shadow-sm">
+                <div className={`bg-gray-50 border rounded-lg p-5 shadow-sm transition-all duration-500 ${bidPlacedEffect ? 'border-green-400 shadow-lg bg-green-50' : ''}`}>
                   <h2 className="text-xl font-bold mb-4 border-b pb-2 flex items-center">
                     <Users size={20} className="mr-2" />
                     Bid History
+                    {bidPlacedEffect && (
+                      <span className="ml-2 text-sm bg-green-500 text-white px-2 py-1 rounded-full animate-pulse">
+                        NEW BID!
+                      </span>
+                    )}
                   </h2>
 
                   <div className="max-h-80 overflow-y-auto">
@@ -471,11 +531,25 @@ export default function AuctionIdPage() {
                         </thead>
                         <tbody>
                           {bids.map((bid: any, idx: number) => (
-                            <tr key={idx} className="border-t">
+                            <tr 
+                              key={bid.id || idx} 
+                              className={`border-t transition-all duration-1000 ${
+                                bid.id === newBidId 
+                                  ? 'bg-gradient-to-r from-green-100 to-blue-100 animate-pulse transform scale-105 shadow-md' 
+                                  : 'hover:bg-gray-50'
+                              }`}
+                            >
                               <td className="py-2 font-medium">
                                 {bid.user.username}
+                                {bid.id === newBidId && (
+                                  <span className="ml-2 text-xs bg-green-500 text-white px-1 py-0.5 rounded">
+                                    NEW
+                                  </span>
+                                )}
                               </td>
-                              <td className="py-2">${bid.bidAmount}</td>
+                              <td className={`py-2 ${bid.id === newBidId ? 'font-bold text-green-600' : ''}`}>
+                                ${bid.bidAmount}
+                              </td>
                               <td className="py-2 text-gray-500">
                                 {new Date(bid.createdAt).toLocaleString(
                                   "en-US",
@@ -631,9 +705,23 @@ export default function AuctionIdPage() {
                     </thead>
                     <tbody>
                       {bids.map((bid: any, idx: number) => (
-                        <tr key={idx} className="border-t hover:bg-gray-50">
-                          <td className="py-3 px-4">{bid.user.username}</td>
-                          <td className="py-3 px-4 font-medium">
+                        <tr 
+                          key={bid.id || idx} 
+                          className={`border-t transition-all duration-1000 ${
+                            bid.id === newBidId 
+                              ? 'bg-gradient-to-r from-green-100 to-blue-100 animate-pulse hover:bg-green-50' 
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <td className="py-3 px-4">
+                            {bid.user.username}
+                            {bid.id === newBidId && (
+                              <span className="ml-2 text-xs bg-green-500 text-white px-1 py-0.5 rounded animate-bounce">
+                                NEW
+                              </span>
+                            )}
+                          </td>
+                          <td className={`py-3 px-4 font-medium ${bid.id === newBidId ? 'font-bold text-green-600' : ''}`}>
                             ${bid.bidAmount}
                           </td>
                           <td className="py-3 px-4 text-gray-500">

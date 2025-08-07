@@ -2,9 +2,11 @@ import { WebSocketServer as WSServer } from "ws";
 import type { WebSocket as WS } from "ws";
 import { verifyWebSocketToken } from "../middleware/authMiddleware";
 import { createClient } from "redis";
-import dotenv from "dotenv"; // Fixed typo
+import dotenv from "dotenv";
 import { randomUUID } from "crypto";
-import { notificationQueue } from "../worker/queue";
+import { db } from "../db";
+import { users } from "../../shared/schema";
+import { eq } from "drizzle-orm";
 
 interface WebSocketWithAlive extends WS {
   isAlive?: boolean;
@@ -198,17 +200,35 @@ async function subscribeToBidPlace() {
   await subscribeOnce(channel, async (message, channel) => {
     console.log(`Message received from ${channel}: ${message}`);
     const data = JSON.parse(message);
-    const { userId } = data;
-    await notificationQueue.add("BID_PLACED", {
-      auctionId: data.auctionId,
-      userId: data.userId,
-      bidAmount: data.bidAmount,
-    });
+    const { userId, auctionId, bidAmount, bidId, createdAt } = data;
+    //Fetch the user data
+    const [bidCreator] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, Number(userId)));
     const wsData = {
       event: "BID_PLACED",
-      message: data,
+      message: {
+        auctionId,
+        bidAmount,
+        bidId,
+        createdAt,
+        user: {
+          id: bidCreator?.id,
+          username: bidCreator?.username,
+          email: bidCreator?.email,
+        },
+      },
     };
-    sendToClient(userId, wsData);
+    if (!auctionClients[auctionId] || auctionClients[auctionId].length == 0) {
+      console.error(
+        `BID_PLACED: auctionClients for auctionId: ${auctionId} is empty even though there is a user who made a bid`
+      );
+      return;
+    }
+    auctionClients[auctionId]?.forEach((clientId) => {
+      sendToClient(clientId, wsData);
+    });
   });
 }
 
