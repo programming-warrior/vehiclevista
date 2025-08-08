@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { db } from "../db";
-import { Vehicle, vehicleDrafts, vehicles } from "../../shared/schema";
+import {
+  Vehicle,
+  vehicleConditionsEnum,
+  vehicleDrafts,
+  vehicles,
+} from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray, ilike } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
 import axios from "axios";
@@ -74,10 +79,11 @@ vehicleRouter.get("/get-vehicle-count", async (req, res) => {
       !isNaN(parseFloat(latitude as string)) &&
       !isNaN(parseFloat(longitude as string))
     ) {
-      const distanceString: string = distance || (distance as string).toLowerCase()!=='national'
-        ? (distance as string).toLowerCase()
-        : "";
-      const match = distanceString.match(/^within\s+(\d+)\s+miles$/i);
+      const distanceString: string =
+        distance || (distance as string).toLowerCase() !== "national"
+          ? (distance as string).toLowerCase()
+          : "";
+      const match = distanceString.match(/^within\s+(\d+)\s+mile(s)?$/i);
       if (match) {
         const distanceValue = parseInt(match[1], 10);
         console.log("Extracted number:", distanceValue);
@@ -95,7 +101,7 @@ vehicleRouter.get("/get-vehicle-count", async (req, res) => {
       ) <= ${distanceValue}
     `);
       } else {
-        console.log(distanceString)
+        console.log(distanceString);
         console.log("Invalid format: expected 'within <number> miles'");
       }
     }
@@ -131,8 +137,17 @@ vehicleRouter.get("/", async (req, res) => {
       fuelType,
       minBudget,
       maxBudget,
+      latitude,
+      longitude,
+      distance,
+      vehicleCondition,
+      fromYear,
+      toYear,
+      minMileage,
+      maxMileage,
       page = "1",
       limit = "10",
+      sortBy,
     } = req.query;
 
     const conditions = [];
@@ -155,12 +170,60 @@ vehicleRouter.get("/", async (req, res) => {
       conditions.push(eq(vehicles.fuelType, String(fuelType)));
     if (bodyType && String(bodyType).toLowerCase() !== "all")
       conditions.push(eq(vehicles.bodyType, String(bodyType)));
+    if (
+      vehicleCondition &&
+      vehicleConditionsEnum.enumValues.includes(vehicleCondition as any)
+    ) {
+      conditions.push(eq(vehicles.condition, vehicleCondition as any));
+    }
     if (color && String(color).toLowerCase() !== "all")
       conditions.push(ilike(vehicles.color, String(color)));
     if (!isNaN(Number(minBudget)) && Number(minBudget) > 0)
       conditions.push(gte(vehicles.price, Number(minBudget)));
     if (!isNaN(Number(maxBudget)) && Number(maxBudget) > 0)
       conditions.push(lte(vehicles.price, Number(maxBudget)));
+    if (!isNaN(Number(fromYear)))
+      conditions.push(gte(vehicles.year, Number(fromYear)));
+    if (!isNaN(Number(toYear)))
+      conditions.push(lte(vehicles.year, Number(toYear)));
+    if (!isNaN(Number(minMileage)))
+      conditions.push(gte(vehicles.mileage, Number(minMileage)));
+    if (!isNaN(Number(maxMileage)))
+      conditions.push(lte(vehicles.mileage, Number(maxMileage)));
+
+    //logic to fetch vehicles based on the postal code and distance
+    if (
+      latitude &&
+      longitude &&
+      !isNaN(parseFloat(latitude as string)) &&
+      !isNaN(parseFloat(longitude as string))
+    ) {
+      const distanceString: string =
+        distance || (distance as string).toLowerCase() !== "national"
+          ? (distance as string).toLowerCase()
+          : "";
+      const match = distanceString.match(/^within\s+(\d+)\s+mile(s)?$/i);
+      if (match) {
+        const distanceValue = parseInt(match[1], 10);
+        console.log("Extracted number:", distanceValue);
+        const lat = parseFloat(latitude as string);
+        const lon = parseFloat(longitude as string);
+        //haversine formula
+        //3969 ---> Earth's radius in miles
+        conditions.push(sql`
+      3959 * acos(
+        cos(radians(${lat})) *
+        cos(radians(${vehicles.latitude})) *
+        cos(radians(${vehicles.longitude}) - radians(${lon})) +
+        sin(radians(${lat})) *  
+        sin(radians(${vehicles.latitude}))
+      ) <= ${distanceValue}
+    `);
+      } else {
+        console.log(distanceString);
+        console.log("Invalid format: expected 'within <number> miles'");
+      }
+    }
 
     const pageNum = parseInt(page as string, 10);
     const pageSize = parseInt(limit as string, 10);
@@ -168,10 +231,37 @@ vehicleRouter.get("/", async (req, res) => {
 
     console.log(conditions);
 
+    let orderByClause = sql`${vehicles.createdAt} DESC`;
+
+    if (sortBy === "oldest") {
+      orderByClause = sql`${vehicles.createdAt} ASC`;
+    } else if (sortBy === "price_low") {
+      orderByClause = sql`${vehicles.price} ASC`;
+    } else if (sortBy === "price_high") {
+      orderByClause = sql`${vehicles.price} DESC`;
+    } else if (sortBy === "mileage_low") {
+      orderByClause = sql`${vehicles.mileage} ASC`;
+    } else if (sortBy === "mileage_high") {
+      orderByClause = sql`${vehicles.mileage} ASC`;
+    } else if (sortBy === "nearest_first" && latitude && longitude) {
+      const lat = parseFloat(latitude as string);
+      const lon = parseFloat(longitude as string);
+      orderByClause = sql`
+      3959 * acos(
+        cos(radians(${lat})) *
+        cos(radians(${vehicles.latitude})) *
+        cos(radians(${vehicles.longitude}) - radians(${lon})) +
+        sin(radians(${lat})) *  
+        sin(radians(${vehicles.latitude}))
+      ) ASC
+    `;
+    }
+
     const result = await db
       .select()
       .from(vehicles)
       .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(orderByClause)
       .limit(pageSize + 1)
       .offset(offset);
 

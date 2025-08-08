@@ -85,38 +85,7 @@ export const useNotification = create<{
     })),
 }));
 
-type heroSectionSearchState = {
-  brand: string;
-  model: string;
-  variant: string;
-  vehicleType: string;
-  transmissionType: string;
-  fuelType: string;
-  color: string;
-  minBudget: number;
-  maxBudget: number;
-  postalCode: string;
-  latitude: string;
-  longitude: string;
-  distance: string;
-  setSearch: (search: {
-    brand?: string;
-    model?: string;
-    variant?: string;
-    transmissionType?: string;
-    vehicleType?: string;
-    fuelType?: string;
-    maxBudget?: number;
-    minBudget?: number;
-    color?: string;
-    latitude?: string;
-    longitude?: string;
-    postalCode?:string;
-    distance?: string;
-  }) => void;
-};
-
-export const useGlobalLoading= create<{
+export const useGlobalLoading = create<{
   globalLoading: boolean;
   setGlobalLoading: (loading: boolean) => void;
 }>((set) => ({
@@ -124,30 +93,29 @@ export const useGlobalLoading= create<{
   setGlobalLoading: (loading) => set({ globalLoading: loading }),
 }));
 
-
 export type AuctionData = {
-  draftId: string
-  title: string
-  description: string
-  durationDays: string
-  itemType: string
-  item: Record<string, any>
-}
+  draftId: string;
+  title: string;
+  description: string;
+  durationDays: string;
+  itemType: string;
+  item: Record<string, any>;
+};
 
 export type AuctionDraftCacheStore = {
-  auctionCache: AuctionData
-  setAuctionCache: (newData: Partial<AuctionData>) => void
-  clearAuctionItemCache: () => void
-  clearAuctionCache: () => void
-}
+  auctionCache: AuctionData;
+  setAuctionCache: (newData: Partial<AuctionData>) => void;
+  clearAuctionItemCache: () => void;
+  clearAuctionCache: () => void;
+};
 
 export const useAuctionDraftCache = create<AuctionDraftCacheStore>((set) => ({
   auctionCache: {
     draftId: "",
-    title: '',
-    description: '',
-    durationDays: '',
-    itemType: '',
+    title: "",
+    description: "",
+    durationDays: "",
+    itemType: "",
     item: {},
   },
   setAuctionCache: (newData) => {
@@ -155,9 +123,9 @@ export const useAuctionDraftCache = create<AuctionDraftCacheStore>((set) => ({
       auctionCache: {
         ...state.auctionCache,
         ...newData,
-        draftId: state.auctionCache.draftId  || crypto.randomUUID(), 
+        draftId: state.auctionCache.draftId || crypto.randomUUID(),
       },
-    }))
+    }));
   },
   clearAuctionItemCache: () => {
     set((state) => ({
@@ -165,30 +133,27 @@ export const useAuctionDraftCache = create<AuctionDraftCacheStore>((set) => ({
         ...state.auctionCache,
         item: {},
       },
-    }))
+    }));
   },
   clearAuctionCache: () => {
     set(() => ({
       auctionCache: {
         draftId: "",
-        title: '',
-        description: '',
-        durationDays: '',
-        itemType: '',
+        title: "",
+        description: "",
+        durationDays: "",
+        itemType: "",
         item: {},
       },
-    }))
+    }));
   },
-}))
-
-
-
+}));
 
 export type vehicleDraftCacheStore = {
-  vehicleCache: any
-  setVehicleCache: (newData: Partial<AuctionData>) => void
-  clearVehicleCache: () => void
-}
+  vehicleCache: any;
+  setVehicleCache: (newData: Partial<AuctionData>) => void;
+  clearVehicleCache: () => void;
+};
 
 export const useVehicleDraftCache = create<vehicleDraftCacheStore>((set) => ({
   vehicleCache: {},
@@ -197,19 +162,16 @@ export const useVehicleDraftCache = create<vehicleDraftCacheStore>((set) => ({
       vehicleCache: {
         ...state.vehicleCache,
         ...newData,
-        draftId: state.vehicleCache.draftId  || crypto.randomUUID(), 
+        draftId: state.vehicleCache.draftId || crypto.randomUUID(),
       },
-    }))
+    }));
   },
   clearVehicleCache: () => {
     set(() => ({
-      vehicleCache: {
- 
-      },
-    }))
+      vehicleCache: {},
+    }));
   },
-}))
-
+}));
 
 type RedirectStore = {
   redirectUrl: string | null;
@@ -224,22 +186,50 @@ export const useRedirectStore = create<RedirectStore>((set) => ({
 }));
 
 
-export const useHeroSectionSearch = create<heroSectionSearchState>((set) => ({
-  postalCode: "",
-  distance: "National",
+type HeroSectionSearchState = {
+  brand: string;
+  model: string;
+  variant: string;
+  vehicleType: string;
+  transmissionType: string;
+  fuelType: string;
+  color: string;
+  minBudget: number;
+  maxBudget: number;
+  postalCode: string;
+  latitude: string;
+  longitude: string;
+  distance: string;
+  fromYear: string;
+  toYear: string;
+  maxMileage: number;
+  minMileage: number;
+  vehicleCondition: string;
+  setSearch: (search: Partial<Omit<HeroSectionSearchState, 'setSearch'>>) => void;
+};
+
+export const useHeroSectionSearch = create<HeroSectionSearchState>((set) => ({
   brand: "",
   model: "",
   variant: "",
-  minBudget: 0,
-  maxBudget: 0,
   vehicleType: "",
   transmissionType: "",
   fuelType: "",
   color: "",
+  minBudget: 0,
+  maxBudget: 0,
+  postalCode: "",
   latitude: "",
   longitude: "",
+  distance: "National",
+  fromYear: "",
+  toYear: "",
+  maxMileage: 0,
+  minMileage:0,
+  vehicleCondition:"",
   setSearch: (newSearch) =>
-    set(() => ({
+    set((state) => ({
+      ...state,
       ...newSearch,
     })),
 }));

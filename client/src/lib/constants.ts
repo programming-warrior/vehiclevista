@@ -42,6 +42,12 @@ export const DISTANCES: string[] = [
 ];
 
 
+export const VEHICLE_CONDITIONS: string[] = [
+    'NEW',
+    'USED',
+    'NEARLY_NEW'
+];
+
 export  const MAKE_MODEL_MAP: {[key:string]:string[] }= {
     Audi: [
         'A1', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q2', 'Q3', 'Q5', 'Q7', 'Q8', 'TT', 'R8', 'e-tron', 'RS3', 'RS4', 'RS5', 'RS6', 'RS7', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'SQ5', 'SQ7', 'SQ8', 'Allroad', 'Cabriolet', 'Coupe', 'Sportback', 'Avant', 'Quattro'

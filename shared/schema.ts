@@ -28,7 +28,7 @@ export const userRolesEnum = pgEnum("user_roles", userRoles);
 export const vehicleTypes = ["car", "bike", "truck", "van"] as const;
 export const vehicleTypesEnum = pgEnum("vehicle_types", vehicleTypes);
 
-export const vehicleConditions = ["clean", "catS", "catN"] as const;
+export const vehicleConditions = ["clean", "catS", "catN", "catA", "catB"] as const;
 export const vehicleConditionsEnum = pgEnum(
   "vehicle_conditions",
   vehicleConditions

@@ -25,7 +25,7 @@ export default function VehicleCard({
   vehicle,
   className = "",
 }: {
-  vehicle: Vehicle;
+vehicle: Vehicle;
   className?: string;
 }) {
   const [isFavorite, setIsFavorite] = useState(false);

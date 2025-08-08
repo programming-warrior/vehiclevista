@@ -7,13 +7,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getVehicles } from "@/api";
 import { useVehicleLists, useHeroSectionSearch } from "@/hooks/use-store";
 import { useToast } from "@/hooks/use-toast";
 import VehicleCard from "@/components/vehicle-card";
-import { AlertCircle, Infinity } from "lucide-react";
-import { ALL_MAKE, MAKE_MODEL_MAP } from "@/lib/constants";
+import { AlertCircle, Filter, X, ArrowUpDown } from "lucide-react";
+import { ALL_MAKE, MAKE_MODEL_MAP, VEHICLE_CONDITIONS } from "@/lib/constants";
 import { vehicleConditions, vehicleTypes } from "@shared/schema";
 import {
   vehicleTransmissionsTypes,
@@ -24,8 +24,91 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { validatePostalCode } from "@/api";
 import { useDebounce } from "@/hooks/use-debounce";
 import { DISTANCES } from "@/lib/constants";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+
+// Generate year options
+const generateYearOptions = () => {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let year = currentYear; year >= 1990; year--) {
+    years.push(year.toString());
+  }
+  return years;
+};
+
+// Generate mileage options
+const generateMileageOptions = () => {
+  const mileageRanges = [
+    "5000",
+    "10000",
+    "15000",
+    "20000",
+    "25000",
+    "30000",
+    "40000",
+    "50000",
+    "60000",
+    "75000",
+    "100000",
+    "125000",
+    "150000",
+    "200000",
+  ];
+  return mileageRanges;
+};
+
+// Sorting options
+const SORTING_OPTIONS = [
+  { value: "price_low", label: "Price: Low to High" },
+  { value: "price_high", label: "Price: High to Low" },
+  { value: "mileage_low", label: "Mileage: Low to High" },
+  { value: "mileage_high", label: "Mileage: High to Low" },
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "nearest_first", label: "Nearest First" },
+];
+
+const YEAR_OPTIONS = generateYearOptions();
+const MILEAGE_OPTIONS = generateMileageOptions();
+
+interface FilterSectionProps {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+const FilterSection = ({
+  title,
+  children,
+  defaultOpen = false,
+  isOpen,
+  onToggle,
+}: FilterSectionProps) => {
+  return (
+    <Collapsible open={isOpen} onOpenChange={onToggle}>
+      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+        <h3 className="font-medium text-blue-800">{title}</h3>
+        <Filter
+          className={`h-4 w-4 text-blue-600 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="px-3 pt-3 pb-2">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
 
 export default function VehiclePage() {
+  const searchState = useHeroSectionSearch();
   const {
     brand,
     maxBudget,
@@ -39,57 +122,97 @@ export default function VehiclePage() {
     latitude,
     postalCode,
     distance,
+    fromYear,
+    toYear,
+    maxMileage,
+    minMileage,
+    vehicleCondition,
     setSearch,
-  } = useHeroSectionSearch();
+  } = searchState;
 
   const { toast } = useToast();
-
   const { vehicles, setVehicles } = useVehicleLists();
+
   const limit = 6;
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalVehicles, setTotalVehicles] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState("newest");
+
+  // Add state to track which filter sections are open
+  const [openSections, setOpenSections] = useState({
+    location: true,
+    priceRange: true,
+    makeModel: false,
+    vehicleSpecs: false,
+    yearRange: false,
+    mileageRange: false,
+    other: false,
+  });
 
   const debouncedColor = useDebounce(color);
+  const debouncedPostalCode = useDebounce(postalCode);
+
+  console.log(debouncedColor);
+
+  // Build search parameters more cleanly
+  const buildSearchParams = () => {
+    const params = new URLSearchParams();
+    params.set("page", page.toString());
+    params.set("limit", limit.toString());
+
+    if (sortBy) {
+      params.set("sortBy", sortBy);
+    }
+
+    const filterMap = {
+      brand,
+      model,
+      minBudget: minBudget > 0 ? minBudget.toString() : "",
+      maxBudget: maxBudget > 0 ? maxBudget.toString() : "",
+      type: vehicleType,
+      color: debouncedColor,
+      transmissionType,
+      fuelType,
+      latitude: latitude && longitude ? latitude : "",
+      longitude: latitude && longitude ? longitude : "",
+      distance: latitude && longitude && distance ? distance : "",
+      fromYear,
+      toYear,
+      maxMileage: maxMileage > 0 ? maxMileage.toString() : "",
+      minMileage: minMileage > 0 ? minMileage.toString() : "",
+      vehicleCondition:
+        vehicleCondition && vehicleCondition.toUpperCase() !== "ANY"
+          ? vehicleCondition
+          : "",
+    };
+
+    Object.entries(filterMap).forEach(([key, value]) => {
+      if (value && value !== "All") {
+        params.append(key, value);
+      }
+    });
+
+    return params.toString();
+  };
+
+  // Toggle function for filter sections
+  const toggleSection = (sectionKey: keyof typeof openSections) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey]
+    }));
+  };
 
   useEffect(() => {
     (async () => {
       try {
         setIsLoading(true);
-        console.log("maxBudget: ",maxBudget);
-        let searchParam = `page=${page}&limit=${limit}&`;
-        if (brand) {
-          searchParam += `brand=${brand}&`;
-        }
-        if (model) {
-          searchParam += `model=${model}&`;
-        }
-        if (minBudget && minBudget > 0.0) {
-          searchParam += `minBudget=${minBudget}&`;
-        }
-        if (maxBudget && maxBudget > 0.0) {
-          searchParam += `maxBudget=${maxBudget}&`;
-        }
-        if (vehicleType) {
-          searchParam += `type=${vehicleType}&`;
-        }
-        if (debouncedColor) {
-          searchParam += `color=${debouncedColor}&`;
-        }
-        if (transmissionType) {
-          searchParam += `transmissionType=${transmissionType}&`;
-        }
-        if (fuelType) {
-          searchParam += `fuelType=${fuelType}&`;
-        }
-        if (latitude && longitude) {
-          searchParam += `latitude=${latitude}&longitude=${longitude}&`;
-          if (distance) searchParam += `distance=${distance}&`;
-        }
-
-        const res: any = await getVehicles(searchParam);
+        const searchParams = buildSearchParams();
+        const res: any = await getVehicles(searchParams);
         setVehicles(res.vehicles);
         setTotalVehicles(res.totalVehicles);
         setTotalPages(res.totalPages);
@@ -107,8 +230,8 @@ export default function VehiclePage() {
     page,
     brand,
     model,
-    maxBudget,
     minBudget,
+    maxBudget,
     vehicleType,
     transmissionType,
     fuelType,
@@ -116,15 +239,18 @@ export default function VehiclePage() {
     latitude,
     longitude,
     distance,
+    fromYear,
+    toYear,
+    maxMileage,
+    minMileage,
+    sortBy,
+    vehicleCondition,
   ]);
 
-  const debouncedPostalCode = useDebounce(postalCode);
-
   useEffect(() => {
-    let ignore = false;
     async function fetch() {
       try {
-        if(!debouncedPostalCode) return;
+        if (!debouncedPostalCode) return;
         const res = await validatePostalCode(debouncedPostalCode);
         if (
           res.data.result &&
@@ -141,295 +267,463 @@ export default function VehiclePage() {
       }
     }
     fetch();
-    return () => {
-      ignore = true;
-    };
   }, [debouncedPostalCode]);
 
+  const clearAllFilters = () => {
+    setSearch({
+      minBudget: 0,
+      maxBudget: 0,
+      brand: "",
+      model: "",
+      vehicleType: "",
+      transmissionType: "",
+      fuelType: "",
+      color: "",
+      fromYear: "",
+      toYear: "",
+      maxMileage: 0,
+      minMileage: 0,
+      postalCode: "",
+      distance: "National",
+      vehicleCondition: "",
+    });
+    setSortBy("relevance");
+  };
 
-  return (
-    <div className="flex min-h-screen">
-      {/* Filter Sidebar */}
-      <div className="w-80 p-6 border-r">
-        {/* <h2 className="text-xl font-bold mb-6 text-blue-500">Filters</h2> */}
+  const handleSortChange = (newSortBy: string) => {
+    setSortBy(newSortBy);
+    setPage(1); // Reset to first page when sorting changes
+  };
 
-        <div className="space-y-6">
-          <div>
-            <h3 className="font-medium mb-2 text-blue-800">Location Filter</h3>
-            <div className="flex gap-2">
-              <div className="w-1/2">
-                <Input
-                  type="text"
-                  placeholder="Postal Code"
-                  className="pl-2 border-blue-200 focus:ring-blue-500"
-                  value={postalCode}
-                  onChange={async (e) => {
-                    const val = e.target.value;
-                    setSearch({
-                      postalCode: val,
-                    });
-                  }}
-                />
-              </div>
+  // Memoize the FilterSidebar to prevent unnecessary re-renders
+  const FilterSidebar = useMemo(() => (
+    <div
+      className={`${showFilters ? "fixed inset-0 z-50 bg-white" : "w-80"} ${
+        showFilters ? "overflow-y-auto" : ""
+      } p-6 border-r`}
+    >
+      {showFilters && (
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-blue-600">Filters</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(false)}
+            className="border-blue-200"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
-              <div className="w-1/2">
-                <Select
-                  value={distance}
-                  disabled={!latitude}
-                  onValueChange={(val)=>setSearch({distance:val})}
-                >
-                  <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
-                    <SelectValue
-                      placeholder="Distance"
-                      className="bg-white border-blue-200 focus:ring-blue-500"
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* <SelectItem value="All">All</SelectItem> */}
-                    {DISTANCES.map((m) => {
-                      return <SelectItem value={m}>{m}</SelectItem>;
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-
-    
+      <div className="space-y-4">
+        <FilterSection 
+          title="Location" 
+          isOpen={openSections.location}
+          onToggle={() => toggleSection('location')}
+        >
+          <div className="flex gap-2">
+            <div className="w-1/2">
+              <Input
+                type="text"
+                placeholder="Postal Code"
+                className="border-blue-200 focus:ring-blue-500"
+                value={postalCode}
+                onChange={(e) => {
+                  console.log(e.target.value);
+                  setSearch({ postalCode: e.target.value });
+                }}
+              />
+            </div>
+            <div className="w-1/2">
+              <Select
+                value={distance}
+                disabled={!latitude}
+                onValueChange={(val) => setSearch({ distance: val })}
+              >
+                <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                  <SelectValue placeholder="Distance" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DISTANCES.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        </FilterSection>
 
-          <div>
-            <h3 className="font-medium mb-2 text-blue-800">Price Range</h3>
-            <div className="flex gap-2">
-              <div>
-                <h3 className="text-blue-600">Min</h3>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9,]*"
-                  placeholder="Min"
-                  className="pl-10 border-blue-200 focus:ring-blue-500"
-                  value={minBudget > 0 ? minBudget.toLocaleString() : ""}
-                  onChange={(e) => {
-                    const rawValue = e.target.value
-                      .replace(/,/g, "")
-                      .replace(/\D/g, "");
-                    const numValue = Number(rawValue);
-                    setSearch({
-                      brand,
-                      model,
-                      maxBudget,
-                      minBudget: rawValue === "" ? 0 : numValue,
-                    });
-                  }}
-                />
-              </div>
-
-              <div>
-                <h3 className="text-blue-600">Max</h3>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9,]*"
-                  placeholder="Min"
-                  className="pl-10 border-blue-200 focus:ring-blue-500"
-                  value={maxBudget > 0 ? maxBudget.toLocaleString() : ""}
-                  onChange={(e) => {
-                    const rawValue = e.target.value
-                      .replace(/,/g, "")
-                      .replace(/\D/g, "");
-                    const numValue = Number(rawValue);
-                    setSearch({
-                      maxBudget: rawValue === "" ? 0 : numValue,
-                    });
-                  }}
-                />
-              </div>
+        <FilterSection 
+          title="Price Range" 
+          isOpen={openSections.priceRange}
+          onToggle={() => toggleSection('priceRange')}
+        >
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm text-blue-600 mb-1 block">
+                Min Budget
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9,]*"
+                placeholder="Min Budget"
+                className="border-blue-200 focus:ring-blue-500"
+                value={minBudget > 0 ? minBudget.toLocaleString() : ""}
+                onChange={(e) => {
+                  const rawValue = e.target.value
+                    .replace(/,/g, "")
+                    .replace(/\D/g, "");
+                  const numValue = Number(rawValue);
+                  setSearch({ minBudget: rawValue === "" ? 0 : numValue });
+                }}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-blue-600 mb-1 block">
+                Max Budget
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9,]*"
+                placeholder="Max Budget"
+                className="border-blue-200 focus:ring-blue-500"
+                value={maxBudget > 0 ? maxBudget.toLocaleString() : ""}
+                onChange={(e) => {
+                  const rawValue = e.target.value
+                    .replace(/,/g, "")
+                    .replace(/\D/g, "");
+                  const numValue = Number(rawValue);
+                  setSearch({ maxBudget: rawValue === "" ? 0 : numValue });
+                }}
+              />
             </div>
           </div>
+        </FilterSection>
 
-          <div>
-            <h3 className="font-medium mb-2 text-blue-800">Make</h3>
+        <FilterSection 
+          title="Make & Model"
+          isOpen={openSections.makeModel}
+          onToggle={() => toggleSection('makeModel')}
+        >
+          <div className="space-y-3">
             <Select
               value={brand}
               onValueChange={(value) =>
                 setSearch({
                   brand: value,
-                  model: value === "All" ? "All" : model,
-                  minBudget,
-                  maxBudget,
+                  model: value === "All" ? "" : model,
                 })
               }
             >
-              <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
-                <SelectValue
-                  placeholder="Brand"
-                  className="bg-white border-blue-200 focus:ring-blue-500"
-                />
+              <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                <SelectValue placeholder="Select Make" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All</SelectItem>
-                {ALL_MAKE.map((m) => {
-                  return <SelectItem value={m}>{m}</SelectItem>;
-                })}
+                <SelectItem value="All">All Makes</SelectItem>
+                {ALL_MAKE.map((make) => (
+                  <SelectItem key={make} value={make}>
+                    {make}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
 
-          <div>
-            <h3 className="font-medium mb-2 text-blue-800">Model</h3>
             <Select
               value={model}
-              disabled={!brand}
-              onValueChange={(value) =>
-                setSearch({
-                  brand,
-                  model: value,
-                  minBudget,
-                  maxBudget,
-                })
-              }
+              disabled={!brand || brand === "All"}
+              onValueChange={(value) => setSearch({ model: value })}
             >
-              <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
-                <SelectValue placeholder="Model" />
+              <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                <SelectValue placeholder="Select Model" />
               </SelectTrigger>
-
               <SelectContent>
-                <SelectItem value="All">All</SelectItem>
-                {MAKE_MODEL_MAP[brand]?.length > 0 &&
-                  MAKE_MODEL_MAP[brand as string].map((m) => {
-                    return <SelectItem value={m}>{m}</SelectItem>;
-                  })}
+                <SelectItem value="All">All Models</SelectItem>
+                {MAKE_MODEL_MAP[brand]?.map((model) => (
+                  <SelectItem key={model} value={model}>
+                    {model}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+        </FilterSection>
 
-          <div>
-            <h3 className="font-medium mb-2 text-blue-800">Vehicle Type</h3>
+        <FilterSection 
+          title="Vehicle Specifications"
+          isOpen={openSections.vehicleSpecs}
+          onToggle={() => toggleSection('vehicleSpecs')}
+        >
+          <div className="space-y-3">
             <Select
               value={vehicleType}
-              onValueChange={(value) =>
-                setSearch({
-                  vehicleType: value,
-                })
-              }
+              onValueChange={(value) => setSearch({ vehicleType: value })}
             >
-              <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
-                <SelectValue
-                  placeholder="Vehicle Type"
-                  className="bg-white border-blue-200 focus:ring-blue-500"
-                />
+              <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                <SelectValue placeholder="Vehicle Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">Any</SelectItem>
-                {vehicleTypes.map((m) => {
-                  return (
-                    <SelectItem value={m}>
-                      {m
-                        .split("")
-                        .map((ch, i) => (i == 0 ? ch.toUpperCase() : ch))
-                        .join("")}
-                    </SelectItem>
-                  );
-                })}
+                <SelectItem value="All">Any Type</SelectItem>
+                {vehicleTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
 
-          <div>
-            <h3 className="font-medium mb-2 text-blue-800">
-              Transmission Type
-            </h3>
             <Select
-              onValueChange={(value) =>
-                setSearch({
-                  transmissionType: value,
-                })
-              }
-              defaultValue={transmissionType}
+              value={transmissionType}
+              onValueChange={(value) => setSearch({ transmissionType: value })}
             >
-              <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
-                <SelectValue placeholder="Select transmission type" />
+              <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                <SelectValue placeholder="Transmission" />
               </SelectTrigger>
-              <SelectContent className="border-blue-200">
-                <SelectItem value="All">All</SelectItem>
+              <SelectContent>
+                <SelectItem value="All">Any Transmission</SelectItem>
                 {vehicleType &&
                   vehicleTransmissionsTypes[
                     vehicleType as keyof typeof vehicleTransmissionsTypes
-                  ] &&
-                  vehicleTransmissionsTypes[
-                    vehicleType as keyof typeof vehicleTransmissionsTypes
-                  ].map((transmission: string) => (
+                  ]?.map((transmission: string) => (
                     <SelectItem key={transmission} value={transmission}>
                       {transmission}
                     </SelectItem>
                   ))}
               </SelectContent>
             </Select>
-          </div>
 
-          <div>
-            <h3 className="font-medium mb-2 text-blue-800">Fuel Type</h3>
             <Select
-              onValueChange={(value) =>
-                setSearch({
-                  fuelType: value,
-                })
-              }
-              defaultValue={fuelType}
+              value={fuelType}
+              onValueChange={(value) => setSearch({ fuelType: value })}
             >
-              <SelectTrigger className="border-blue-200 focus:ring-blue-500 focus:border-blue-500">
-                <SelectValue placeholder="Select Fuel type" />
+              <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                <SelectValue placeholder="Fuel Type" />
               </SelectTrigger>
-              <SelectContent className="border-blue-200">
-                <SelectItem value="All">All</SelectItem>
+              <SelectContent>
+                <SelectItem value="All">Any Fuel</SelectItem>
                 {vehicleType &&
                   vehicleFuelTypes[
                     vehicleType as keyof typeof vehicleFuelTypes
-                  ] &&
-                  vehicleFuelTypes[
-                    vehicleType as keyof typeof vehicleFuelTypes
-                  ].map((fuelType: string) => (
-                    <SelectItem key={fuelType} value={fuelType}>
-                      {fuelType}
+                  ]?.map((fuel: string) => (
+                    <SelectItem key={fuel} value={fuel}>
+                      {fuel}
                     </SelectItem>
                   ))}
               </SelectContent>
             </Select>
           </div>
+        </FilterSection>
 
-          <div>
-            <h3 className="font-medium mb-2 text-blue-800">Color</h3>
-            <Input
-              type="text"
-              className="pl-10 border-blue-200 focus:ring-blue-500"
-              value={color}
-              onChange={(e) => {
-                setSearch({
-                  color: e.target.value,
-                });
-              }}
-            />
+        <FilterSection 
+          title="Year Range"
+          isOpen={openSections.yearRange}
+          onToggle={() => toggleSection('yearRange')}
+        >
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm text-blue-600 mb-1 block">
+                From Year
+              </label>
+              <Select
+                value={fromYear}
+                onValueChange={(value) => setSearch({ fromYear: value })}
+              >
+                <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                  <SelectValue placeholder="From Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {YEAR_OPTIONS.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm text-blue-600 mb-1 block">
+                To Year
+              </label>
+              <Select
+                value={toYear}
+                onValueChange={(value) => setSearch({ toYear: value })}
+              >
+                <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                  <SelectValue placeholder="To Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {YEAR_OPTIONS.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+        </FilterSection>
 
+        <FilterSection 
+          title="Mileage Range"
+          isOpen={openSections.mileageRange}
+          onToggle={() => toggleSection('mileageRange')}
+        >
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm text-blue-600 mb-1 block">
+                Min Mileage
+              </label>
+              <Select
+                value={minMileage > 0 ? minMileage.toString() : ""}
+                onValueChange={(value) =>
+                  setSearch({ minMileage: value ? Number(value) : 0 })
+                }
+              >
+                <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                  <SelectValue placeholder="Min Mileage" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MILEAGE_OPTIONS.map((mileage) => (
+                    <SelectItem key={mileage} value={mileage}>
+                      {Number(mileage).toLocaleString()} miles
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm text-blue-600 mb-1 block">
+                Max Mileage
+              </label>
+              <Select
+                value={maxMileage > 0 ? maxMileage.toString() : ""}
+                onValueChange={(value) =>
+                  setSearch({ maxMileage: value ? Number(value) : 0 })
+                }
+              >
+                <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                  <SelectValue placeholder="Max Mileage" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MILEAGE_OPTIONS.map((mileage) => (
+                    <SelectItem key={mileage} value={mileage}>
+                      {Number(mileage).toLocaleString()} miles
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </FilterSection>
+
+        <FilterSection 
+          title="Other"
+          isOpen={openSections.other}
+          onToggle={() => toggleSection('other')}
+        >
+          <div className="space-y-3">
+            <div className="w-1/2">
+              <Input
+                type="text"
+                placeholder="Color"
+                className="border-blue-200 focus:ring-blue-500"
+                value={color}
+                onChange={(e) => setSearch({ color: e.target.value })}
+              />
+            </div>
+            <div className="">
+              <Select
+                value={vehicleCondition}
+                onValueChange={(val) => setSearch({ vehicleCondition: val })}
+              >
+                <SelectTrigger className="border-blue-200 focus:ring-blue-500">
+                  <SelectValue placeholder="Vehicle Condition" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="ANY">Any</SelectItem>
+                  {vehicleConditions.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </FilterSection>
+
+        <div className="space-y-2 pt-4">
           <Button
             variant="outline"
-            className="w-full text-center border-blue-200 bg-white  font-normal "
-            onClick={() =>
-              setSearch({
-                minBudget: 0,
-                maxBudget: 0,
-                brand: "",
-                model: "",
-              })
-            }
+            className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
+            onClick={clearAllFilters}
           >
-            Clear Filters
+            Clear All Filters
           </Button>
+          {showFilters && (
+            <Button
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              onClick={() => setShowFilters(false)}
+            >
+              Apply Filters
+            </Button>
+          )}
         </div>
       </div>
+    </div>
+  ), [
+    showFilters,
+    openSections,
+    postalCode,
+    latitude,
+    distance,
+    minBudget,
+    maxBudget,
+    brand,
+    model,
+    vehicleType,
+    transmissionType,
+    fuelType,
+    fromYear,
+    toYear,
+    minMileage,
+    maxMileage,
+    color,
+    vehicleCondition
+  ]);
 
+  return (
+    <div className="flex min-h-screen">
+      {/* Mobile Filter Button */}
+      <div className="lg:hidden fixed bottom-4 right-4 z-40">
+        <Button
+          onClick={() => setShowFilters(true)}
+          className="bg-blue-600 hover:bg-blue-700 rounded-full p-4 shadow-lg"
+        >
+          <Filter className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        {FilterSidebar}
+      </div>
+
+      {/* Mobile Overlay */}
+      {showFilters && (
+        <div className="lg:hidden">
+          {FilterSidebar}
+        </div>
+      )}
+
+      {/* Main Content */}
       {isLoading ? (
-        <div className="w-full  p-4 flex flex-col gap-4 border-blue-200">
+        <div className="w-full p-4 flex flex-col gap-4">
           <Skeleton className="w-[90%] h-16 bg-blue-100" />
           <Skeleton className="w-full h-16 bg-blue-100" />
           <Skeleton className="w-full h-16 bg-blue-100" />
@@ -437,19 +731,44 @@ export default function VehiclePage() {
         </div>
       ) : (
         <div className="flex-1 p-6">
+          {/* Sort Section */}
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-blue-100">
+            <div className="text-sm text-blue-600">
+              Showing {vehicles.length} of {totalVehicles} vehicles
+            </div>
+            <div className="flex items-center gap-3">
+              <ArrowUpDown className="h-4 w-4 text-blue-600" />
+              <Select value={sortBy} onValueChange={handleSortChange}>
+                <SelectTrigger className="w-48 border-blue-200 focus:ring-blue-500">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORTING_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {vehicles.length == 0 ? (
+            {vehicles.length === 0 ? (
               <Alert className="border-blue-200 bg-blue-50 w-full col-span-full mb-4">
                 <AlertCircle className="h-4 w-4 text-blue-600" />
-                <AlertTitle className="text-blue-700">0 result</AlertTitle>
+                <AlertTitle className="text-blue-700">0 results</AlertTitle>
                 <AlertDescription className="text-blue-600">
                   No Vehicles Found!
                 </AlertDescription>
               </Alert>
             ) : (
-              vehicles.map((vehicle: any) => <VehicleCard vehicle={vehicle} />)
+              vehicles.map((vehicle: any) => (
+                <VehicleCard key={vehicle.id} vehicle={vehicle} />
+              ))
             )}
           </div>
+
           <div className="pt-2 flex justify-between bg-blue-50 rounded-sm mt-3">
             <div className="text-sm text-blue-600 rounded-sm px-2">
               Showing {vehicles.length} of {totalVehicles} vehicles
