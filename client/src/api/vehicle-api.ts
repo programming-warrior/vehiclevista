@@ -158,6 +158,31 @@ export async function incrementVehicleClicks(vehicleId: string) {
   }
 }
 
+
+
+export async function addOrRemoveVehicleToFavouriteApi(vehicleId:any, toAdd:boolean) {
+  try {
+    const response = await axios.post(
+      `${BACKEND_URL}/api/vehicles/update-favourite`,
+      {
+        vehicleId,
+        toAdd
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error incrementing vehicle clicks"
+    );
+  }
+}
+
 export async function incrementVehicleViews(vehicleId: string) {
   try {
     const response = await axios.post(

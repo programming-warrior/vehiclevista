@@ -10,6 +10,7 @@ import {
   vehicleDrafts,
   numberPlate,
   paymentSession,
+  auctionFavourites
 } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
@@ -250,6 +251,50 @@ auctionRouter.get("/get/:id", async (req, res) => {
     res
       .status(500)
       .json({ message: "Error fetching auction", error: err.message });
+  }
+});
+
+
+auctionRouter.post("/update-favourite", verifyToken, async (req, res) => {
+  try {
+    if (!req.userId) return res.status(403).json({ error: "unauthorized" });
+    let { auctionId, toAdd } = req.body;
+    auctionId = parseInt(auctionId, 10);
+    if (typeof auctionId !== "number" || isNaN(auctionId)) {
+      return res.status(400).json({ error: "auction ID or toAdd is missing" });
+    }
+    await db.transaction(async (trx) => {
+      const isFavourite = await trx.execute(
+        sql`
+      SELECT id 
+      FROM ${auctionFavourites}
+      WHERE ${auctionFavourites.auctionId} = ${auctionId}
+      AND ${auctionFavourites.userId} = ${req.userId}
+      FOR UPDATE
+    `
+      );
+
+      if (isFavourite.rows.length === 0) {
+        await trx.insert(auctionFavourites).values({
+          auctionId: auctionId,
+          userId: req.userId,
+        });
+      } else {
+        await trx
+          .delete(auctionFavourites)
+          .where(
+            and(
+              eq(auctionFavourites.auctionId, auctionId),
+              eq(auctionFavourites.userId, req.userId as number)
+            )
+          );
+      }
+    });
+
+    res.status(201).json({ message: "success" });
+  } catch (err: any) {
+    console.error("Error updating vehicle favourite:", err);
+    res.status(500).json({ message: "Error updating vehicle favourite" });
   }
 });
 

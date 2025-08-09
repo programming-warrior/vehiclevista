@@ -19,6 +19,7 @@ import {
   markClassifiedListingSold,
   markAuctionListingSold,
   editClassifiedListing,
+  getFavouriteVehicles
 } from "./user-api";
 import {
   getVehicles,
@@ -31,6 +32,7 @@ import {
   incrementVehicleClicks,
   incrementVehicleViews,
   getDraftVehicle,
+  addOrRemoveVehicleToFavouriteApi,
 } from "./vehicle-api";
 import {
   createAuction,
@@ -41,6 +43,7 @@ import {
   UpdateDraftAuctionWithItemDraft,
   createNumberPlate,
   verifyBidPayment,
+  addOrRemoveAuctionToFavouriteApi
 } from "./auction-api";
 
 import {
@@ -428,6 +431,7 @@ export {
   getFeaturedVehicles,
   incrementVehicleClicks,
   incrementVehicleViews,
+  addOrRemoveVehicleToFavouriteApi,
   getDraftVehicle,
   createAuction,
   getActiveAuctions,
@@ -437,12 +441,14 @@ export {
   UpdateDraftAuctionWithItemDraft,
   createNumberPlate,
   verifyBidPayment,
+  addOrRemoveAuctionToFavouriteApi,
   registerUser,
   loginUser,
   validateSession,
   logoutUser,
   getUserDetails,
   changePassword,
+  getFavouriteVehicles,
   getUserBids,
   updateUserCardInfo,
   googleAuth,

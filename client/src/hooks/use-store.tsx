@@ -185,7 +185,6 @@ export const useRedirectStore = create<RedirectStore>((set) => ({
   clearRedirectUrl: () => set({ redirectUrl: null }),
 }));
 
-
 type HeroSectionSearchState = {
   brand: string;
   model: string;
@@ -205,7 +204,9 @@ type HeroSectionSearchState = {
   maxMileage: number;
   minMileage: number;
   vehicleCondition: string;
-  setSearch: (search: Partial<Omit<HeroSectionSearchState, 'setSearch'>>) => void;
+  setSearch: (
+    search: Partial<Omit<HeroSectionSearchState, "setSearch">>
+  ) => void;
 };
 
 export const useHeroSectionSearch = create<HeroSectionSearchState>((set) => ({
@@ -225,8 +226,8 @@ export const useHeroSectionSearch = create<HeroSectionSearchState>((set) => ({
   fromYear: "",
   toYear: "",
   maxMileage: 0,
-  minMileage:0,
-  vehicleCondition:"",
+  minMileage: 0,
+  vehicleCondition: "",
   setSearch: (newSearch) =>
     set((state) => ({
       ...state,
@@ -282,5 +283,35 @@ export const useVehicleLists = create<VehicleState>((set) => ({
       vehicles: state.vehicles.map((vehicle) =>
         vehicle.id === id ? { ...vehicle, ...updates } : vehicle
       ),
+    })),
+}));
+
+export const useFavouriteListings = create<any>((set) => ({
+  vehicles: [],
+  auctions: [],
+  addVehicleToFavourite: (newVehicle: any) =>
+    set((state: any) => ({
+      ...state,
+      vehicles: state.vehicles.some((v: any) => v.id === newVehicle.id)
+        ? state.vehicles
+        : [...state.vehicles, newVehicle],
+    })),
+
+  addAuctionToFavourite: (newAuction: any) =>
+    set((state: any) => ({
+      ...state,
+      auctions: state.auctions.some((a: any) => a.id === newAuction.id)
+        ? state.auctions
+        : [...state.auctions, newAuction],
+    })),
+  removeAuctionFromFavourite: (auctionId: any) =>
+    set((state: any) => ({
+      ...state,
+      auctions: state.auctions.filter((a: any) => a.id != auctionId),
+    })),
+  removeVehicleFromFavourite: (vehicleId: any) =>
+    set((state: any) => ({
+      ...state,
+      vehicles: state.vehicles.filter((v: any) => v.id != vehicleId),
     })),
 }));

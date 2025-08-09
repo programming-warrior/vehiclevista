@@ -4,6 +4,7 @@ import {
   Vehicle,
   vehicleConditionsEnum,
   vehicleDrafts,
+  vehicleFavourites,
   vehicles,
 } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray, ilike } from "drizzle-orm";
@@ -548,6 +549,51 @@ vehicleRouter.post("/increase-views", async (req, res) => {
     res.status(500).json({ message: "Error updating views count" });
   }
 });
+
+vehicleRouter.post("/update-favourite", verifyToken, async (req, res) => {
+  try {
+    if (!req.userId) return res.status(403).json({ error: "unauthorized" });
+    let { vehicleId, toAdd } = req.body;
+    vehicleId = parseInt(vehicleId, 10);
+    if (typeof vehicleId !== "number" || isNaN(vehicleId)) {
+      return res.status(400).json({ error: "Vehicle ID or toAdd is missing" });
+    }
+    await db.transaction(async (trx) => {
+      const isFavourite = await trx.execute(
+        sql`
+      SELECT id 
+      FROM ${vehicleFavourites}
+      WHERE ${vehicleFavourites.vehicleId} = ${vehicleId}
+      AND ${vehicleFavourites.userId} = ${req.userId}
+      FOR UPDATE
+    `
+      );
+
+      if (isFavourite.rows.length === 0) {
+        await trx.insert(vehicleFavourites).values({
+          vehicleId: vehicleId,
+          userId: req.userId,
+        });
+      } else {
+        await trx
+          .delete(vehicleFavourites)
+          .where(
+            and(
+              eq(vehicleFavourites.vehicleId, vehicleId),
+              eq(vehicleFavourites.userId, req.userId as number)
+            )
+          );
+      }
+    });
+
+    res.status(201).json({ message: "success" });
+  } catch (err: any) {
+    console.error("Error updating vehicle favourite:", err);
+    res.status(500).json({ message: "Error updating vehicle favourite" });
+  }
+});
+
+
 
 vehicleRouter.post("/increase-clicks", async (req, res) => {
   try {

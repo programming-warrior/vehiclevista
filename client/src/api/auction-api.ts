@@ -48,6 +48,29 @@ export async function createNumberPlate(
   }
 }
 
+export async function addOrRemoveAuctionToFavouriteApi(auctionId:any, toAdd:boolean) {
+  try {
+    const response = await axios.post(
+      `${BACKEND_URL}/api/auction/update-favourite`,
+      {
+        auctionId,
+        toAdd
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error updating auction favourite"
+    );
+  }
+}
+
 export async function UpdateDraftAuctionWithItemDraft(
   auctionDraftId: number,
   itemId:number,

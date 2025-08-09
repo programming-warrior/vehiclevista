@@ -11,6 +11,7 @@ import {
   jsonb,
   foreignKey,
   pgEnum,
+  unique,
   json,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -28,7 +29,13 @@ export const userRolesEnum = pgEnum("user_roles", userRoles);
 export const vehicleTypes = ["car", "bike", "truck", "van"] as const;
 export const vehicleTypesEnum = pgEnum("vehicle_types", vehicleTypes);
 
-export const vehicleConditions = ["clean", "catS", "catN", "catA", "catB"] as const;
+export const vehicleConditions = [
+  "clean",
+  "catS",
+  "catN",
+  "catA",
+  "catB",
+] as const;
 export const vehicleConditionsEnum = pgEnum(
   "vehicle_conditions",
   vehicleConditions
@@ -93,13 +100,28 @@ export const vehicles = pgTable("vehicles", {
   leads: integer("leads").default(0),
 });
 
-export const paymentSession= pgTable("payment_session", {
+export const vehicleFavourites = pgTable(
+  "vehicle_favourite",
+  {
+    id: serial("id").primaryKey(),
+    vehicleId: integer("vehicle_id").references(() => vehicles.id),
+    userId: integer("user_id").references(() => users.id),
+  },
+  (table) => [unique().on(table.vehicleId, table.userId)]
+);
+
+export const auctionFavourites = pgTable("auction_favourites", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id")
-    .notNull(),
+  auctionId: integer("auction_id").references(() => auctions.id),
+  userId: integer("user_id").references(() => users.id),
+});
+
+export const paymentSession = pgTable("payment_session", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
   packageId: integer("package_id").references(() => packages.id),
   draftId: integer("draft_id"),
-  listingId: integer('listing_id'),
+  listingId: integer("listing_id"),
   amount: real("amount").notNull(),
   currency: text("currency").notNull().default("gbp"),
   status: text("status").notNull().default("PENDING"), // PENDING, SUCCEEDED
@@ -370,7 +392,7 @@ export const auctions = pgTable("auctions", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  itemType: text("item_type").notNull().default('VEHICLE'), // VEHICLE, NUMBER_PLATE
+  itemType: text("item_type").notNull().default("VEHICLE"), // VEHICLE, NUMBER_PLATE
   itemId: integer("item_id"),
   startingPrice: real("starting_price").notNull(),
   startDate: timestamp("start_date").notNull(),
@@ -386,16 +408,15 @@ export const auctions = pgTable("auctions", {
   leads: integer("leads").default(0),
 });
 
-
-export const numberPlate = pgTable("number_plate",{
+export const numberPlate = pgTable("number_plate", {
   id: serial("id").primaryKey(),
   plate_number: text("plate_number").notNull(),
   document_url: text("document_url").array().notNull(),
-  plate_value: real("plate_value").notNull(), 
-  sellerId: integer("seller_id").references(()=>users.id),
-  status: text().notNull().default('PENDING'), //PENDING, ACTIVE, EXPIRED
-  created_at: timestamp().defaultNow()
-})
+  plate_value: real("plate_value").notNull(),
+  sellerId: integer("seller_id").references(() => users.id),
+  status: text().notNull().default("PENDING"), //PENDING, ACTIVE, EXPIRED
+  created_at: timestamp().defaultNow(),
+});
 
 export const auctionWinner = pgTable("auction_winner", {
   id: serial("id").primaryKey(),
@@ -584,7 +605,9 @@ export const insertPackageSchema = createInsertSchema(packages).omit({
   createdAt: true,
 });
 
-export const insertUserPackageSchema = createInsertSchema(userListingPackages).omit({
+export const insertUserPackageSchema = createInsertSchema(
+  userListingPackages
+).omit({
   id: true,
 });
 

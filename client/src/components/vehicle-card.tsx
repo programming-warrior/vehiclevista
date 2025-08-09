@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Gauge, Fuel, Settings, Heart } from "lucide-react";
 import { Link } from "wouter";
 import type { Vehicle } from "@shared/schema";
-import { incrementVehicleClicks } from "@/api";
+import { addOrRemoveVehicleToFavouriteApi, incrementVehicleClicks,  } from "@/api";
+import { useFavouriteListings } from "@/hooks/use-store";
 
 const conditionColors = {
   clean: "bg-green-100 text-green-800",
@@ -28,12 +29,20 @@ export default function VehicleCard({
 vehicle: Vehicle;
   className?: string;
 }) {
-  const [isFavorite, setIsFavorite] = useState(false);
+  
   const VehicleCardRef = useRef<HTMLDivElement>(null);
+  const {vehicles, addVehicleToFavourite, removeVehicleFromFavourite} = useFavouriteListings();
+  console.log("vehicleId: ", vehicle.id)
+  console.log(vehicles)
+  const isFavorite= vehicles.find((v:any)=>vehicle.id==v.id) ? true : false;
+  console.log(isFavorite)
 
   const toggleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
-    setIsFavorite(!isFavorite);
+    if(isFavorite) removeVehicleFromFavourite(vehicle.id)
+    else addVehicleToFavourite(vehicle)
+    //send an api request to store it in the db
+    addOrRemoveVehicleToFavouriteApi(vehicle.id, !isFavorite).catch((e:any)=>console.error(e));
   };
 
   useEffect(() => {

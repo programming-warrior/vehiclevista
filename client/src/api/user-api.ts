@@ -162,6 +162,25 @@ export async function getUserDetails() {
   }
 }
 
+export async function getFavouriteVehicles() {
+  try {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/user/vehicle-fav`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error incrementing vehicle clicks"
+    );
+  }
+}
+
 //change password
 export async function changePassword(oldPassword: string, newPassword: string) {
   try {

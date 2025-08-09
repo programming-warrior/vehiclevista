@@ -12,7 +12,7 @@ import SearchMakes from "@/components/search-makes";
 import QualityBikesSection from "@/components/quality-bikes-section";
 import BikesCollection from "@/components/bikes-collection";
 import VansCollection from "@/components/vans-collection";
-import { getFeaturedVehicles } from "@/api";
+import { getFeaturedVehicles, getFavouriteVehicles } from "@/api";
 import { useUser } from "@/hooks/use-store";
 import Navbar from "@/components/navbar";
 import { ChevronRight } from "lucide-react";
@@ -20,7 +20,7 @@ import { Link } from "wouter";
 import RaffleHomeSection from "@/components/raffle-home-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
-import { useGlobalLoading } from "@/hooks/use-store";
+import { useGlobalLoading, useFavouriteListings } from "@/hooks/use-store";
 import Loader from "@/components/loader";
 
 export default function Home() {
@@ -30,7 +30,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [_, setLocation] = useLocation();
   const { globalLoading, setGlobalLoading } = useGlobalLoading();
-  
+  const {vehicles,addVehicleToFavourite} = useFavouriteListings();
 
   useEffect(() => {
     async function fetch() {
@@ -47,6 +47,21 @@ export default function Home() {
     fetch();
   }, [activeCategory]);
 
+  useEffect(() => {
+    async function fetch() {
+      try {
+        const data = await getFavouriteVehicles();
+        console.log(data);
+        data.favourites?.forEach((fv:any)=> addVehicleToFavourite(fv));
+      } catch (err) {
+        console.error("Error fetching featured vehicles:", err);
+      }
+    }
+    fetch();
+  }, []);
+
+  console.log(vehicles);
+
   console.log(userId);
   console.log(role);
 
@@ -62,10 +77,8 @@ export default function Home() {
       .join("")
   );
 
-  if(globalLoading) {
-    return (
-     <Loader/>
-    );
+  if (globalLoading) {
+    return <Loader />;
   }
 
   return (
@@ -144,7 +157,7 @@ export default function Home() {
                 size="lg"
                 variant="outline"
                 className="text-center border-blue-200 bg-white  font-normal "
-                onClick={()=>setLocation('/vehicle')}
+                onClick={() => setLocation("/vehicle")}
               >
                 View More <ChevronRight className="ml-2 h-5 w-5" />
               </Button>
@@ -167,7 +180,7 @@ export default function Home() {
         <LiveAuctionSection itemType="VEHICLE" auctionVehicleType="" />
       </section>
 
-           {/* Live Auction Section */}
+      {/* Live Auction Section */}
       <section className="px-12 mx-auto w-full">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">NumerPlate Auctions</h2>
