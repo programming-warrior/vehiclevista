@@ -181,6 +181,25 @@ export async function getFavouriteVehicles() {
   }
 }
 
+export async function getFavouriteAuctions() {
+  try {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/user/auction-fav`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error fetching favourite auction"
+    );
+  }
+}
+
 //change password
 export async function changePassword(oldPassword: string, newPassword: string) {
   try {

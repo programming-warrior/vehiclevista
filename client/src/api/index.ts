@@ -19,7 +19,8 @@ import {
   markClassifiedListingSold,
   markAuctionListingSold,
   editClassifiedListing,
-  getFavouriteVehicles
+  getFavouriteVehicles,
+  getFavouriteAuctions
 } from "./user-api";
 import {
   getVehicles,
@@ -449,6 +450,7 @@ export {
   getUserDetails,
   changePassword,
   getFavouriteVehicles,
+  getFavouriteAuctions,
   getUserBids,
   updateUserCardInfo,
   googleAuth,

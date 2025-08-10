@@ -106,6 +106,7 @@ export const vehicleFavourites = pgTable(
     id: serial("id").primaryKey(),
     vehicleId: integer("vehicle_id").references(() => vehicles.id),
     userId: integer("user_id").references(() => users.id),
+    createdAt: timestamp("created_at").defaultNow()
   },
   (table) => [unique().on(table.vehicleId, table.userId)]
 );
@@ -114,6 +115,7 @@ export const auctionFavourites = pgTable("auction_favourites", {
   id: serial("id").primaryKey(),
   auctionId: integer("auction_id").references(() => auctions.id),
   userId: integer("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow()
 });
 
 export const paymentSession = pgTable("payment_session", {

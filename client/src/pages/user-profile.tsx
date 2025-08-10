@@ -59,6 +59,8 @@ import { useToast } from "@/hooks/use-toast";
 import ProfileClassifiedTab from "@/components/user/classified-tab";
 import { useLocation } from "wouter";
 import ProfileAuctionTab from "@/components/user/auction-tab";
+import ProfileFavouriteVehicleTab from "@/components/user/favourite-vehicle-tab";
+import ProfileFavouriteAuctionTab from "@/components/user/favourite-auction-tab";
 
 const stripePromise = loadStripe(STRIPE_PUBLIC_KEY);
 
@@ -377,7 +379,7 @@ export default function UserProfile() {
               onValueChange={handleTabChange}
               className="h-full"
             >
-              <TabsList className="grid grid-cols-2 md:grid-cols-3 mb-6 bg-gray-100">
+              <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-6 bg-gray-100">
                 <TabsTrigger
                   value="account"
                   className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
@@ -399,13 +401,20 @@ export default function UserProfile() {
                   <History size={16} />
                   <span className="hidden md:inline">Auctions</span>
                 </TabsTrigger>
-                {/* <TabsTrigger
-                  value="saved"
+                <TabsTrigger
+                  value="favourite-vehicles"
                   className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
                 >
                   <Heart size={16} />
-                  <span className="hidden md:inline">Saved</span>
-                </TabsTrigger> */}
+                  <span className="hidden md:inline">Saved Vehi..</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="favourite-auctions"
+                  className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                >
+                  <Heart size={16} />
+                  <span className="hidden md:inline">Saved Auc..</span>
+                </TabsTrigger>
               </TabsList>
 
               <motion.div
@@ -622,6 +631,12 @@ export default function UserProfile() {
                 </TabsContent>
                 <TabsContent value="auctions" className="mt-0">
                   <ProfileAuctionTab />
+                </TabsContent>
+                <TabsContent value="favourite-vehicles" className="mt-0">
+                  <ProfileFavouriteVehicleTab />
+                </TabsContent>
+                <TabsContent value="favourite-auctions" className="mt-0">
+                  <ProfileFavouriteAuctionTab />
                 </TabsContent>
 
                 {/* <TabsContent value="saved" className="mt-0">

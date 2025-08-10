@@ -12,7 +12,11 @@ import SearchMakes from "@/components/search-makes";
 import QualityBikesSection from "@/components/quality-bikes-section";
 import BikesCollection from "@/components/bikes-collection";
 import VansCollection from "@/components/vans-collection";
-import { getFeaturedVehicles, getFavouriteVehicles } from "@/api";
+import {
+  getFeaturedVehicles,
+  getFavouriteVehicles,
+  getFavouriteAuctions,
+} from "@/api";
 import { useUser } from "@/hooks/use-store";
 import Navbar from "@/components/navbar";
 import { ChevronRight } from "lucide-react";
@@ -30,7 +34,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [_, setLocation] = useLocation();
   const { globalLoading, setGlobalLoading } = useGlobalLoading();
-  const {vehicles,addVehicleToFavourite} = useFavouriteListings();
+  const { vehicles, addVehicleToFavourite, auctions, addAuctionToFavourite } =
+    useFavouriteListings();
 
   useEffect(() => {
     async function fetch() {
@@ -48,16 +53,24 @@ export default function Home() {
   }, [activeCategory]);
 
   useEffect(() => {
-    async function fetch() {
-      try {
-        const data = await getFavouriteVehicles();
-        console.log(data);
-        data.favourites?.forEach((fv:any)=> addVehicleToFavourite(fv));
-      } catch (err) {
-        console.error("Error fetching featured vehicles:", err);
-      }
+    async function fetchFav() {
+        getFavouriteVehicles()
+          .then((data) => {
+            data.favourites?.forEach((fv: any) => addVehicleToFavourite(fv));
+          })
+          .catch((e) => {
+            console.error(e)
+          });
+        getFavouriteAuctions()
+          .then((data) => {
+            data.favourites?.forEach((fv: any) => addAuctionToFavourite(fv));
+          })
+          .catch((e) => {
+            console.error(e)
+          });
+ 
     }
-    fetch();
+    fetchFav();
   }, []);
 
   console.log(vehicles);

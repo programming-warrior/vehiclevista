@@ -6,7 +6,7 @@ export default function CountdownTimer({
   setAuction,
 }: {
   auction: any;
-  setAuction: any;
+  setAuction?: any;
 }) {
   const [timeLeft, setTimeLeft] = useState<string>("00:00:00:00");
   const { socket } = useWebSocket();
@@ -14,24 +14,53 @@ export default function CountdownTimer({
   const isSubscribedRef = useRef<boolean>(false);
   // console.log(timeLeft);
 
+  function updateTimerDisplay(distance: number) {
+    if (distance <= 0) {
+      setTimeLeft("Ended");
+      return;
+    }
+
+    const totalSeconds = Math.floor(distance / 1000);
+    const days = Math.floor(totalSeconds / (3600 * 24));
+    const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    setTimeLeft(
+      `${days.toString().padStart(2, "0")}:${hours
+        .toString()
+        .padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds
+        .toString()
+        .padStart(2, "0")}`
+    );
+  }
+
   useEffect(() => {
     // Set up timer to decrease remainingTime locally every second
     if (
       !socket ||
-      socket.readyState !== WebSocket.OPEN ||
-      isSubscribedRef.current
+      socket.readyState !== WebSocket.OPEN 
     ) {
+      console.log("Socket is not open, now starting timer.");
+      timerRef.current = setInterval(() => {
+        // console.log("timer running: " + auction.id);
+        const now = new Date().getTime();
+        const endTimeDate = new Date(auction.endDate).getTime();
+        let distance = endTimeDate - now;
+        updateTimerDisplay(distance);
+      }, 1000);
       return;
     }
 
-    socket.send(
-      JSON.stringify({
-        type: "subscribe",
-        payload: {
-          auctionId: auction.id,
-        },
-      })
-    );
+    if(!isSubscribedRef)
+      socket.send(
+        JSON.stringify({
+          type: "subscribe",
+          payload: {
+            auctionId: auction.id,
+          },
+        })
+      );
 
     isSubscribedRef.current = true;
     // Handle WebSocket messages
@@ -40,11 +69,13 @@ export default function CountdownTimer({
         const data = JSON.parse(event.data);
         if (data.event === "AUCTION_TIMER") {
           console.log("received auction timer update");
-          setAuction((prevAuction: any) =>
-            prevAuction.id.toString() == data.message.auctionId
-              ? { ...prevAuction, remainingTime: data.message.remainingTime }
-              : prevAuction
-          );
+          updateTimerDisplay(data.message.remainingTime);
+          // if (setAuction && typeof setAuction == "function")
+          //   setAuction((prevAuction: any) =>
+          //     prevAuction.id.toString() == data.message.auctionId
+          //       ? { ...prevAuction, remainingTime: data.message.remainingTime }
+          //       : prevAuction
+          //   );
         }
       } catch (err) {
         console.error("Error processing WebSocket message:", err);
@@ -70,45 +101,6 @@ export default function CountdownTimer({
     };
   }, [socket]);
 
-  useEffect(() => {
-    const initialDistance = auction.remainingTime || 0;
-
-    updateTimerDisplay(initialDistance);
-
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      console.log("Socket is not open, not starting timer.");
-      timerRef.current = setInterval(() => {
-        // console.log("timer running: " + auction.id);
-        const now = new Date().getTime();
-        const endTimeDate = new Date(auction.endDate).getTime();
-        let distance = endTimeDate - now;
-        updateTimerDisplay(distance);
-      }, 1000);
-    }
-
-    function updateTimerDisplay(distance: number) {
-      if (distance <= 0) {
-        setTimeLeft("Ended");
-        return;
-      }
-
-      const totalSeconds = Math.floor(distance / 1000);
-      const days = Math.floor(totalSeconds / (3600 * 24));
-      const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-
-      setTimeLeft(
-        `${days.toString().padStart(2, "0")}:${hours
-          .toString()
-          .padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds
-          .toString()
-          .padStart(2, "0")}`
-      );
-    }
-
-    return () => {};
-  }, [auction.remainingTime, socket]);
 
   useEffect(() => {
     return () => {

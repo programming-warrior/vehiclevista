@@ -25,6 +25,7 @@ import { verifyToken } from "../middleware/authMiddleware";
 import { userSessionSchema } from "../utils/session";
 import { notificationQueue, cleanupQueue } from "../worker/queue";
 import { vehicleEditSchema } from "../../shared/zodSchema/vehicleSchema";
+import { LetterText } from "lucide-react";
 
 const userRouter = Router();
 
@@ -72,6 +73,9 @@ userRouter.get("/listings/classified", verifyToken, async (req, res) => {
   const limitNumber = parseInt(limit as string) || 10;
   const offset = (pageNumber - 1) * limitNumber;
 
+  console.log("limit Number: ", limitNumber);
+  console.log("pageNumber: ", pageNumber);
+
   let filterOptions: any = {};
   let searchTerm = "";
   let statusFilter = null;
@@ -89,10 +93,6 @@ userRouter.get("/listings/classified", verifyToken, async (req, res) => {
 
   // Determine sort order
   let orderByClause = sql`${vehicles.createdAt} DESC`;
-
-  console.log(sortBy);
-  console.log(searchTerm);
-  console.log(statusFilter);
 
   if (sortBy === "oldest") {
     orderByClause = sql`${vehicles.createdAt} ASC`;
@@ -179,7 +179,11 @@ userRouter.get("/listings/classified", verifyToken, async (req, res) => {
     countQuery.where(and(...whereClause));
   }
 
+  console.log("result");
+  console.log(result);
+
   const [{ count: totalVehicles }] = await countQuery;
+  console.log("totalVehicles: ", totalVehicles);
 
   return res.status(200).json({
     listings: result.splice(0, limitNumber),
@@ -764,7 +768,8 @@ userRouter.get("/vehicle-fav", verifyToken, async (req, res) => {
     if (!req.userId) return res.status(403).json({ error: "unauthorized" });
     const { page = "1", limit = "10" } = req.query;
     const pageNum = parseInt(page as string, 10);
-    const pageSize = parseInt(limit as string, 10);
+    let pageSize = parseInt(limit as string, 10);
+    pageSize = Math.max(pageSize, 50);
     const offset = (pageNum - 1) * pageSize;
     const vehiclesData = await db
       .select({
@@ -774,7 +779,7 @@ userRouter.get("/vehicle-fav", verifyToken, async (req, res) => {
       .from(vehicleFavourites)
       .innerJoin(vehicles, eq(vehicleFavourites.vehicleId, vehicles.id))
       .where(eq(vehicleFavourites.userId, req.userId))
-      .limit(pageSize)
+      .limit(pageSize + 1)
       .offset(offset);
 
     const [{ count }] = await db
@@ -782,15 +787,13 @@ userRouter.get("/vehicle-fav", verifyToken, async (req, res) => {
       .from(vehicleFavourites)
       .where(eq(vehicleFavourites.userId, req.userId));
 
-    res.status(200).json({
+    return res.status(200).json({
       favourites: vehiclesData.splice(0, pageSize).map((data) => data.vehicle),
       total: count,
       totalPages: Math.ceil(count / pageSize),
       currentPage: pageNum,
       hasNextPage: vehiclesData.length > pageSize,
     });
-
-    return;
   } catch (err: any) {
     console.error("Error fetching vehicle favourite:", err);
     res.status(500).json({ message: "Error fetching vehicle favourite" });
@@ -803,7 +806,8 @@ userRouter.get("/auction-fav", verifyToken, async (req, res) => {
     if (!req.userId) return res.status(403).json({ error: "unauthorized" });
     const { page = "1", limit = "10" } = req.query;
     const pageNum = parseInt(page as string, 10);
-    const pageSize = parseInt(limit as string, 10);
+    let pageSize = parseInt(limit as string, 10);
+    pageSize = Math.max(pageSize, 50);
     const offset = (pageNum - 1) * pageSize;
     const result = await db
       .select({
@@ -813,68 +817,71 @@ userRouter.get("/auction-fav", verifyToken, async (req, res) => {
       .from(auctionFavourites)
       .innerJoin(auctions, eq(auctionFavourites.auctionId, auctions.id))
       .where(eq(auctionFavourites.userId, req.userId))
-      .limit(pageSize)
+      .limit(pageSize + 1)
       .offset(offset);
+    console.log(result);
 
     //get the item data based on  auction itemType
-    const auctionData = result.map(async (r) => {
-      if (r.auction.itemType === "VEHICLE") {
-        const [vehicleData] = await db
-          .select()
-          .from(vehicles)
-          .where(eq(vehicles.id, Number(r.auction.itemId)));
+    const auctionData = await Promise.all(
+      result.map(async (r) => {
+        if (r.auction.itemType === "VEHICLE") {
+          const [vehicleData] = await db
+            .select()
+            .from(vehicles)
+            .where(eq(vehicles.id, Number(r.auction.itemId)));
 
-        return {
-          ...r.auction,
-          remainingTime: new Date(r.auction.endDate).getTime() - Date.now(),
-          vehicle: {
-            id: vehicleData.id,
-            make: vehicleData.make,
-            model: vehicleData.model,
-            year: vehicleData.year,
-            color: vehicleData.color,
-            registration_num: vehicleData.registration_num,
-            bodyType: vehicleData.bodyType,
-            mileage: vehicleData.mileage,
-            fuelType: vehicleData.fuelType,
-            transmission: vehicleData.transmission,
-            price: vehicleData.price,
-            images: vehicleData.images,
-          },
-        };
-      } else if (r.auction.itemType === "NUMBER_PLATE") {
-        const [numberPlateData] = await db
-          .select()
-          .from(numberPlate)
-          .where(eq(numberPlate.id, Number(r.auction.itemId)));
+          return {
+            ...r.auction,
+            remainingTime: new Date(r.auction.endDate).getTime() - Date.now(),
+            vehicle: {
+              id: vehicleData.id,
+              make: vehicleData.make,
+              model: vehicleData.model,
+              year: vehicleData.year,
+              color: vehicleData.color,
+              registration_num: vehicleData.registration_num,
+              bodyType: vehicleData.bodyType,
+              mileage: vehicleData.mileage,
+              fuelType: vehicleData.fuelType,
+              transmission: vehicleData.transmission,
+              price: vehicleData.price,
+              images: vehicleData.images,
+            },
+          };
+        } else if (r.auction.itemType === "NUMBER_PLATE") {
+          const [numberPlateData] = await db
+            .select()
+            .from(numberPlate)
+            .where(eq(numberPlate.id, Number(r.auction.itemId)));
 
-        return {
-          ...r.auction,
-          remainingTime: new Date(r.auction.endDate).getTime() - Date.now(),
-          numberPlate: {
-            id: numberPlateData.id,
-            document_urls: numberPlateData.document_url,
-            plate_number: numberPlateData.plate_number,
-            plate_value: numberPlateData.plate_value,
-          },
-        };
-      }
-    });
+          return {
+            ...r.auction,
+            remainingTime: new Date(r.auction.endDate).getTime() - Date.now(),
+            numberPlate: {
+              id: numberPlateData.id,
+              document_urls: numberPlateData.document_url,
+              plate_number: numberPlateData.plate_number,
+              plate_value: numberPlateData.plate_value,
+            },
+          };
+        }
+      })
+    );
+
+    console.log(auctionData);
 
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(auctionFavourites)
       .where(eq(auctionFavourites.userId, req.userId));
 
-    res.status(200).json({
-      favourites: auctionData.splice(0, pageSize),
+    return res.status(200).json({
+      favourites: auctionData,
       total: count,
       totalPages: Math.ceil(count / pageSize),
       currentPage: pageNum,
       hasNextPage: auctionData.length > pageSize,
     });
-
-    return;
   } catch (err: any) {
     console.error("Error fetching vehicle favourite:", err);
     res.status(500).json({ message: "Error fetching vehicle favourite" });
