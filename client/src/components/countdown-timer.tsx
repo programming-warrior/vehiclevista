@@ -52,7 +52,7 @@ export default function CountdownTimer({
       return;
     }
 
-    if(!isSubscribedRef)
+    if(!isSubscribedRef.current)
       socket.send(
         JSON.stringify({
           type: "subscribe",
