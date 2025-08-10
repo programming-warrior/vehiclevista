@@ -654,7 +654,6 @@ vehicleRouter.post("/upload-single", verifyToken, async (req, res) => {
       price: parseFloat(result.data.price),
       year: parseInt(result.data.year),
       mileage: parseFloat(result.data.mileage),
-      category: "classified",
       sellerId: req.userId as number,
     };
     console.log(data);

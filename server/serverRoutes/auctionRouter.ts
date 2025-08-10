@@ -114,6 +114,7 @@ auctionRouter.get("/get", async (req, res) => {
             id: vehicle.id,
             make: vehicle.make,
             model: vehicle.model,
+            description: vehicle.description,
             year: vehicle.year,
             color: vehicle.color,
             registration_num: vehicle.registration_num,
@@ -123,6 +124,9 @@ auctionRouter.get("/get", async (req, res) => {
             transmission: vehicle.transmission,
             price: vehicle.price,
             images: vehicle.images,
+            latitude: vehicle.latitude,
+            longitude: vehicle.longitude,
+            location: vehicle.location,
           },
         };
       });

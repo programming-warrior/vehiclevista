@@ -83,14 +83,16 @@ export const vehicles = pgTable("vehicles", {
   latitude: real("latitude"),
   longitude: real("longitude"),
   images: text("images").array().notNull(),
-  category: text("category").notNull(), // 'dealer', 'classified', 'auction'
+  category: text("category"), // 'dealer', 'classified', 'auction'
   condition: vehicleConditionsEnum().notNull().default("clean"),
   openToPX: boolean("open_to_px").default(false),
   sellerId: integer("seller_id").notNull(),
   sellerType: text("seller_type"), // private, trader, garage
   contactPreference: text("contact_preference"), // 'phone', 'email', 'both'
   listingStatus: vehicleListingStatusEnum().notNull().default("ACTIVE"),
-  listingType: text().default("CLASSIFIED"), //for knowing if the vehicle is listed as classified or through auction
+  listingType: text("listing_type").default("CLASSIFIED"), //for knowing if the vehicle is listed as classified or through auction
+  others: json("others").default(null), // may contain number_of_doors, co2_emission, mpg_range_filter, number_prev_owner, first_registration  ... 
+  engine: json("engine").default(null),
   expiresAt: timestamp("expires_at"),
   blacklistReason: text("reason"),
   negotiable: boolean("negotiable").default(true),
@@ -165,15 +167,17 @@ export const vehicleDrafts = pgTable("vehicle_drafts", {
   location: text("location").notNull(),
   latitude: real("latitude"),
   longitude: real("longitude"),
+  others: json("others").default(null), // may contain number_of_doors, co2_emission, mpg_range_filter, number_prev_owner, first_registration  ... 
+  engine: json("engine").default(null),
   images: text("images").array().notNull(),
-  category: text("category").notNull(), // 'dealer', 'classified', 'auction'
+  category: text("category"), // 'dealer', 'classified', 'auction'
   condition: vehicleConditionsEnum().notNull().default("clean"),
   openToPX: boolean("open_to_px").default(false),
   sellerId: integer("seller_id").notNull(),
   sellerType: text("seller_type"), // private, trader, garage
   contactPreference: text("contact_preference"), // 'phone', 'email', 'both'
   listingStatus: vehicleListingStatusEnum().notNull().default("ACTIVE"),
-  listingType: text().default("CLASSIFIED"),
+  listingType: text("listing_type").default("CLASSIFIED"),
   blacklistReason: text("reason"),
   negotiable: boolean("negotiable").default(true),
   createdAt: timestamp("created_at").defaultNow(),

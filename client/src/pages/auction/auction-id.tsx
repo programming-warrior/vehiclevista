@@ -109,7 +109,7 @@ export default function AuctionIdPage() {
 
       toast({
         title: "New Bid Placed! 🎯",
-        description: `New bid of $${msg.bidAmount} has been placed!`,
+        description: `New bid of ${msg.bidAmount} has been placed!`,
         duration: 4000,
       });
     };
@@ -233,7 +233,6 @@ export default function AuctionIdPage() {
                     Current Bid
                   </span>
                   <span className={`text-2xl font-bold flex items-center transition-all duration-500 ${currentBidPulse ? 'text-green-400 scale-110 animate-pulse' : ''}`}>
-                    <DollarSign size={20} className="mr-1" />
                     {auction.currentBid}
                   </span>
                 </div>
@@ -279,10 +278,13 @@ export default function AuctionIdPage() {
                     : "Auction Item")}
               </h1>
               <div className="flex items-center gap-4 text-gray-600">
-                <div className="flex items-center gap-2">
+                {/* <div className="flex items-center gap-2">
+                  {
+                    
+                  }
                   <MapPin size={16} />
-                  <span>{auction.location || "Location not specified"}</span>
-                </div>
+                  <span>{auction.vehicle.location || "Location not specified"}</span>
+                </div> */}
                 <div className="flex items-center gap-2">
                   <Tag size={16} />
                   <span className="capitalize">
@@ -461,7 +463,7 @@ export default function AuctionIdPage() {
                             <span>Plate Value</span>
                           </div>
                           <span className="font-medium">
-                            $
+                            
                             {auction.numberPlate.plate_value ||
                               auction.startingPrice ||
                               "N/A"}
@@ -481,15 +483,7 @@ export default function AuctionIdPage() {
                       </>
                     )}
 
-                    <div className="flex items-center justify-between border-t pt-3">
-                      <div className="flex items-center text-gray-700">
-                        <DollarSign size={18} className="mr-2" />
-                        <span>Starting Price</span>
-                      </div>
-                      <span className="font-medium">
-                        ${auction.startingPrice}
-                      </span>
-                    </div>
+                
                   </div>
 
                   <Button
@@ -548,7 +542,7 @@ export default function AuctionIdPage() {
                                 )}
                               </td>
                               <td className={`py-2 ${bid.id === newBidId ? 'font-bold text-green-600' : ''}`}>
-                                ${bid.bidAmount}
+                                {bid.bidAmount}
                               </td>
                               <td className="py-2 text-gray-500">
                                 {new Date(bid.createdAt).toLocaleString(
@@ -634,7 +628,7 @@ export default function AuctionIdPage() {
                 <div className="flex items-center">
                   <DollarSign size={18} className="mr-2 text-gray-600" />
                   <span className="font-semibold">Current Bid:</span>
-                  <span className="ml-2">${currentBid}</span>
+                  <span className="ml-2">{currentBid}</span>
                 </div>
 
                 <div className="flex items-center">
@@ -659,7 +653,7 @@ export default function AuctionIdPage() {
                   className={`w-full border rounded-md px-3 py-2 ${
                     bidError ? "border-red-500 bg-red-50" : "border-gray-300"
                   }`}
-                  placeholder={`Min bid: $${currentBid}`}
+                  placeholder={`Min bid: ${currentBid}`}
                   value={bidAmount}
                   onChange={handleBidInput}
                 />
@@ -722,7 +716,7 @@ export default function AuctionIdPage() {
                             )}
                           </td>
                           <td className={`py-3 px-4 font-medium ${bid.id === newBidId ? 'font-bold text-green-600' : ''}`}>
-                            ${bid.bidAmount}
+                            {bid.bidAmount}
                           </td>
                           <td className="py-3 px-4 text-gray-500">
                             {bid.createdAt}

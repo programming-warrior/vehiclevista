@@ -69,11 +69,28 @@ const VehicleUploadForm = ({
     resolver: zodResolver(vehicleUploadSchema),
     defaultValues: {
       title: "",
+      engine: {
+        capacity: prefetchedData?.result?.engine_data?.engine_badged_size_litres,
+        number_cylinders: prefetchedData?.result?.engine_data?.number_cylinders,
+        co2_emission: prefetchedData?.result?.engine_data?.co2_gkm,
+        cylinder_arrangement:
+          prefetchedData?.result?.engine_data?.cylinder_arrangement,
+      },
+      others: {
+        number_doors: prefetchedData?.result?.basic_vehicle_info?.number_doors,
+        number_seats: prefetchedData?.result?.basic_vehicle_info?.number_seats,
+        drive_train:
+          prefetchedData?.result?.basic_vehicle_info
+            ?.autotrader_drivetrain_type_desc,
+        number_previous_owners:
+          prefetchedData?.result?.basic_vehicle_check?.number_previous_keepers,
+      },
       type:
         prefetchedData?.result?.basic_vehicle_info?.autotrader_asset_type?.toLowerCase() ??
         "car",
       make: prefetchedData?.result?.basic_vehicle_info?.manufacturer_desc ?? "",
-      model: prefetchedData?.result?.basic_vehicle_info?.model_range_desc ?? "",
+      model:
+        prefetchedData?.result?.basic_vehicle_info?.model_range_desc ?? "",
       price: "",
       year: "",
       mileage: prefetchedData?.mileage.toString() ?? "",
@@ -556,7 +573,9 @@ const VehicleUploadForm = ({
                   name="condition"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-blue-800">Condition</FormLabel>
+                      <FormLabel className="text-blue-800">
+                        Condition
+                      </FormLabel>
                       <FormControl>
                         <Select
                           onValueChange={field.onChange}
@@ -683,7 +702,9 @@ const VehicleUploadForm = ({
                   name="fuelType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-blue-800">Fuel Type</FormLabel>
+                      <FormLabel className="text-blue-800">
+                        Fuel Type
+                      </FormLabel>
                       <FormControl>
                         <Select
                           onValueChange={field.onChange}
@@ -750,7 +771,9 @@ const VehicleUploadForm = ({
                   name="bodyType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-blue-800">Body Type</FormLabel>
+                      <FormLabel className="text-blue-800">
+                        Body Type
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="text"
@@ -763,6 +786,129 @@ const VehicleUploadForm = ({
                     </FormItem>
                   )}
                 />
+                {/* START: Added Fields */}
+                <FormField
+                  control={form.control}
+                  name="others.number_doors"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-blue-800">
+                        Number of Doors
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="e.g. 4"
+                          className="border-blue-200 focus:ring-blue-500 focus:border-blue-500"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="others.number_seats"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-blue-800">
+                        Number of Seats
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="e.g. 5"
+                          className="border-blue-200 focus:ring-blue-500 focus:border-blue-500"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="others.drive_train"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-blue-800">
+                        Drive Train
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="e.g. FWD"
+                          className="border-blue-200 focus:ring-blue-500 focus:border-blue-500"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="engine.capacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-blue-800">
+                        Engine Capacity (Litres)
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="e.g. 2.0"
+                          step="0.1"
+                          className="border-blue-200 focus:ring-blue-500 focus:border-blue-500"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="engine.co2_emission"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-blue-800">
+                        CO₂ Emission (g/km)
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="e.g. 120"
+                          className="border-blue-200 focus:ring-blue-500 focus:border-blue-500"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="engine.number_cylinders"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-blue-800">
+                        Number of Cylinders
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="e.g. 4"
+                          className="border-blue-200 focus:ring-blue-500 focus:border-blue-500"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {/* END: Added Fields */}
               </div>
             </div>
 

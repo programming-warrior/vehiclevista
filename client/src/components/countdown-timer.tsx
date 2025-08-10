@@ -12,7 +12,6 @@ export default function CountdownTimer({
   const { socket } = useWebSocket();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isSubscribedRef = useRef<boolean>(false);
-  // console.log(timeLeft);
 
   function updateTimerDisplay(distance: number) {
     if (distance <= 0) {
@@ -36,11 +35,12 @@ export default function CountdownTimer({
   }
 
   useEffect(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     // Set up timer to decrease remainingTime locally every second
-    if (
-      !socket ||
-      socket.readyState !== WebSocket.OPEN 
-    ) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
       console.log("Socket is not open, now starting timer.");
       timerRef.current = setInterval(() => {
         // console.log("timer running: " + auction.id);
@@ -52,7 +52,7 @@ export default function CountdownTimer({
       return;
     }
 
-    if(!isSubscribedRef.current)
+    if (!isSubscribedRef.current)
       socket.send(
         JSON.stringify({
           type: "subscribe",
@@ -100,7 +100,6 @@ export default function CountdownTimer({
       isSubscribedRef.current = false;
     };
   }, [socket]);
-
 
   useEffect(() => {
     return () => {

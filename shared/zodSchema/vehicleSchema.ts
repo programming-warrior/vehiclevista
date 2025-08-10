@@ -60,6 +60,8 @@ export const vehicleUploadSchema = z.object({
   }).optional(),
   // listingStatus: z.enum(["active", "inactive"], { required_error: "Listing status is required" }),
   negotiable: z.boolean().optional(),
+  engine: z.any(),
+  others: z.any()
 });
 
 

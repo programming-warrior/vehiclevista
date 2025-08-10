@@ -12,6 +12,13 @@ import {
   Info,
   MessageSquare,
   Check,
+  // Imported new icons for better UI
+  DoorOpen,
+  Armchair,
+  Users,
+  Cog,
+  Wind,
+  GitCommitHorizontal,
 } from "lucide-react";
 import { getVehicleById } from "@/api/vehicle-api";
 import { Button } from "@/components/ui/button";
@@ -44,6 +51,11 @@ export default function VehicleIdPage() {
   const [isOwner, setIsOwner] = useState(false);
   const [contactMessage, setContactMessage] = useState("");
 
+  // Helper function to format strings (e.g., "MANUAL" => "Manual")
+  const formatString = (str: string | null | undefined): string => {
+    if (!str || typeof str !== "string") return "N/A";
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
 
   useEffect(() => {
     setIsOwner(userId === vehicle?.sellerId);
@@ -131,11 +143,21 @@ export default function VehicleIdPage() {
                 <Badge variant="secondary">
                   {vehicle.mileage.toLocaleString()} miles
                 </Badge>
-                <Badge variant="secondary">{vehicle.transmission}</Badge>
-                <Badge variant="secondary">{vehicle.fuelType}</Badge>
-                <Badge variant="secondary">{vehicle.bodyType}</Badge>
-                <Badge variant="secondary">{vehicle.color}</Badge>
-                <Badge variant="secondary">{vehicle.condition}</Badge>
+                <Badge variant="secondary">
+                  {formatString(vehicle.transmission)}
+                </Badge>
+                <Badge variant="secondary">
+                  {formatString(vehicle.fuelType)}
+                </Badge>
+                <Badge variant="secondary">
+                  {formatString(vehicle.bodyType)}
+                </Badge>
+                <Badge variant="secondary">
+                  {formatString(vehicle.color)}
+                </Badge>
+                <Badge variant="secondary">
+                  {formatString(vehicle.condition)}
+                </Badge>
                 {vehicle.openToPX && (
                   <Badge
                     variant="outline"
@@ -150,107 +172,115 @@ export default function VehicleIdPage() {
 
               {/* Vehicle specifications */}
               <div className="grid md:grid-cols-2 gap-6 mb-8">
+                {/* Card 1: Key Details */}
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h2 className="text-lg font-semibold mb-4 flex items-center">
                     <Info size={18} className="mr-2" />
                     Vehicle Details
                   </h2>
-
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
                         <Tag size={16} className="mr-2" />
                         <span>Make</span>
                       </div>
-                      <span className="font-medium">{vehicle.make}</span>
+                      <span className="font-medium">
+                        {formatString(vehicle.make)}
+                      </span>
                     </div>
-
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
                         <Tag size={16} className="mr-2" />
                         <span>Model</span>
                       </div>
-                      <span className="font-medium">{vehicle.model}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center text-gray-700">
-                        <Calendar size={16} className="mr-2" />
-                        <span>Year</span>
-                      </div>
-                      <span className="font-medium">{vehicle.year}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center text-gray-700">
-                        <Gauge size={16} className="mr-2" />
-                        <span>Mileage</span>
-                      </div>
                       <span className="font-medium">
-                        {vehicle.mileage.toLocaleString()} miles
+                        {formatString(vehicle.model)}
                       </span>
                     </div>
-
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
-                        <Palette size={16} className="mr-2" />
-                        <span>Color</span>
+                        <DoorOpen size={16} className="mr-2" />
+                        <span>Doors</span>
                       </div>
-                      <span className="font-medium">{vehicle.color}</span>
+                      <span className="font-medium">
+                        {vehicle.others?.number_doors ?? "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <Armchair size={16} className="mr-2" />
+                        <span>Seats</span>
+                      </div>
+                      <span className="font-medium">
+                        {vehicle.others?.number_seats ?? "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <Users size={16} className="mr-2" />
+                        <span>Previous Owners</span>
+                      </div>
+                      <span className="font-medium">
+                        {vehicle.others?.number_previous_owners ?? "N/A"}
+                      </span>
                     </div>
                   </div>
                 </div>
 
+                {/* Card 2: Engine & Performance */}
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h2 className="text-lg font-semibold mb-4 flex items-center">
-                    <Info size={18} className="mr-2" />
-                    Additional Information
+                    <Cog size={18} className="mr-2" />
+                    Engine & Performance
                   </h2>
-
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
-                        <Tag size={16} className="mr-2" />
-                        <span>Body Type</span>
-                      </div>
-                      <span className="font-medium">{vehicle.bodyType}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center text-gray-700">
-                        <Tag size={16} className="mr-2" />
-                        <span>Fuel Type</span>
-                      </div>
-                      <span className="font-medium">{vehicle.fuelType}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center text-gray-700">
-                        <Tag size={16} className="mr-2" />
-                        <span>Transmission</span>
+                        <Cog size={16} className="mr-2" />
+                        <span>Engine Capacity</span>
                       </div>
                       <span className="font-medium">
-                        {vehicle.transmission}
+                        {vehicle.engine?.capacity
+                          ? `${vehicle.engine.capacity.toFixed(1)}L`
+                          : "N/A"}
                       </span>
                     </div>
-
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
-                        <Tag size={16} className="mr-2" />
-                        <span>Registration</span>
+                        <Cog size={16} className="mr-2" />
+                        <span>Cylinders</span>
                       </div>
                       <span className="font-medium">
-                        {vehicle.registration_num}
+                        {vehicle.engine?.number_cylinders ?? "N/A"}
                       </span>
                     </div>
-
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-gray-700">
-                        <Tag size={16} className="mr-2" />
-                        <span>Category</span>
+                        <Cog size={16} className="mr-2" />
+                        <span>Cylinder Arrangement</span>
                       </div>
-                      <span className="font-medium capitalize">
-                        {vehicle.category}
+                      <span className="font-medium">
+                        {formatString(vehicle.engine?.cylinder_arrangement)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <GitCommitHorizontal size={16} className="mr-2" />
+                        <span>Drive Train</span>
+                      </div>
+                      <span className="font-medium">
+                        {vehicle.others?.drive_train ?? "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-700">
+                        <Wind size={16} className="mr-2" />
+                        <span>CO₂ Emission</span>
+                      </div>
+                      <span className="font-medium">
+                        {vehicle.engine?.co2_emission
+                          ? `${vehicle.engine.co2_emission} g/km`
+                          : "N/A"}
                       </span>
                     </div>
                   </div>
@@ -293,11 +323,6 @@ export default function VehicleIdPage() {
                 </div>
 
                 <div className="space-y-4">
-                  {/* <Button className="w-full" size="lg">
-                    <Phone className="h-4 w-4 mr-2" />
-                    Show Phone Number
-                  </Button> */}
-
                   <Button
                     variant="outline"
                     className="w-full"
@@ -332,14 +357,6 @@ export default function VehicleIdPage() {
                         {new Date(vehicle.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-                    {/* <div className="flex justify-between">
-                      <span className="text-gray-600">Views</span>
-                      <span>{vehicle.views}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Reference</span>
-                      <span>#{vehicle.id}</span>
-                    </div> */}
                   </div>
                 </div>
               </CardContent>
@@ -366,7 +383,9 @@ export default function VehicleIdPage() {
               <p className="text-sm text-gray-600">
                 {isOwner && <span>You are the owner of this vehicle.</span>}
                 {!userId && (
-                  <span className="text-red-500">You need to login first.</span>
+                  <span className="text-red-500">
+                    You need to login first.
+                  </span>
                 )}
               </p>
             </div>
@@ -412,12 +431,11 @@ export default function VehicleIdPage() {
                     title: "Message Sent",
                     description: "Your message has been sent successfully.",
                   });
-                } catch (error:any) {
+                } catch (error: any) {
                   console.error("Error sending message:", error);
                   toast({
                     title: "Error",
-                    description:
-                      error.message,
+                    description: error.message,
                     variant: "destructive",
                   });
                 } finally {
