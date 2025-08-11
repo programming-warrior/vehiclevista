@@ -328,24 +328,76 @@ export type RecentViewType= {
 type RecentViewStoreType = {
   recent_views: RecentViewType[];
   setRecentView: (data: RecentViewType[]) => void;
-  addToRecentView: (data: RecentViewType[]) =>void;
+  addToRecentView: (data: RecentViewType) =>void;
   removeFromRecentView: (id:number)=> void;
 };
 export const useRecentViews = create<RecentViewStoreType>((set) => ({
   recent_views: [],
-  setRecentView: (newState: any) =>
-    set((state: any) => ({
-      ...state,
-      recent_views: [...state.recent_views, ...newState],
-    })),
-  addToRecentView: (newRecord: any) =>
-    set((state: any) => ({
-      ...state,
-      recent_views: [...state.recent_views, newRecord],
-    })),
+setRecentView: (newState: RecentViewType[]) =>
+    set((state) => {
+        // To prevent duplicates when setting multiple items, you can use a Set
+        const combined = [...state.recent_views, ...newState];
+        const uniqueIds = new Set();
+        const uniqueViews = combined.filter(item => {
+            if (!uniqueIds.has(item.id)) {
+                uniqueIds.add(item.id);
+                return true;
+            }
+            return false;
+        });
+        return { recent_views: uniqueViews };
+    }),
+
+  // Updated this function to prevent duplicates
+  addToRecentView: (newRecord: RecentViewType) =>
+    set((state) => {
+      const filteredViews = state.recent_views.filter(
+        (view) => view.id !== newRecord.id
+      );
+
+      const updatedViews = [newRecord, ...filteredViews];
+
+      return {
+        recent_views: updatedViews,
+      };
+    }),
   removeFromRecentView: (id: number) =>
     set((state: any) => ({
       ...state,
       recent_views: state.recent_views.filter((v: any) => v.id != id),
     })),
+}));
+
+
+interface AuctionFilterState {
+  itemType: string;
+  vehicleAuctionType: string;
+  make: string;
+  model: string;
+  minPrice: number;
+  maxPrice: number;
+  sortBy: string;
+  setFilters: (filters: Partial<AuctionFilterState>) => void;
+  clearFilters: () => void;
+}
+
+export const useAuctionFilterStore = create<AuctionFilterState>((set) => ({
+  itemType: "VEHICLE",
+  vehicleAuctionType: "",
+  make: "",
+  model: "",
+  minPrice: 0,
+  maxPrice: 0,
+  sortBy: "newest",
+  setFilters: (filters) => set((state) => ({ ...state, ...filters })),
+  clearFilters: () =>
+    set({
+      itemType: "VEHICLE",
+      vehicleAuctionType: "",
+      make: "",
+      model: "",
+      minPrice: 0,
+      maxPrice: 0,
+      sortBy: "newest",
+    }),
 }));

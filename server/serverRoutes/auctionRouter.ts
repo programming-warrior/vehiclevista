@@ -10,7 +10,7 @@ import {
   vehicleDrafts,
   numberPlate,
   paymentSession,
-  auctionFavourites
+  auctionFavourites,
 } from "../../shared/schema";
 import { eq, lte, or, gte, and, sql, inArray } from "drizzle-orm";
 import RedisClientSingleton from "../utils/redis";
@@ -33,163 +33,176 @@ const auctionRouter = Router();
 
 auctionRouter.get("/get", async (req, res) => {
   try {
-    const {
-      brand,
+    let {
+      make,
       model,
       itemType,
       page = "1",
       limit = "10",
-      type,
+      type, // This is vehicleAuctionType (e.g., CAR, BIKE)
+      sortBy = "newest",
+      minPrice,
+      maxPrice,
     } = req.query;
-
+    type = (type as string)?.toLowerCase();
     const conditions = [eq(auctions.status, "RUNNING")];
 
-    console.log(itemType);
-    if (!itemType || !["VEHICLE", "NUMBERPLATE"].includes(String(itemType)))
-      return res.status(400).json({ error: "itemType not specified" });
-
+    // --- Item Type Filter (Required) ---
+    if (!itemType || !["VEHICLE", "NUMBER_PLATE"].includes(String(itemType))) {
+      return res.status(400).json({ error: "A valid itemType is required" });
+    }
     conditions.push(eq(auctions.itemType, String(itemType).toUpperCase()));
 
-    if (
-      String(itemType).toUpperCase() === "VEHICLE" &&
-      brand &&
-      String(brand).toLowerCase() !== "all"
-    )
-      conditions.push(eq(vehicles.make, String(brand)));
-    if (
-      String(itemType).toUpperCase() === "VEHICLE" &&
-      model &&
-      String(brand).toLowerCase() !== "all"
-    )
-      conditions.push(eq(vehicles.model, String(model)));
-
-    if (
-      String(itemType).toUpperCase() === "VEHICLE" &&
-      type &&
-      vehicleTypesEnum.enumValues.includes(
-        String(
-          type
-        ).toLocaleLowerCase() as (typeof vehicleTypesEnum.enumValues)[number]
-      )
-    ) {
-      conditions.push(
-        eq(
-          vehicles.type,
-          String(
-            type
-          ).toLocaleLowerCase() as (typeof vehicleTypesEnum.enumValues)[number]
-        )
-      );
+    // --- Vehicle Specific Filters ---
+    if (String(itemType).toUpperCase() === "VEHICLE") {
+      if (make && String(make).toLowerCase() !== "all") {
+        conditions.push(eq(vehicles.make, String(make)));
+      }
+      if (model && String(model).toLowerCase() !== "all") {
+        conditions.push(eq(vehicles.model, String(model)));
+      }
+      if (type!=='all' && type && (type as (typeof vehicleTypesEnum.enumValues)[number])) {
+        console.log("type: ", type);
+        conditions.push(
+          eq(
+            vehicles.type,
+            type as (typeof vehicleTypesEnum.enumValues)[number]
+          )
+        );
+      }
     }
-    const MAXLIMIT = 50;
+
+    // --- Price Filters ---
+    const minPriceNum = parseFloat(minPrice as string);
+    if (!isNaN(minPriceNum) && minPriceNum > 0) {
+      conditions.push(gte(auctions.currentBid, minPriceNum));
+    }
+    const maxPriceNum = parseFloat(maxPrice as string);
+    if (!isNaN(maxPriceNum) && maxPriceNum > 0) {
+      conditions.push(lte(auctions.currentBid, maxPriceNum));
+    }
+
+    // --- Sorting Logic ---
+    let orderByClause;
+    switch (sortBy) {
+      case "price_low_to_high":
+        orderByClause = sql`${auctions.currentBid} ASC`;
+        break;
+      case "price_high_to_low":
+        orderByClause = sql`${auctions.currentBid} DESC`;
+        break;
+      case "ending_soon":
+        orderByClause = sql`${auctions.endDate} ASC`; // ASC for truly ending soon
+        break;
+      case "most_bids":
+        orderByClause = sql`${auctions.totalBids} DESC`;
+        break;
+      case "oldest":
+        orderByClause = sql`${auctions.startDate} ASC`;
+        break;
+      case "newest":
+      default:
+        orderByClause = sql`${auctions.startDate} DESC`;
+        break;
+    }
+
+    // --- Pagination Logic ---
+    const MAX_LIMIT = 50;
     const pageNum = parseInt(page as string, 10);
-    const pageSize =
-      parseInt(limit as string, 10) <= MAXLIMIT
-        ? parseInt(limit as string, 10)
-        : MAXLIMIT;
+    const pageSize = Math.min(parseInt(limit as string, 10), MAX_LIMIT);
     const offset = (pageNum - 1) * pageSize;
 
-    let result: any;
-    let auctionsWithItemDetails: any;
+    // --- Database Query ---
+    const whereClause = conditions.length ? and(...conditions) : undefined;
+    let auctionWithItemDetails: any = [];
 
     if (itemType === "VEHICLE") {
-      result = await db
-        .select({
-          auction: auctions,
-          vehicle: vehicles,
-        })
+      const results = await db
+        .select({ auction: auctions, vehicle: vehicles })
         .from(auctions)
         .innerJoin(vehicles, eq(auctions.itemId, vehicles.id))
-        .where(conditions.length ? and(...conditions) : undefined)
-        .limit(pageSize + 1)
+        .where(whereClause)
+        .orderBy(orderByClause)
+        .limit(pageSize)
         .offset(offset);
-
-      auctionsWithItemDetails = result.map((row: any) => {
-        const auction = row.auction as any;
-        const vehicle = row.vehicle as Vehicle;
-        return {
-          ...auction,
-          remainingTime: new Date(auction.endDate).getTime() - Date.now(),
-          vehicle: {
-            id: vehicle.id,
-            make: vehicle.make,
-            model: vehicle.model,
-            description: vehicle.description,
-            year: vehicle.year,
-            color: vehicle.color,
-            registration_num: vehicle.registration_num,
-            bodyType: vehicle.bodyType,
-            mileage: vehicle.mileage,
-            fuelType: vehicle.fuelType,
-            transmission: vehicle.transmission,
-            price: vehicle.price,
-            images: vehicle.images,
-            latitude: vehicle.latitude,
-            longitude: vehicle.longitude,
-            location: vehicle.location,
-            others: vehicle.others,
-            engine: vehicle.engine
-          },
-        };
-      });
-    } else if (itemType === "NUMBERPLATE") {
-      result = await db
-        .select({
-          auction: auctions,
-          numberPlate: numberPlate,
-        })
+      
+      console.log("Vehicle auction results:", results);
+      
+      auctionWithItemDetails = results.map((result: any) => ({
+        ...result.auction,
+        remainingTime: new Date(result.auction.endDate).getTime() - Date.now(),
+        vehicle: {
+          id: result.vehicle.id,
+          make: result.vehicle.make,
+          model: result.vehicle.model,
+          description: result.vehicle.description,
+          year: result.vehicle.year,
+          color: result.vehicle.color,
+          registration_num: result.vehicle.registration_num,
+          bodyType: result.vehicle.bodyType,
+          mileage: result.vehicle.mileage,
+          fuelType: result.vehicle.fuelType,
+          transmission: result.vehicle.transmission,
+          price: result.vehicle.price,
+          images: result.vehicle.images,
+          latitude: result.vehicle.latitude,
+          longitude: result.vehicle.longitude,
+          location: result.vehicle.location,
+          others: result.vehicle.others,
+          engine: result.vehicle.engine,
+        },
+      }));
+    } else if (itemType === "NUMBER_PLATE") {
+      const results = await db
+        .select({ auction: auctions, numberPlate: numberPlate })
         .from(auctions)
         .innerJoin(numberPlate, eq(auctions.itemId, numberPlate.id))
-        .where(conditions.length ? and(...conditions) : undefined)
-        .limit(pageSize + 1)
+        .where(whereClause)
+        .orderBy(orderByClause)
+        .limit(pageSize)
         .offset(offset);
 
-      auctionsWithItemDetails = result.map((row: any) => {
-        const auction = row.auction as any;
-        const numberPlate = row.numberPlate as any;
-        return {
-          ...auction,
-          remainingTime: new Date(auction.endDate).getTime() - Date.now(),
-          numberPlate: {
-            id: numberPlate.id,
-            document_urls: numberPlate.document_url,
-            plate_number: numberPlate.plate_number,
-            plate_value: numberPlate.plate_value,
-          },
-        };
-      });
+      auctionWithItemDetails = results.map((result: any) => ({
+        ...result.auction,
+        remainingTime: new Date(result.auction.endDate).getTime() - Date.now(),
+        numberPlate: {
+          id: result.numberPlate.id,
+          document_url: result.numberPlate.document_url,
+          plate_value: result.numberPlate.plate_value,
+          plate_number: result.numberPlate.plate_number,
+        },
+      }));
     }
 
-    let totalCount: number = 0;
-
+    // Get total count with proper join conditions
+    let totalCountResult;
     if (itemType === "VEHICLE") {
-      const [{ count }] = await db
+      totalCountResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(auctions)
         .innerJoin(vehicles, eq(auctions.itemId, vehicles.id))
-        .where(conditions.length ? and(...conditions) : undefined);
-      totalCount = count;
-    } else if (itemType === "NUMBERPLATE") {
-      const [{ count }] = await db
+        .where(whereClause);
+    } else if (itemType === "NUMBER_PLATE") {
+      totalCountResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(auctions)
         .innerJoin(numberPlate, eq(auctions.itemId, numberPlate.id))
-        .where(conditions.length ? and(...conditions) : undefined);
-      totalCount = count;
+        .where(whereClause);
     }
+
+    const totalCount = totalCountResult?.[0]?.count || 0;
 
     res.status(200).json({
-      auctions: auctionsWithItemDetails,
-      totalCount,
+      auctions: auctionWithItemDetails,
+      totalAuctions: totalCount,
       totalPages: Math.ceil(totalCount / pageSize),
       currentPage: pageNum,
-      hasNextPage: result.length > pageSize,
     });
   } catch (err: any) {
-    console.error("Error fetching vehicles:", err);
+    console.error("Error fetching auctions:", err);
     res
       .status(500)
-      .json({ message: "Error fetching vehicle list", error: err.message });
+      .json({ message: "Error fetching auction list", error: err.message });
   }
 });
 
@@ -220,24 +233,24 @@ auctionRouter.get("/get/:id", async (req, res) => {
         ...auction,
         remainingTime: new Date(auction.endDate).getTime() - Date.now(),
         vehicle: {
-           id: vehicle.id,
-            make: vehicle.make,
-            model: vehicle.model,
-            description: vehicle.description,
-            year: vehicle.year,
-            color: vehicle.color,
-            registration_num: vehicle.registration_num,
-            bodyType: vehicle.bodyType,
-            mileage: vehicle.mileage,
-            fuelType: vehicle.fuelType,
-            transmission: vehicle.transmission,
-            price: vehicle.price,
-            images: vehicle.images,
-            latitude: vehicle.latitude,
-            longitude: vehicle.longitude,
-            location: vehicle.location,
-            others: vehicle.others,
-            engine: vehicle.engine
+          id: vehicle.id,
+          make: vehicle.make,
+          model: vehicle.model,
+          description: vehicle.description,
+          year: vehicle.year,
+          color: vehicle.color,
+          registration_num: vehicle.registration_num,
+          bodyType: vehicle.bodyType,
+          mileage: vehicle.mileage,
+          fuelType: vehicle.fuelType,
+          transmission: vehicle.transmission,
+          price: vehicle.price,
+          images: vehicle.images,
+          latitude: vehicle.latitude,
+          longitude: vehicle.longitude,
+          location: vehicle.location,
+          others: vehicle.others,
+          engine: vehicle.engine,
         },
       };
       res.status(200).json(auctionWithVehicleDetails);
@@ -265,7 +278,6 @@ auctionRouter.get("/get/:id", async (req, res) => {
       .json({ message: "Error fetching auction", error: err.message });
   }
 });
-
 
 auctionRouter.post("/update-favourite", verifyToken, async (req, res) => {
   try {
@@ -338,8 +350,10 @@ auctionRouter.post("/bids/verify-payment", verifyToken, async (req, res) => {
         .select()
         .from(paymentSession)
         .where(eq(paymentSession.paymentIntentId, paymentIntentId));
-      if(payment_session_db.status!=='PENDING')
-        return res.status(400).json({ error: "Payment Expired or Already Processed" });
+      if (payment_session_db.status !== "PENDING")
+        return res
+          .status(400)
+          .json({ error: "Payment Expired or Already Processed" });
       if (payment_session_db.userId !== req.userId) {
         //fraud attempt
         return res.status(401).json({
@@ -587,7 +601,12 @@ auctionRouter.post("/numberplate/create", verifyToken, async (req, res) => {
   try {
     const { plate_number, document_url, plate_value } = req.body;
     console.log(req.body);
-    if (!plate_number || !plate_number.trim() || !document_url || !plate_value) {
+    if (
+      !plate_number ||
+      !plate_number.trim() ||
+      !document_url ||
+      !plate_value
+    ) {
       return res.status(400).json({ error: "Invalid input" });
     }
 
@@ -629,8 +648,7 @@ auctionRouter.post("/create", verifyToken, async (req, res) => {
     // if (result.error) {
     //   return res.status(401).json({ error: result.error });
     // }
-    const { itemType, title, description, durationDays } =
-      req.body;
+    const { itemType, title, description, durationDays } = req.body;
     console.log(req.body);
     if (
       !itemType ||
