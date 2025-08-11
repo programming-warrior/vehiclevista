@@ -36,9 +36,9 @@ type Auction = {
   id: string | number;
   title: string;
   description: string;
-  startingPrice: number;
+  startingPrice?: number;
   currentBid: number;
-  endTime: string;
+  endDate: string;
   status: string;
   vehicle?: Vehicle;
   numberPlate?: NumberPlate;
@@ -83,10 +83,6 @@ export default function LiveAuctionSection({
   if (loading) {
     return <div className="text-center py-8">Loading auctions...</div>;
   }
-
-  // if (error) {
-  //   return <div className="text-center py-8 text-red-500">{error}</div>;
-  // }
 
   if (auctions.length === 0) {
     return (

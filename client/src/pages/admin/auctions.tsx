@@ -43,6 +43,7 @@ import { adminGetAuctions } from "@/api"; // Assuming these API functions exist
 import { useDebounce } from "@/hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
+import { Separator } from "@radix-ui/react-select";
 
 export default function AdminAuctions() {
   const [auctions, setAuctions] = useState<any>([]);

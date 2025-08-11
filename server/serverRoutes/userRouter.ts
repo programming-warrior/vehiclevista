@@ -794,13 +794,15 @@ userRouter.post("/add-to-recent-view", verifyToken, async (req, res) => {
               FOR UPDATE
           `);
       const existing: any | null = result?.rows ?? null;
-
+        console.log(existing);
       // Check if record already exists for this item
       const ifExists = existing?.find(
         (e: any) =>
-          e.userId == userId &&
-          (type === "classified" ? e.classifiedId == id : e.auctionId == id)
+          e.user_id == userId &&
+          (type === "classified" ? e.classified_id == id : e.auction_id == id)
       );
+      console.log("id: ", id);
+      console.log(ifExists)
 
       if (ifExists) {
         // Update "viewedAt" for existing record

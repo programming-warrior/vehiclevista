@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "wouter";
 import {
+  // Base Icons
   Heart,
   Mail,
-  Phone,
   MapPin,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Tag,
   Users,
@@ -17,6 +15,18 @@ import {
   Palette,
   FileText,
   Hash,
+  MessageSquare,
+  Check,
+  // Imported from VehicleIdPage for new sections
+  DoorOpen,
+  Armchair,
+  Cog,
+  Wind,
+  GitCommitHorizontal,
+  UserCircle,
+  CarFront,
+  Gavel,
+  CalendarDays,
 } from "lucide-react";
 import {
   getAuctionById,
@@ -43,6 +53,8 @@ import "react-quill/dist/quill.bubble.css";
 import ReportDialog from "@/components/ui/report-dialog";
 import PaymentFormWrapper from "@/components/payment-form";
 import { useRecentViews } from "@/hooks/use-store";
+import { Separator } from "@radix-ui/react-select";
+import Loader from "@/components/loader";
 
 export default function AuctionIdPage() {
   const { id } = useParams<{ id: string }>();
@@ -207,10 +219,16 @@ export default function AuctionIdPage() {
     fetchAuction();
   }, [id]);
 
+  // Helper function to format strings (e.g., "MANUAL" => "Manual")
+  const formatString = (str: string | null | undefined): string => {
+    if (!str || typeof str !== "string") return "N/A";
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-8 flex items-center justify-center min-h-[50vh]">
-        <div className="text-xl font-medium">Loading auction details...</div>
+          <Loader/>
       </div>
     );
   }
@@ -284,7 +302,7 @@ export default function AuctionIdPage() {
 
               <Button
                 onClick={() => setBidOpen(true)}
-                className={`bg-green-600 hover:bg-green-700 text-white py-3 px-8 rounded-md transition-all duration-300 ${
+                className={`bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-md transition-all duration-300 ${
                   bidPlacedEffect ? "animate-bounce shadow-lg" : ""
                 }`}
               >
@@ -425,7 +443,7 @@ export default function AuctionIdPage() {
                             <span>Make</span>
                           </div>
                           <span className="font-medium">
-                            {auction.vehicle.make || "N/A"}
+                            {formatString(auction.vehicle.make) || "N/A"}
                           </span>
                         </div>
 
@@ -435,7 +453,7 @@ export default function AuctionIdPage() {
                             <span>Model</span>
                           </div>
                           <span className="font-medium">
-                            {auction.vehicle.model || "N/A"}
+                            {formatString(auction.vehicle.model) || "N/A"}
                           </span>
                         </div>
 
@@ -465,8 +483,76 @@ export default function AuctionIdPage() {
                             <span>Color</span>
                           </div>
                           <span className="font-medium">
-                            {auction.vehicle.color || "N/A"}
+                            {formatString(auction.vehicle.color) || "N/A"}
                           </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-700">
+                            <DoorOpen size={16} className="mr-2" />
+                            <span>Doors</span>
+                          </div>
+                          <span className="font-medium">
+                            {auction.vehicle.others?.number_doors ?? "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-gray-700">
+                            <Armchair size={16} className="mr-2" />
+                            <span>Seats</span>
+                          </div>
+                          <span className="font-medium">
+                            {auction.vehicle.others?.number_seats ?? "N/A"}
+                          </span>
+                        </div>
+                        <Separator className="my-6" />
+
+                        {/* Vehicle specifications */}
+
+                        <div className="">
+                          {/* Card 2: Engine & Performance */}
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <h2 className="text-lg font-semibold mb-4 flex items-center">
+                              <Cog size={18} className="mr-2" /> Engine &
+                              Performance
+                            </h2>
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="flex items-center text-gray-700">
+                                  <Cog size={16} className="mr-2" /> Engine
+                                </span>
+                                <span className="font-medium">
+                                  {auction.vehicle.engine?.capacity
+                                    ? `${auction.vehicle.engine.capacity.toFixed(
+                                        1
+                                      )}L`
+                                    : "N/A"}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="flex items-center text-gray-700">
+                                  <GitCommitHorizontal
+                                    size={16}
+                                    className="mr-2"
+                                  />{" "}
+                                  Drive Train
+                                </span>
+                                <span className="font-medium">
+                                  {formatString(auction.vehicle.drive_train)}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="flex items-center text-gray-700">
+                                  <Wind size={16} className="mr-2" /> CO₂
+                                  Emission
+                                </span>
+                                <span className="font-medium">
+                                  {auction.vehicle.engine?.co2_emission
+                                    ? `${auction.vehicle.engine.co2_emission} g/km`
+                                    : "N/A"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </>
                     )}
@@ -697,7 +783,7 @@ export default function AuctionIdPage() {
                 )}
 
                 <Button
-                  className="mt-4 w-full bg-green-600 hover:bg-green-700"
+                  className="mt-4 w-full bg-blue-600 hover:bg-blue-700"
                   disabled={!!bidError || !bidAmount}
                   onClick={handlePlaceBid}
                 >

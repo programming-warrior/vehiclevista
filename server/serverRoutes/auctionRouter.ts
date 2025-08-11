@@ -127,6 +127,8 @@ auctionRouter.get("/get", async (req, res) => {
             latitude: vehicle.latitude,
             longitude: vehicle.longitude,
             location: vehicle.location,
+            others: vehicle.others,
+            engine: vehicle.engine
           },
         };
       });
@@ -218,18 +220,24 @@ auctionRouter.get("/get/:id", async (req, res) => {
         ...auction,
         remainingTime: new Date(auction.endDate).getTime() - Date.now(),
         vehicle: {
-          id: vehicle.id,
-          make: vehicle.make,
-          model: vehicle.model,
-          year: vehicle.year,
-          color: vehicle.color,
-          registration_num: vehicle.registration_num,
-          bodyType: vehicle.bodyType,
-          mileage: vehicle.mileage,
-          fuelType: vehicle.fuelType,
-          transmission: vehicle.transmission,
-          price: vehicle.price,
-          images: vehicle.images,
+           id: vehicle.id,
+            make: vehicle.make,
+            model: vehicle.model,
+            description: vehicle.description,
+            year: vehicle.year,
+            color: vehicle.color,
+            registration_num: vehicle.registration_num,
+            bodyType: vehicle.bodyType,
+            mileage: vehicle.mileage,
+            fuelType: vehicle.fuelType,
+            transmission: vehicle.transmission,
+            price: vehicle.price,
+            images: vehicle.images,
+            latitude: vehicle.latitude,
+            longitude: vehicle.longitude,
+            location: vehicle.location,
+            others: vehicle.others,
+            engine: vehicle.engine
         },
       };
       res.status(200).json(auctionWithVehicleDetails);
