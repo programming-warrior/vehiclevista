@@ -33,9 +33,9 @@ type Auction = {
   id: string | number;
   title: string;
   description: string;
-  startingPrice: number;
+  startingPrice?: number;
   currentBid: number;
-  endTime: string;
+  endDate: string;
   status: string;
   vehicle?: Vehicle;
   numberPlate?: NumberPlate;
@@ -45,7 +45,7 @@ type Auction = {
 type AuctionCardProps = {
   auction: Auction;
   idx: number;
-  setAuctions: React.Dispatch<React.SetStateAction<Auction[]>>;
+  setAuctions?: React.Dispatch<React.SetStateAction<Auction[]>>;
 };
 
 const AuctionCard = ({ auction, idx, setAuctions }: AuctionCardProps) => {
@@ -106,17 +106,17 @@ const AuctionCard = ({ auction, idx, setAuctions }: AuctionCardProps) => {
         <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-center py-2 px-4">
           <CountdownTimer
             auction={auction}
-            setAuction={(updater: any) =>
-              setAuctions((prev) =>
-                prev.map((a, i) =>
-                  i === idx
-                    ? typeof updater === "function"
-                      ? updater(a)
-                      : updater
-                    : a
-                )
-              )
-            }
+            // setAuction={ (updater: any) =>
+            //   // setAuctions((prev) =>
+            //   //   prev.map((a, i) =>
+            //   //     i === idx
+            //   //       ? typeof updater === "function"
+            //   //         ? updater(a)
+            //   //         : updater
+            //   //       : a
+            //   //   )
+            //   // )
+            // }
           />
         </div>
       </div>
@@ -157,10 +157,10 @@ const AuctionCard = ({ auction, idx, setAuctions }: AuctionCardProps) => {
         )}
         <div className="flex justify-between items-center">
           <span className="text-lg font-bold">
-            $
-            {auction.currentBid
-              ? auction.currentBid.toLocaleString()
-              : auction.startingPrice.toLocaleString()}
+            
+            { 
+              auction.currentBid.toLocaleString()
+              }
           </span>
           <span className="text-blue-600 hover:text-blue-700">Auction →</span>
         </div>

@@ -4,7 +4,7 @@ import VehicleCard from "@/components/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { vehicleTypes } from "@shared/schema";
-import type { Vehicle } from "@shared/schema";
+import type { Vehicle, Auction } from "@shared/schema"; // Assuming Auction type is available
 import HeroSection from "@/components/hero-section";
 import LiveAuctionSection from "@/components/live-auction-section";
 import ExploreCategories from "@/components/explore-categories";
@@ -16,6 +16,8 @@ import {
   getFeaturedVehicles,
   getFavouriteVehicles,
   getFavouriteAuctions,
+  getVehicleById,
+  getAuctionById,
 } from "@/api";
 import { useUser } from "@/hooks/use-store";
 import Navbar from "@/components/navbar";
@@ -26,6 +28,70 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
 import { useGlobalLoading, useFavouriteListings } from "@/hooks/use-store";
 import Loader from "@/components/loader";
+import { useRecentViews, RecentViewType } from "@/hooks/use-store";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"; // Make sure to import Carousel components
+import AuctionCard from "@/components/auction-card";
+
+
+const RecentViewItem = ({ view }: { view: RecentViewType }) => {
+  const [item, setItem] = useState< any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchItem = async () => {
+      setIsLoading(true);
+      try {
+        let data = null;
+        if (view.classifiedId) {
+          data = await getVehicleById(view.classifiedId.toString());
+        } else if (view.auctionId) {
+     
+          data = await getAuctionById(view.auctionId.toString());
+        }
+        setItem(data);
+      } catch (error) {
+        console.error("Failed to fetch recent item:", error);
+        setItem(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchItem();
+  }, [view]);
+
+  if (isLoading) {
+    // Skeleton loader while the individual item is fetching
+    return (
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-40 w-full bg-gray-200" />
+        <Skeleton className="h-4 w-3/4 bg-gray-200" />
+        <Skeleton className="h-4 w-1/2 bg-gray-200" />
+      </div>
+    );
+  }
+
+  if (!item) {
+    return null; 
+  }
+
+  // Check if the item is a Vehicle (assuming it has a 'make' property)
+  if ("make" in item) {
+    return <VehicleCard vehicle={item as Vehicle} />;
+  }
+ 
+  if ("endDate" in item && "startDate" in item) {
+    return <AuctionCard auction={item} idx={view.id}/>
+  }
+
+  return null;
+};
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Car");
@@ -36,7 +102,9 @@ export default function Home() {
   const { globalLoading, setGlobalLoading } = useGlobalLoading();
   const { vehicles, addVehicleToFavourite, auctions, addAuctionToFavourite } =
     useFavouriteListings();
+  const { recent_views } = useRecentViews(); // Get recent views from the store
 
+  console.log(recent_views);
   useEffect(() => {
     async function fetch() {
       try {
@@ -54,29 +122,23 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchFav() {
-        getFavouriteVehicles()
-          .then((data) => {
-            data.favourites?.forEach((fv: any) => addVehicleToFavourite(fv));
-          })
-          .catch((e) => {
-            console.error(e)
-          });
-        getFavouriteAuctions()
-          .then((data) => {
-            data.favourites?.forEach((fv: any) => addAuctionToFavourite(fv));
-          })
-          .catch((e) => {
-            console.error(e)
-          });
- 
+      getFavouriteVehicles()
+        .then((data) => {
+          data.favourites?.forEach((fv: any) => addVehicleToFavourite(fv));
+        })
+        .catch((e) => {
+          console.error(e);
+        });
+      getFavouriteAuctions()
+        .then((data) => {
+          data.favourites?.forEach((fv: any) => addAuctionToFavourite(fv));
+        })
+        .catch((e) => {
+          console.error(e);
+        });
     }
     fetchFav();
   }, []);
-
-  console.log(vehicles);
-
-  console.log(userId);
-  console.log(role);
 
   const vehicleCategories = vehicleTypes.map((type) =>
     type
@@ -101,6 +163,39 @@ export default function Home() {
       <div className="px-12 mx-auto w-full">
         <RaffleHomeSection />
       </div>
+
+      {/* Recently Viewed Section */}
+      {recent_views && recent_views.length > 0 && (
+        <section className="px-12 mx-auto w-full">
+          <header className="mb-8">
+            <h2 className="text-3xl font-bold mb-2">Recently Viewed</h2>
+            <p className="text-lg text-muted-foreground">
+              Pick up where you left off.
+            </p>
+          </header>
+          <Carousel
+            opts={{
+              align: "start",
+            }}
+            className="w-full"
+          >
+            <CarouselContent>
+              {recent_views.map((view) => (
+                <CarouselItem
+                  key={`recent-${view.id}`}
+                  className="md:basis-1/2 lg:basis-1/4"
+                >
+                  <div className="p-1">
+                    <RecentViewItem view={view} />
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious />
+            <CarouselNext />
+          </Carousel>
+        </section>
+      )}
 
       {/* Featured Vehicles Section */}
       <section className="px-12  mx-auto w-full">
@@ -138,11 +233,11 @@ export default function Home() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <Skeleton className="w-60 h-56 flex flex-col ">
-                <Skeleton className="ml-3 mt-3 w-44 h-20 bg-gray-300"></Skeleton>
+              <Skeleton key={i} className="w-full h-72 flex flex-col ">
+                <Skeleton className="ml-3 mt-3 w-11/12 h-40 bg-gray-300"></Skeleton>
                 <div>
-                  <Skeleton className="ml-3 mt-3 w-40 h-4 bg-gray-300"></Skeleton>
-                  <Skeleton className="ml-3 mt-3 w-44 h-4 bg-gray-300"></Skeleton>
+                  <Skeleton className="ml-3 mt-3 w-10/12 h-4 bg-gray-300"></Skeleton>
+                  <Skeleton className="ml-3 mt-3 w-11/12 h-4 bg-gray-300"></Skeleton>
                 </div>
               </Skeleton>
             ))}
@@ -193,7 +288,7 @@ export default function Home() {
         <LiveAuctionSection itemType="VEHICLE" auctionVehicleType="" />
       </section>
 
-      {/* Live Auction Section */}
+      {/* NumerPlate Auctions Section */}
       <section className="px-12 mx-auto w-full">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">NumerPlate Auctions</h2>
@@ -207,11 +302,6 @@ export default function Home() {
         <LiveAuctionSection itemType="NUMBERPLATE" />
       </section>
 
-      {/* Explore Categories Section */}
-      {/* <section className="  mx-auto w-full">
-        <ExploreCategories />
-      </section> */}
-
       {/* Search Makes Section */}
       <section className=" mx-auto w-full">
         <SearchMakes />
@@ -224,7 +314,6 @@ export default function Home() {
 
       {/* Bikes Collection Section */}
       <section className="px-4 md:px-8 lg:px-12  mx-auto w-full">
-        {/* <BikesCollection /> */}
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">Bikes Collection</h2>
           <Link

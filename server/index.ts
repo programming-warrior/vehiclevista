@@ -22,6 +22,7 @@ import reportRouter from "./serverRoutes/reportRouter";
 import raffleRouter from "./serverRoutes/raffleRouter";
 import brandRouter from "./serverRoutes/brandRouter";
 import packageRouter from "./serverRoutes/packageRouter";
+import sellerRouter from "./serverRoutes/sellerRouter";
 // import { seedValueToMakeTable } from "./serverRoutes/brandRouter";
 
 
@@ -61,7 +62,7 @@ app.use("/api/report", reportRouter)
 app.use("/api/raffle", raffleRouter)
 app.use('/api/brand',brandRouter);
 app.use('/api/package',packageRouter);
-
+app.use('/api/seller',sellerRouter);
 
 
 // Add diagnostic endpoint

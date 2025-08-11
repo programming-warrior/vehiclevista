@@ -1,3 +1,4 @@
+import { recentViews } from "@shared/schema";
 import { create } from "zustand";
 
 type WebSocketStore = {
@@ -313,5 +314,38 @@ export const useFavouriteListings = create<any>((set) => ({
     set((state: any) => ({
       ...state,
       vehicles: state.vehicles.filter((v: any) => v.id != vehicleId),
+    })),
+}));
+
+export type RecentViewType= {
+  id: number,
+  userId: number,
+  auctionId: null | number,
+  classifiedId: null | number,
+  viewed_at: string,
+}
+
+type RecentViewStoreType = {
+  recent_views: RecentViewType[];
+  setRecentView: (data: RecentViewType[]) => void;
+  addToRecentView: (data: RecentViewType[]) =>void;
+  removeFromRecentView: (id:number)=> void;
+};
+export const useRecentViews = create<RecentViewStoreType>((set) => ({
+  recent_views: [],
+  setRecentView: (newState: any) =>
+    set((state: any) => ({
+      ...state,
+      recent_views: [...state.recent_views, ...newState],
+    })),
+  addToRecentView: (newRecord: any) =>
+    set((state: any) => ({
+      ...state,
+      recent_views: [...state.recent_views, newRecord],
+    })),
+  removeFromRecentView: (id: number) =>
+    set((state: any) => ({
+      ...state,
+      recent_views: state.recent_views.filter((v: any) => v.id != id),
     })),
 }));

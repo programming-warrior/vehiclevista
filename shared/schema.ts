@@ -113,6 +113,18 @@ export const vehicleFavourites = pgTable(
   (table) => [unique().on(table.vehicleId, table.userId)]
 );
 
+export const recentViews = pgTable(
+  "recent_views",
+  {
+    id: serial("id").primaryKey(),
+    classifiedId: integer("classified_id"),
+    auctionId: integer("auction_id"),
+    userId: integer("user_id").references(() => users.id),
+    viewedAt: timestamp("viewsAt").defaultNow()
+  },
+  (table) => [unique().on(table.classifiedId, table.userId), unique().on(table.auctionId, table.userId) ]
+);
+
 export const auctionFavourites = pgTable("auction_favourites", {
   id: serial("id").primaryKey(),
   auctionId: integer("auction_id").references(() => auctions.id),

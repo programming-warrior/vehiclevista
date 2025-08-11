@@ -54,6 +54,8 @@ import VehicleEditPage from "./pages/vehicle/vehicle-edit";
 import RunningRafflePage from "./pages/raffle/raffle";
 import AdminPaymentHistory from "./pages/admin/payment-history";
 import AdminBuyerSellerChatHistory from "./pages/admin/buyer-seller-chat";
+import { getRecentView } from "./api/user-api";
+import { useRecentViews } from "./hooks/use-store";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -66,20 +68,23 @@ export default function App() {
     setUnReadCount,
     setTotalNotifications,
   } = useNotification();
+  const { setRecentView } = useRecentViews();
 
   useEffect(() => {
-    console.log(userId);
-    console.log(card_verified);
-    console.log(role);
     const sessionId = localStorage.getItem("sessionId");
-    console.log(sessionId);
+    //fetch the recent views
+    getRecentView()
+      .then((data) => {
+        console.log("fetched recent view")
+        console.log(data)
+        setRecentView(data);
+      })
+      .catch((e) => console.log(e));
+
     if (!socket) {
       let ws;
       if (sessionId) {
-        ws = new WebSocket(`${WEBSOCKET_URL}`, [
-          "Authorization",
-          sessionId,
-        ]);
+        ws = new WebSocket(`${WEBSOCKET_URL}`, ["Authorization", sessionId]);
       } else {
         ws = new WebSocket(`${WEBSOCKET_URL}`);
       }
@@ -119,7 +124,7 @@ export default function App() {
 
           addNotification({ id: notificationId, type, message, createdAt });
           console.log(unReadCount);
-          setUnReadCount(unReadCount+1);
+          setUnReadCount(unReadCount + 1);
           setTotalNotifications((prev: number) => prev + 1);
         }
       };
@@ -152,10 +157,10 @@ export default function App() {
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <main className="flex-1">
-           <ScrollToTop/>
+          <ScrollToTop />
           <Switch>
             {/* Public Routes */}
-           
+
             <Route path="/profile" component={UserProfile} />
             <Route path="/notifications" component={NotificationsPage} />
             <Route path="/" component={Home} />
@@ -172,12 +177,11 @@ export default function App() {
             <Route path="/auction/:id" component={AuctionIdPage} />
             <Route path="/raffle" component={RunningRafflePage} />
 
-
             {/* Admin Routes */}
             <Route path="/admin">
               <ProtectedRoute component={AdminDashboard} adminOnly />
             </Route>
-              <Route path="/admin/raffle/:id">
+            <Route path="/admin/raffle/:id">
               <ProtectedRoute component={RaffleIdPage} adminOnly />
             </Route>
             <Route path="/admin/blacklist">
@@ -208,7 +212,10 @@ export default function App() {
               <ProtectedRoute component={AdminPaymentHistory} adminOnly />
             </Route>
             <Route path="/admin/buyer-seller-chat">
-              <ProtectedRoute component={AdminBuyerSellerChatHistory} adminOnly />
+              <ProtectedRoute
+                component={AdminBuyerSellerChatHistory}
+                adminOnly
+              />
             </Route>
             <Route path="/admin/spare-parts">
               <ProtectedRoute component={AdminSpareParts} adminOnly />
@@ -231,10 +238,10 @@ export default function App() {
                 />
               </Route> */}
             <Route path="/seller/auction/create">
-              <SellerAuctionUpload/>
+              <SellerAuctionUpload />
             </Route>
             <Route path="/seller/vehicle/upload">
-              <SellerVehicleUpload/>
+              <SellerVehicleUpload />
             </Route>
             {/* <Route path="/seller/vehicle/bulk-upload">
               <ProtectedRoute component={SellerVehilceBulkUpload} />

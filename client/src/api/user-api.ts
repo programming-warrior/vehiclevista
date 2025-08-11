@@ -181,6 +181,50 @@ export async function getFavouriteVehicles() {
   }
 }
 
+export async function getRecentView() {
+  try {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/user/recent-view`,
+      {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error incrementing vehicle clicks"
+    );
+  }
+}
+
+export async function addToRecentViewApi(id:number, type: "classified" | "auction") {
+  try {
+    const response = await axios.post(
+      `${BACKEND_URL}/api/user/add-to-recent-view`,
+      {
+        id,
+        type
+      },
+      {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error adding to recent view"
+    );
+  }
+}
+
 export async function getFavouriteAuctions() {
   try {
     const response = await axios.get(

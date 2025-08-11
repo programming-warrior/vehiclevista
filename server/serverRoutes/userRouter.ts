@@ -16,6 +16,7 @@ import {
   vehicleFavourites,
   auctionFavourites,
   Auction,
+  recentViews,
 } from "../../shared/schema";
 import { eq, or, sql, and, ilike, hasOwnEntityKind } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
@@ -25,7 +26,7 @@ import { verifyToken } from "../middleware/authMiddleware";
 import { userSessionSchema } from "../utils/session";
 import { notificationQueue, cleanupQueue } from "../worker/queue";
 import { vehicleEditSchema } from "../../shared/zodSchema/vehicleSchema";
-import { LetterText } from "lucide-react";
+import { MAX_RECENT_VIEW_RECORD_PER_USER } from "../utils/constants";
 
 const userRouter = Router();
 
@@ -760,6 +761,102 @@ userRouter.get("/notifications", verifyToken, async (req, res) => {
   } catch (e) {
     console.log(e);
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+userRouter.post("/add-to-recent-view", verifyToken, async (req, res) => {
+  if (!req.userId) return res.status(403).json({ error: "unauthorized" });
+
+  try {
+    let { type, id } = req.body; // type = "classified" or "auction"
+    const userId = req.userId;
+
+    if (
+      !type ||
+      !["classified", "auction"].includes(type.toLowerCase()) ||
+      !id
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Missing or invalid required fields" });
+    }
+
+    type = type.toLowerCase();
+
+    const matchField =
+      type === "classified" ? recentViews.classifiedId : recentViews.auctionId;
+
+    await db.transaction(async (trx) => {
+      // Get all recent views for this user (oldest first)
+      const result = await trx.execute(sql`
+              SELECT * FROM ${recentViews} WHERE ${recentViews.userId} = ${userId} 
+              ORDER BY ${recentViews.viewedAt}  
+              FOR UPDATE
+          `);
+      const existing: any | null = result?.rows ?? null;
+
+      // Check if record already exists for this item
+      const ifExists = existing?.find(
+        (e: any) =>
+          e.userId == userId &&
+          (type === "classified" ? e.classifiedId == id : e.auctionId == id)
+      );
+
+      if (ifExists) {
+        // Update "viewedAt" for existing record
+        await trx
+          .update(recentViews)
+          .set({ viewedAt: new Date() })
+          .where(and(eq(recentViews.userId, userId), eq(matchField, id)));
+      } else {
+        // If user already has max records, delete oldest
+        if (existing?.length >= MAX_RECENT_VIEW_RECORD_PER_USER) {
+          const oldestRecord = existing[0];
+          await trx
+            .delete(recentViews)
+            .where(eq(recentViews.id, oldestRecord.id));
+        }
+
+        // Insert new record
+        await trx.insert(recentViews).values({
+          userId,
+          classifiedId: type === "classified" ? id : null,
+          auctionId: type === "auction" ? id : null,
+          viewedAt: new Date(),
+        });
+      }
+    });
+
+    // Fetch the saved record after transaction completes
+    const savedRecordResult = await db
+      .select()
+      .from(recentViews)
+      .where(and(eq(recentViews.userId, userId), eq(matchField, id)))
+      .limit(1);
+
+    const savedRecord = savedRecordResult[0] || null;
+
+    res.json({ success: true, savedRecord });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to add recent view" });
+  }
+});
+
+userRouter.get("/recent-view", verifyToken, async (req, res) => {
+  try {
+    if (!req.userId) return res.status(403).json({ error: "unauthorized" });
+    const result = await db
+      .select()
+      .from(recentViews)
+      .where(eq(recentViews.userId, req.userId))
+      .limit(MAX_RECENT_VIEW_RECORD_PER_USER)
+
+    return res.status(200).json(result);
+  } catch (err: any) {
+    console.error("Error fetching recent view:", err);
+    res.status(500).json({ message: "Error fetching recent view" });
+    return;
   }
 });
 

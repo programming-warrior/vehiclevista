@@ -19,20 +19,30 @@ import {
   Cog,
   Wind,
   GitCommitHorizontal,
+  // Icons for Seller Profile
+  UserCircle,
+  CarFront,
+  Gavel,
+  CalendarDays,
 } from "lucide-react";
-import { getVehicleById } from "@/api/vehicle-api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
+  DialogTitle as DialogTitleComponent, // Renamed to avoid conflict
 } from "@/components/ui/dialog";
 import ImageGallery from "@/components/image-gallery";
-import { incrementVehicleViews, contactSeller } from "@/api";
+import {
+  incrementVehicleViews,
+  contactSeller,
+  getSellerDetais,
+  getVehicleById,
+  addToRecentViewApi,
+} from "@/api";
 import ReportDialog from "@/components/ui/report-dialog";
 import MapComponent from "@/components/map-component";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,16 +50,18 @@ import { Label } from "recharts";
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/hooks/use-store";
 import { toast } from "@/hooks/use-toast";
-
+import { useRecentViews } from "@/hooks/use-store";
 export default function VehicleIdPage() {
   const { id } = useParams<{ id: string }>();
   const [isLoading, setIsLoading] = useState(true);
   const [vehicle, setVehicle] = useState<any>(null);
+  const [seller, setSeller] = useState<any>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const { userId, role, card_verified } = useUser();
   const [isOwner, setIsOwner] = useState(false);
   const [contactMessage, setContactMessage] = useState("");
+  const { addToRecentView } = useRecentViews();
 
   // Helper function to format strings (e.g., "MANUAL" => "Manual")
   const formatString = (str: string | null | undefined): string => {
@@ -62,21 +74,27 @@ export default function VehicleIdPage() {
   }, [userId, vehicle]);
 
   useEffect(() => {
-    const fetchVehicle = async () => {
+    const fetch = async () => {
       setIsLoading(true);
       try {
-        const response = await getVehicleById(id);
-        console.log(response);
-        setVehicle(response);
+        const vehicleData = await getVehicleById(id);
+        setVehicle(vehicleData);
+        if (vehicleData?.sellerId) {
+          const sellerData = await getSellerDetais(vehicleData.sellerId);
+          setSeller(sellerData);
+        }
+        incrementVehicleViews(id).catch((e) => console.error(e));
+        addToRecentViewApi(Number(id), "classified")
+          .then((data) => addToRecentView(data.savedRecord))
+          .catch((e) => console.error(e));
       } catch (error) {
-        console.error("Error fetching vehicle data:", error);
+        console.error("Error fetching page data:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    incrementVehicleViews(id);
-    fetchVehicle();
+    fetch();
   }, [id]);
 
   if (isLoading) {
@@ -152,9 +170,7 @@ export default function VehicleIdPage() {
                 <Badge variant="secondary">
                   {formatString(vehicle.bodyType)}
                 </Badge>
-                <Badge variant="secondary">
-                  {formatString(vehicle.color)}
-                </Badge>
+                <Badge variant="secondary">{formatString(vehicle.color)}</Badge>
                 <Badge variant="secondary">
                   {formatString(vehicle.condition)}
                 </Badge>
@@ -316,7 +332,6 @@ export default function VehicleIdPage() {
                     />
                   ) : (
                     <p className="text-gray-400 text-xs font-light">
-                      {" "}
                       No Map Preview
                     </p>
                   )}
@@ -365,6 +380,55 @@ export default function VehicleIdPage() {
         </div>
       </div>
 
+      {/* Seller Profile Section */}
+      {seller && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center text-2xl">
+              <UserCircle className="mr-3 h-8 w-8 text-primary" />
+              About the Seller
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid md:grid-cols-3 gap-6 p-6 items-center">
+            {/* Seller Info */}
+            <div className="md:col-span-1">
+              <h3 className="text-xl font-semibold">{seller?.username}</h3>
+              <div className="flex items-center text-gray-600 mt-2">
+                <CalendarDays size={16} className="mr-2" />
+                <span>Member since {seller?.createdAt}</span>
+              </div>
+            </div>
+
+            {/* Seller Stats */}
+            <div className="md:col-span-1 flex justify-start md:justify-center gap-6">
+              <div className="flex items-center">
+                <CarFront className="mr-2 h-6 w-6 text-gray-500" />
+                <div>
+                  <p className="font-bold text-lg">
+                    {seller?.totalVehiclesListed}
+                  </p>
+                  <p className="text-sm text-gray-500">Vehicles</p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <Gavel className="mr-2 h-6 w-6 text-gray-500" />
+                <div>
+                  <p className="font-bold text-lg">
+                    {seller?.totalAuctionsListed}
+                  </p>
+                  <p className="text-sm text-gray-500">Auctions</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="md:col-span-1 flex justify-start md:justify-end">
+              <Button variant="outline">View Seller's Other Listings</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <ReportDialog
         isOpen={reportOpen}
         onOpenChange={setReportOpen}
@@ -375,7 +439,7 @@ export default function VehicleIdPage() {
       <Dialog open={contactOpen} onOpenChange={setContactOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Contact Seller</DialogTitle>
+            <DialogTitleComponent>Contact Seller</DialogTitleComponent>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -383,9 +447,7 @@ export default function VehicleIdPage() {
               <p className="text-sm text-gray-600">
                 {isOwner && <span>You are the owner of this vehicle.</span>}
                 {!userId && (
-                  <span className="text-red-500">
-                    You need to login first.
-                  </span>
+                  <span className="text-red-500">You need to login first.</span>
                 )}
               </p>
             </div>

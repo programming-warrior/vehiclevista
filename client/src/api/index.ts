@@ -20,7 +20,8 @@ import {
   markAuctionListingSold,
   editClassifiedListing,
   getFavouriteVehicles,
-  getFavouriteAuctions
+  getFavouriteAuctions,
+  addToRecentViewApi,
 } from "./user-api";
 import {
   getVehicles,
@@ -119,6 +120,20 @@ export async function vehicleLookUp(
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       }
+    );
+    return res.data;
+  } catch (e) {
+    throw e;
+  }
+}
+
+
+export async function getSellerDetais(
+  sellerId: number
+) {
+  try {
+    const res = await axios.get(
+      BACKEND_URL + "/api/seller/" + sellerId,
     );
     return res.data;
   } catch (e) {
@@ -451,6 +466,7 @@ export {
   changePassword,
   getFavouriteVehicles,
   getFavouriteAuctions,
+  addToRecentViewApi,
   getUserBids,
   updateUserCardInfo,
   googleAuth,

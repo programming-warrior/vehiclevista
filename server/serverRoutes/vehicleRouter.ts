@@ -508,7 +508,6 @@ vehicleRouter.get("/:vehicleId", async (req, res) => {
     if (!vehicle) {
       return res.status(404).json({ error: "Vehicle not found" });
     }
-    console.log(vehicle);
     res.status(200).json(vehicle);
   } catch (err: any) {
     console.error("Error fetching vehicles:", err);
