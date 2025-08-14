@@ -6,7 +6,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import RedisClientSingleton from "./utils/redis";
 import cookieParser from "cookie-parser";
 import { flushMetrics } from "./lib/cron-jobs/flush-metrics";
-import { FlushPastPerformanceMetrics } from "./lib/cron-jobs/historical-performance-metrics";
+import { flushAndAggregateMetrics } from "./lib/cron-jobs/historical-performance-metrics";
 import cron from "node-cron";
 import { BUCKET_NAME, s3Client } from "./utils/s3";
 dotenv.config();
@@ -175,13 +175,13 @@ app.use((req, res, next) => {
       console.error("Error flushing metrics:", error);
     }
   });
-
-  cron.schedule("59 23 * * *", async () => {
+  //TODO
+  //earlier 23 59 -> */1 * for testing 
+  cron.schedule("*/1 * * * *", async () => {
     console.log("Flushing historical past metrics...");
     try {
-      const date= new Date();
-      FlushPastPerformanceMetrics(date);
-      console.log("Metrics flushed successfully!");
+      flushAndAggregateMetrics();
+      console.log("historical data flushed successfully!");
     } catch (error) {
       console.error("Error flushing metrics:", error);
     }

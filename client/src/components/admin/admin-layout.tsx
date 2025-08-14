@@ -9,6 +9,7 @@ import {
   MessageSquare,
   CreditCard,
   MessageCircle,
+
 } from "lucide-react";
 import { useEffect } from "react";
 import { useUser } from "@/hooks/use-store";
@@ -36,7 +37,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
     { href: "/admin/payment-history", label: "Payment History", icon: CreditCard },
     { href: "/admin/buyer-seller-chat", label: "Buyer-Seller Chats", icon: MessageCircle },
-
+    { href: "/admin/packages", label: "Packages", icon: Ticket },
   ];
 
   return (

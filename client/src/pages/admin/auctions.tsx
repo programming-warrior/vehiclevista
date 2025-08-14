@@ -290,7 +290,7 @@ export default function AdminAuctions() {
                           <th className="px-4 py-3 text-center font-medium text-blue-700">Stats</th>
                           <th className="px-4 py-3 text-center font-medium text-blue-700">Bids</th>
                           <th className="px-4 py-3 text-left font-medium text-blue-700">Status</th>
-                          <th className="px-4 py-3 text-right font-medium text-blue-700">Actions</th>
+                          {/* <th className="px-4 py-3 text-right font-medium text-blue-700">Actions</th> */}
                         </tr>
                       </thead>
                       <tbody>
@@ -325,7 +325,7 @@ export default function AdminAuctions() {
                               </Badge>
                             </td>
                             <td className="px-4 py-4">{getStatusBadge(auction.status)}</td>
-                            <td className="px-4 py-4 text-right">
+                            {/* <td className="px-4 py-4 text-right">
                                 {auction.status !== "BLACKLISTED" ? (
                                     <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={(e) => { e.stopPropagation(); handleBlacklistAuction(auction); }}>
                                         <ShieldAlert className="mr-2 h-4 w-4" /> Blacklist
@@ -335,7 +335,7 @@ export default function AdminAuctions() {
                                         <ShieldCheck className="mr-2 h-4 w-4" /> Restore
                                     </Button>
                                 )}
-                            </td>
+                            </td> */}
                           </tr>
                         ))}
                       </tbody>

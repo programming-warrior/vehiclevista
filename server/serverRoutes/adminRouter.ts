@@ -7,6 +7,7 @@ import {
   vehicles,
   auctions,
   lisitngReport,
+  platformSummaryHistory,
   vehicleMetricsHistory,
   auctionMetricsHistory,
   raffle,
@@ -14,6 +15,7 @@ import {
   auctionWinner,
   auctionStatus,
   paymentSession,
+  packages,
   contactAttempts,
 } from "../../shared/schema";
 import {
@@ -26,6 +28,8 @@ import {
   isNotNull,
   ilike,
   and,
+  gte,
+  not
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { raffleQueue } from "../worker/queue";
@@ -129,100 +133,184 @@ interface TopListingType {
 }
 
 adminRouter.get(
-  "/analytics/performance-metrics",
+  "/analytics/patterns", // Using a new endpoint name to differentiate
   verifyToken,
   async (req, res) => {
-    if (!req.userId || req.role !== "admin")
+    if (!req.userId || req.role !== "admin") {
       return res.status(401).json({ error: "unauthorized access" });
-
-    const { searchBy } = req.query;
-
-    let pastDate = new Date();
-
-    if (searchBy === "week") {
-      pastDate.setDate(pastDate.getDate() - 7);
-    } else if (searchBy === "month") {
-      pastDate.setMonth(pastDate.getMonth() - 1);
-    } else if (searchBy === "year") {
-      pastDate.setFullYear(pastDate.getFullYear() - 1);
-    } else {
-      pastDate.setDate(pastDate.getDate() - 1);
     }
 
-    const pastVehicleMetric = await db
-      .select({
-        views: sum(vehicleMetricsHistory.views).mapWith(Number),
-        clicks: sum(vehicleMetricsHistory.clicks).mapWith(Number),
-        leads: sum(vehicleMetricsHistory.leads).mapWith(Number),
-      })
-      .from(vehicleMetricsHistory)
-      .where(sql`recorded_at <= ${pastDate}`);
+    const { searchBy } = req.query;
+    let pastDate = new Date();
+    
+    switch (searchBy) {
+      case "month":
+        pastDate.setMonth(pastDate.getMonth() - 1);
+        break;
+      case "year":
+        pastDate.setFullYear(pastDate.getFullYear() - 1);
+        break;
+      case "week":
+      default:
+        pastDate.setDate(pastDate.getDate() - 7);
+        break;
+    }
 
-    const pastAuctionMetric = await db
-      .select({
-        views: sum(vehicleMetricsHistory.views).mapWith(Number),
-        clicks: sum(vehicleMetricsHistory.clicks).mapWith(Number),
-        leads: sum(vehicleMetricsHistory.leads).mapWith(Number),
-      })
-      .from(vehicleMetricsHistory)
-      .where(sql`recorded_at <= ${pastDate}`);
+    try {
+      // 1. Fetch ALL historical data points within the date range
+      // Order them chronologically to build the chart correctly.
+      const historicalData = await db
+        .select({
+          date: platformSummaryHistory.recorded_at,
+          vehicleViews: platformSummaryHistory.total_vehicle_views,
+          vehicleClicks: platformSummaryHistory.total_vehicle_clicks,
+          users: platformSummaryHistory.total_users,
+          auctionViews: platformSummaryHistory.total_auction_views,
+          // Add any other metrics you want to plot
+        })
+        .from(platformSummaryHistory)
+        .where(gte(platformSummaryHistory.recorded_at, pastDate))
+        .orderBy(platformSummaryHistory.recorded_at); // ASC order is default
 
-    const vehicleTotals = await db
-      .select({
-        count: sql<number>`count(*)`,
-        views: sum(vehicles.views).mapWith(Number),
-        clicks: sum(vehicles.clicks).mapWith(Number),
-      })
-      .from(vehicles)
-      .execute()
-      .then((rows) => rows[0] || { views: 0, clicks: 0 });
-    const auctionTotals = await db
-      .select({
-        count: sql<number>`count(*)`,
-        views: sum(auctions.views).mapWith(Number),
-        clicks: sum(auctions.clicks).mapWith(Number),
-      })
-      .from(auctions)
-      .execute()
-      .then((rows) => rows[0] || { views: 0, clicks: 0 });
+      if (historicalData.length === 0) {
+        return res.status(404).json({ 
+          error: "No analytics data found for the selected period." 
+        });
+      }
 
-    const [{ count: totalUsers }] = await db
-      .select({
-        count: sql<number>`count(*)`,
-      })
-      .from(users);
+      // 2. Format the data for a charting library (like Chart.js or Recharts)
+      // We create labels (dates) and datasets (the numbers).
+      const chartData = {
+        labels: historicalData.map(d => d.date.toLocaleDateString()), // e.g., ["8/7/2025", "8/8/2025", ...]
+        datasets: {
+          vehicleViews: historicalData.map(d => d.vehicleViews),
+          vehicleClicks: historicalData.map(d => d.vehicleClicks),
+          users: historicalData.map(d => d.users),
+          auctionViews: historicalData.map(d => d.auctionViews),
+        }
+      };
 
-    const performanceMetrics = {
-      vehicleViewsGrowth:
-        ((vehicleTotals.views - pastVehicleMetric[0].views) /
-          (pastVehicleMetric[0].views || 1)) *
-        100,
-      vehicleClicksGrowth:
-        ((vehicleTotals.clicks - pastVehicleMetric[0].clicks) /
-          (pastVehicleMetric[0].clicks || 1)) *
-        100,
-      auctionViewsGrowth:
-        ((auctionTotals.views - pastAuctionMetric[0].views) /
-          (pastAuctionMetric[0].views || 1)) *
-        100,
-      auctionClicksGrowth:
-        ((auctionTotals.clicks - pastAuctionMetric[0].clicks) /
-          (pastAuctionMetric[0].clicks || 1)) *
-        100,
-      totalUsers: totalUsers,
-      totalVehicles: vehicleTotals.count,
-      totalAuctions: auctionTotals.count,
-      vehicleTotalViews: vehicleTotals.views,
-      vehicleTotalClicks: vehicleTotals.clicks,
-      auctionTotalViews: auctionTotals.views,
-      auctionTotalClicks: auctionTotals.clicks,
-      vehicleTotalLeads: 0,
-      auctionTotalLeads: 0,
-    };
+      // 3. (Optional but Recommended) Also provide the summary stats
+      const firstPoint = historicalData[0];
+      const lastPoint = historicalData[historicalData.length - 1];
+      const calculateGrowth = (current: number, past: number) => {
+        if (!past || past === 0) return current > 0 ? 100 : 0;
+        return ((current - past) / past) * 100;
+      };
 
-    return res.status(200).json(performanceMetrics);
+      const summary = {
+          totalUsers: lastPoint.users,
+          userGrowth: calculateGrowth(lastPoint.users, firstPoint.users),
+          totalVehicleViews: lastPoint.vehicleViews,
+          vehicleViewsGrowth: calculateGrowth(lastPoint.vehicleViews, firstPoint.vehicleViews),
+      };
+
+
+      // 4. Return both the chart data and the summary
+      return res.status(200).json({ chartData, summary });
+
+    } catch (error) {
+      console.error("Failed to fetch analytics patterns:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
   }
 );
+
+// adminRouter.get(
+//   "/analytics/performance-metrics",
+//   verifyToken,
+//   async (req, res) => {
+//     if (!req.userId || req.role !== "admin")
+//       return res.status(401).json({ error: "unauthorized access" });
+
+//     const { searchBy } = req.query;
+
+//     let pastDate = new Date();
+
+//     if (searchBy === "week") {
+//       pastDate.setDate(pastDate.getDate() - 7);
+//     } else if (searchBy === "month") {
+//       pastDate.setMonth(pastDate.getMonth() - 1);
+//     } else if (searchBy === "year") {
+//       pastDate.setFullYear(pastDate.getFullYear() - 1);
+//     } else {
+//       pastDate.setDate(pastDate.getDate() - 7);
+//     }
+
+//     const pastVehicleMetric = await db
+//       .select({
+//         views: sum(vehicleMetricsHistory.views).mapWith(Number),
+//         clicks: sum(vehicleMetricsHistory.clicks).mapWith(Number),
+//         leads: sum(vehicleMetricsHistory.leads).mapWith(Number),
+//       })
+//       .from(vehicleMetricsHistory)
+//       .where(sql`recorded_at <= ${pastDate}`);
+
+//     const pastAuctionMetric = await db
+//       .select({
+//         views: sum(auctionMetricsHistory.views).mapWith(Number),
+//         clicks: sum(auctionMetricsHistory.clicks).mapWith(Number),
+//         leads: sum(auctionMetricsHistory.leads).mapWith(Number),
+//       })
+//       .from(vehicleMetricsHistory)
+//       .where(sql`recorded_at <= ${pastDate}`);
+
+//     const vehicleTotals = await db
+//       .select({
+//         count: sql<number>`count(*)`,
+//         views: sum(vehicles.views).mapWith(Number),
+//         clicks: sum(vehicles.clicks).mapWith(Number),
+//       })
+//       .from(vehicles)
+//       .execute()
+//       .then((rows) => rows[0] || { views: 0, clicks: 0 });
+//     const auctionTotals = await db
+//       .select({
+//         count: sql<number>`count(*)`,
+//         views: sum(auctions.views).mapWith(Number),
+//         clicks: sum(auctions.clicks).mapWith(Number),
+//       })
+//       .from(auctions)
+//       .execute()
+//       .then((rows) => rows[0] || { views: 0, clicks: 0 });
+
+//     const [{ count: totalUsers }] = await db
+//       .select({
+//         count: sql<number>`count(*)`,
+//       })
+//       .from(users);
+
+//     const performanceMetrics = {
+//       vehicleViewsGrowth:
+//         ((vehicleTotals.views - pastVehicleMetric[0].views) /
+//           (pastVehicleMetric[0].views || 1)) *
+//         100,
+//       vehicleClicksGrowth:
+//         ((vehicleTotals.clicks - pastVehicleMetric[0].clicks) /
+//           (pastVehicleMetric[0].clicks || 1)) *
+//         100,
+//       auctionViewsGrowth:
+//         ((auctionTotals.views - pastAuctionMetric[0].views) /
+//           (pastAuctionMetric[0].views || 1)) *
+//         100,
+//       auctionClicksGrowth:
+//         ((auctionTotals.clicks - pastAuctionMetric[0].clicks) /
+//           (pastAuctionMetric[0].clicks || 1)) *
+//         100,
+//       totalUsers: totalUsers,
+//       totalVehicles: vehicleTotals.count,
+//       totalAuctions: auctionTotals.count,
+//       vehicleTotalViews: vehicleTotals.views,
+//       vehicleTotalClicks: vehicleTotals.clicks,
+//       auctionTotalViews: auctionTotals.views,
+//       auctionTotalClicks: auctionTotals.clicks,
+//       vehicleTotalLeads: 0,
+//       auctionTotalLeads: 0,
+//     };
+
+//     return res.status(200).json(performanceMetrics);
+//   }
+// );
 
 adminRouter.get("/analytics/top-listings", verifyToken, async (req, res) => {
   if (!req.userId || req.role !== "admin")
@@ -1294,9 +1382,7 @@ adminRouter.get("/buyer-seller-chat", verifyToken, async (req, res) => {
 
   if (searchTerm) {
     console.log("added search where clause");
-    whereClause.push(
-      or(ilike(contactAttempts.message, `%${searchTerm}%`))
-    );
+    whereClause.push(or(ilike(contactAttempts.message, `%${searchTerm}%`)));
   }
 
   if (statusFilter) {
@@ -1335,5 +1421,172 @@ adminRouter.get("/buyer-seller-chat", verifyToken, async (req, res) => {
   });
 });
 
-// Export the router
+adminRouter.get("/packages/all", verifyToken, async (req, res) => {
+  if (!req.userId || !req.role || req.role !== "admin") {
+    return res.status(401).json({ error: "Unauthorized access" });
+  }
+
+  try {
+    const { page, limit } = req.query;
+    const pageNumber = parseInt(page as string) || 1;
+    const limitNumber = parseInt(limit as string) || 10;
+    const offset = (pageNumber - 1) * limitNumber;
+
+    // 3. Fetch packages from the database
+    const allPackages = await db
+      .select()
+      .from(packages)
+      .limit(limitNumber)
+      .offset(offset);
+
+    // 4. Fetch total count for pagination metadata
+    const totalCountResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(packages);
+    const totalCount = totalCountResult[0].count;
+
+    // 5. Send Response
+    return res.status(200).json({
+      packages: allPackages,
+      total: totalCount,
+      page: pageNumber,
+      limit: limitNumber,
+      totalPages: Math.ceil(totalCount / limitNumber),
+    });
+  } catch (error) {
+    console.error("Error fetching packages:", error);
+    return res
+      .status(500)
+      .json({ error: "Internal server error while fetching packages." });
+  }
+});
+
+adminRouter.post("/packages/add", verifyToken, async (req, res) => {
+  if (!req.userId || !req.role || req.role !== "admin") {
+    return res.status(401).json({ error: "Unauthorized access" });
+  }
+
+  try {
+    const {
+      name,
+      type,
+      prices,
+      duration_days,
+      features,
+      is_until_sold,
+      is_rebookable,
+      rebookable_days,
+      youtubeShowcase,
+      premiumPlacement,
+    } = req.body;
+
+    if (!name || !type || !prices || !duration_days || !features) {
+      return res.status(400).json({ error: "Missing required fields." });
+    }
+
+    const newPackage = await db
+      .insert(packages)
+      .values({
+        name,
+        type,
+        prices,
+        duration_days,
+        features,
+        is_until_sold,
+        youtubeShowcase,
+        premiumPlacement,
+      })
+      .returning(); 
+
+    return res
+      .status(201)
+      .json({ message: "Package added successfully.", data: newPackage[0] });
+  } catch (error) {
+    console.error("Error adding new package:", error);
+    return res
+      .status(500)
+      .json({ error: "Internal server error while adding package." });
+  }
+});
+
+adminRouter.put(
+  "/packages/update/:id",
+  verifyToken,
+  async (req, res) => {
+    // 1. Authorization Check
+    if (!req.userId || !req.role || req.role !== "admin") {
+      return res.status(401).json({ error: "Unauthorized access" });
+    }
+
+    try {
+      const packageId = parseInt(req.params.id);
+      if (isNaN(packageId)) {
+        return res.status(400).json({ error: "Invalid package ID." });
+      }
+
+      const { ...updateData } = req.body;
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No update data provided." });
+      }
+
+      const updatedPackage = await db
+        .update(packages)
+        .set(updateData)
+        .where(eq(packages.id, packageId))
+        .returning();
+
+      if (updatedPackage.length === 0) {
+        return res.status(404).json({ error: "Package not found." });
+      }
+
+      return res
+        .status(200)
+        .json({
+          message: "Package updated successfully.",
+          data: updatedPackage[0],
+        });
+    } catch (error) {
+      console.error(`Error updating package with ID ${req.params.id}:`, error);
+      return res
+        .status(500)
+        .json({ error: "Internal server error while updating package." });
+    }
+  }
+);
+
+adminRouter.put("/packages/toggle-active/:id", verifyToken, async (req, res) => {
+    // 1. Authorization Check
+    if (!req.userId || !req.role || req.role !== "admin") {
+        return res.status(401).json({ error: "Unauthorized access" });
+    }
+
+    try {
+        const packageId = parseInt(req.params.id);
+        if (isNaN(packageId)) {
+            return res.status(400).json({ error: "Invalid package ID." });
+        }
+``
+        const updatedPackage = await db
+            .update(packages)
+            .set({ is_active: not(packages.is_active) })
+            .where(eq(packages.id, packageId))
+            .returning({ id: packages.id, is_active: packages.is_active });
+
+        if (updatedPackage.length === 0) {
+            return res.status(404).json({ error: "Package not found." });
+        }
+        
+        // 3. Send response
+        return res.status(200).json({ 
+            message: `Package status toggled to ${updatedPackage[0].is_active ? 'Active' : 'Inactive'}.`,
+            data: updatedPackage[0]
+        });
+
+    } catch (error) {
+        console.error(`Error toggling package status for ID ${req.params.id}:`, error);
+        return res.status(500).json({ error: "Internal server error." });
+    }
+});
+
 export default adminRouter;

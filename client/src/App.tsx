@@ -56,6 +56,7 @@ import AdminPaymentHistory from "./pages/admin/payment-history";
 import AdminBuyerSellerChatHistory from "./pages/admin/buyer-seller-chat";
 import { getRecentView } from "./api/user-api";
 import { useRecentViews } from "./hooks/use-store";
+import AdminPackagesPage from "./pages/admin/packages";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -196,9 +197,9 @@ export default function App() {
             <Route path="/admin/users">
               <ProtectedRoute component={AdminUsers} adminOnly />
             </Route>
-            {/* <Route path="/admin/settings">
-                <ProtectedRoute component={AdminSettings} adminOnly />
-              </Route> */}
+            <Route path="/admin/packages">
+                <ProtectedRoute component={AdminPackagesPage} adminOnly />
+              </Route>
             <Route path="/admin/auctions">
               <ProtectedRoute component={AdminAuctions} adminOnly />
             </Route>

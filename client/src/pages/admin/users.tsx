@@ -68,9 +68,9 @@ export default function AdminUsers() {
         sortBy: sortOption,
         filter: JSON.stringify(filter),
       });
-
-      setUsers(response.users);
-      setFilteredUsers(response.users);
+      const usersWithStandardStatus = response.users.map((u:any)=>({...u, status: u.status.toUpperCase()}))
+      setUsers(usersWithStandardStatus);
+      setFilteredUsers(usersWithStandardStatus);
       setTotalPages(response.totalPages);
       setTotalUsers(parseInt(response.totalUsers));
     } catch (error) {

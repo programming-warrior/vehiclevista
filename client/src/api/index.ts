@@ -45,7 +45,7 @@ import {
   UpdateDraftAuctionWithItemDraft,
   createNumberPlate,
   verifyBidPayment,
-  addOrRemoveAuctionToFavouriteApi
+  addOrRemoveAuctionToFavouriteApi,
 } from "./auction-api";
 
 import {
@@ -71,6 +71,12 @@ import {
   unBlacklistVehicle,
 } from "./admin-api/vehicle-api";
 
+import {
+  adminAddPackage,
+  adminGetPackages,
+  adminUpdatePackage,
+  adminTogglePackageActive,
+} from "./admin-api/packages-api";
 import { adminGetAuctions } from "./admin-api/auction-api";
 
 import { getListingReports } from "./admin-api/repots-api";
@@ -127,14 +133,9 @@ export async function vehicleLookUp(
   }
 }
 
-
-export async function getSellerDetais(
-  sellerId: number
-) {
+export async function getSellerDetais(sellerId: number) {
   try {
-    const res = await axios.get(
-      BACKEND_URL + "/api/seller/" + sellerId,
-    );
+    const res = await axios.get(BACKEND_URL + "/api/seller/" + sellerId);
     return res.data;
   } catch (e) {
     throw e;
@@ -425,7 +426,7 @@ export async function pushListingDraftCacheToServer({
       console.log("auction cache draft pushed to the server");
       return auctionDraftId;
     }
-    return NaN
+    return NaN;
   } catch (e: any) {
     console.error("Error pushing draft cache: ", e);
     throw new Error(e.message || "Previous saved data lost!");
@@ -501,6 +502,10 @@ export {
   adminGetAuctions,
   adminGetPaymentHistory,
   adminGetChatHistory,
+  adminAddPackage,
+  adminTogglePackageActive,
+  adminGetPackages,
+  adminUpdatePackage,
   uploadListingReport,
   uploadUserReport,
   getPackagesWithAmount,
