@@ -13,6 +13,8 @@ import {
   pgEnum,
   unique,
   json,
+  interval,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { number, string, z } from "zod";
@@ -276,6 +278,42 @@ export const raffle = pgTable("raffle", {
   views: integer("views").default(0),
   clicks: integer("clicks").default(0),
   leads: integer("leads").default(0),
+});
+
+export const adminIpLogs = pgTable("admin_ip_logs", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id")
+    .notNull()
+    .references(() => users.id),
+  ipAddress: text("ip_address").notNull(),
+  locationCity: text("location_city"),
+  locationCountry: text("location_country"),
+  deviceBrowser: text("device_browser"),  
+  deviceOs: text("device_os"),
+  userAgentRaw: text("user_agent_raw"),
+  sessionDuration: integer("session_duration"), 
+  status: text("status").notNull().default("failed"), 
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const platformSummaryHistory = pgTable("platform_summary_history", {
+  id: serial("id").primaryKey(),
+  recorded_at: timestamp("recorded_at").notNull(),
+
+  // Absolute Totals
+  total_vehicles: integer("total_vehicles").notNull().default(0),
+  total_auctions: integer("total_auctions").notNull().default(0),
+  total_users: integer("total_users").notNull().default(0),
+
+  // Vehicle Metric Totals
+  total_vehicle_views: integer("total_vehicle_views").notNull().default(0),
+  total_vehicle_clicks: integer("total_vehicle_clicks").notNull().default(0),
+  total_vehicle_leads: integer("total_vehicle_leads").notNull().default(0),
+
+  // Auction Metric Totals
+  total_auction_views: integer("total_auction_views").notNull().default(0),
+  total_auction_clicks: integer("total_auction_clicks").notNull().default(0),
+  total_auction_leads: integer("total_auction_leads").notNull().default(0),
 });
 
 export const vehicleMetricsHistory = pgTable("vehicle_metrics_history", {

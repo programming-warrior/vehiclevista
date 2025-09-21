@@ -1,15 +1,15 @@
 import { Router } from "express";
 import { hashPassword, comparePasswords } from "../utils/auth";
 import { db } from "../db";
-import { users } from "../../shared/schema";
+import { adminIpLogs, users } from "../../shared/schema";
 import { eq, or } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
 import { userRegisterSchema } from "../../shared/zodSchema/userSchema";
 import RedisClientSingleton from "../utils/redis";
-import { StringRouteParams } from "wouter";
-import { userSessionSchema } from "../utils/session";
 import axios from "axios";
+import UAParser from 'my-ua-parser';
 import { randomBytes } from "crypto";
+import { PgTable } from "drizzle-orm/pg-core";
 
 const authRouter = Router();
 
@@ -96,7 +96,7 @@ authRouter.post("/google", async (req, res) => {
 
       user = newUser[0];
     }
-  
+
     const sessionId = await createUserSession(user);
     res.cookie("sessionId", sessionId, {
       maxAge: SESSION_EXPIRY_SECONDS * 1000,
@@ -104,14 +104,12 @@ authRouter.post("/google", async (req, res) => {
       secure: process.env.NODE_ENV === "production",
       sameSite: "none",
     });
-    res
-      .status(200)
-      .json({
-        sessionId: sessionId,
-        userId: user.id,
-        role: user.role,
-        card_verified: false,
-      });
+    res.status(200).json({
+      sessionId: sessionId,
+      userId: user.id,
+      role: user.role,
+      card_verified: false,
+    });
   } catch (err) {
     res.status(401).json({ error: "Invalid token" });
   }
@@ -139,11 +137,49 @@ authRouter.post("/login", async (req, res) => {
 
     if (!user) return res.status(401).json({ error: "Wrong Credentials" });
 
+    let loginLog: any = null;
+    if (user.role == "admin") {
+      //store the login logs
+      console.log("Admin login detected, logging IP and User-Agent");
+    
+      const parser = new UAParser(req.headers["user-agent"]);
+      const ua = parser.getResult();
+      console.log(ua);
+      const deviceBrowser = `${ua.browser.name ?? "Unknown"} ${
+        ua.browser.version ?? ""
+      }`;
+      const deviceOS = `${ua.os.name ?? "Unknown"} ${ua.os.version ?? ""}`;
+
+      loginLog = await db
+        .insert(adminIpLogs)
+        .values({
+          adminId: user.id,
+          ipAddress: (req.headers["x-forwarded-for"] ||
+            req.socket.remoteAddress) as string,
+          userAgentRaw: req.headers["user-agent"] || "Unknown",
+          deviceBrowser: deviceBrowser,
+          deviceOs: deviceOS,
+          locationCity: "Unknown",
+          locationCountry: "Unknown",
+          sessionDuration: 0,
+          createdAt: new Date(),
+        })
+        .returning();
+    }
+
     const match = await comparePasswords(password, user.password);
     if (!match) return res.status(401).json({ error: "Wrong Credentials" });
 
     //CREATE USER SESSIONS
     const sessionId = await createUserSession(user);
+
+    if (user.role == "admin" && loginLog && loginLog[0]?.id)
+      await db
+        .update(adminIpLogs)
+        .set({
+          status: "success",
+        })
+        .where(eq(adminIpLogs.id, loginLog[0].id));
 
     res.cookie("sessionId", sessionId, {
       maxAge: SESSION_EXPIRY_SECONDS * 1000,

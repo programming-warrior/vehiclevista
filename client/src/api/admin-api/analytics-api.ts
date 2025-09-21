@@ -1,10 +1,10 @@
 import axios from "axios";
 import { BACKEND_URL } from "@/lib/constants";
 
-export async function getPerformanceMetrics() {
+export async function getPerformanceMetrics(timeframe: any) {
   try {
     const response = await axios.get(
-      `${BACKEND_URL}/api/admin/analytics/performance-metrics`,
+      `${BACKEND_URL}/api/admin/analytics/patterns?searchBy=${timeframe}`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -40,5 +40,3 @@ export async function getTopListings() {
     );
   }
 }
-
-

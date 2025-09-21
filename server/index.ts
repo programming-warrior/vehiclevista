@@ -28,6 +28,8 @@ import sellerRouter from "./serverRoutes/sellerRouter";
 
 const app = express();
 
+console.log("Starting server...");
+
 // Extend the Request interface to include userId and role
 declare global {
   namespace Express {

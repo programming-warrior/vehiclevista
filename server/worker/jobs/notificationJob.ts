@@ -20,7 +20,6 @@ const notificationWorker = new Worker(
     console.log(job.data);
     if (job.name === "contact-seller") {
       const { messageId, userId, vehicleId, sellerId, message } = job.data;
-
       try {
         const [seller] = await db
           .select()

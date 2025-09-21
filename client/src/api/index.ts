@@ -63,6 +63,7 @@ import {
   getPerformanceMetrics,
   getTopListings,
 } from "./admin-api/analytics-api";
+import { adminGetLoginLogs } from "./admin-api/log-api";
 import { getUsers, blacklistUser, unBlacklistUser } from "./admin-api/user-api";
 
 import {
@@ -497,6 +498,7 @@ export {
   createRaffle,
   getRaffles,
   adminGetVehicles,
+  adminGetLoginLogs,
   blacklistVehicle,
   unBlacklistVehicle,
   adminGetAuctions,

@@ -17,6 +17,7 @@ import {
   paymentSession,
   packages,
   contactAttempts,
+  adminIpLogs,
 } from "../../shared/schema";
 import {
   eq,
@@ -29,7 +30,7 @@ import {
   ilike,
   and,
   gte,
-  not
+  not,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { raffleQueue } from "../worker/queue";
@@ -131,90 +132,243 @@ interface TopListingType {
   model: string;
   year: number;
 }
+;
 
-adminRouter.get(
-  "/analytics/patterns", // Using a new endpoint name to differentiate
-  verifyToken,
-  async (req, res) => {
-    if (!req.userId || req.role !== "admin") {
-      return res.status(401).json({ error: "unauthorized access" });
-    }
-
-    const { searchBy } = req.query;
-    let pastDate = new Date();
-    
-    switch (searchBy) {
-      case "month":
-        pastDate.setMonth(pastDate.getMonth() - 1);
-        break;
-      case "year":
-        pastDate.setFullYear(pastDate.getFullYear() - 1);
-        break;
-      case "week":
-      default:
-        pastDate.setDate(pastDate.getDate() - 7);
-        break;
-    }
-
-    try {
-      // 1. Fetch ALL historical data points within the date range
-      // Order them chronologically to build the chart correctly.
-      const historicalData = await db
-        .select({
-          date: platformSummaryHistory.recorded_at,
-          vehicleViews: platformSummaryHistory.total_vehicle_views,
-          vehicleClicks: platformSummaryHistory.total_vehicle_clicks,
-          users: platformSummaryHistory.total_users,
-          auctionViews: platformSummaryHistory.total_auction_views,
-          // Add any other metrics you want to plot
-        })
-        .from(platformSummaryHistory)
-        .where(gte(platformSummaryHistory.recorded_at, pastDate))
-        .orderBy(platformSummaryHistory.recorded_at); // ASC order is default
-
-      if (historicalData.length === 0) {
-        return res.status(404).json({ 
-          error: "No analytics data found for the selected period." 
-        });
-      }
-
-      // 2. Format the data for a charting library (like Chart.js or Recharts)
-      // We create labels (dates) and datasets (the numbers).
-      const chartData = {
-        labels: historicalData.map(d => d.date.toLocaleDateString()), // e.g., ["8/7/2025", "8/8/2025", ...]
-        datasets: {
-          vehicleViews: historicalData.map(d => d.vehicleViews),
-          vehicleClicks: historicalData.map(d => d.vehicleClicks),
-          users: historicalData.map(d => d.users),
-          auctionViews: historicalData.map(d => d.auctionViews),
-        }
-      };
-
-      // 3. (Optional but Recommended) Also provide the summary stats
-      const firstPoint = historicalData[0];
-      const lastPoint = historicalData[historicalData.length - 1];
-      const calculateGrowth = (current: number, past: number) => {
-        if (!past || past === 0) return current > 0 ? 100 : 0;
-        return ((current - past) / past) * 100;
-      };
-
-      const summary = {
-          totalUsers: lastPoint.users,
-          userGrowth: calculateGrowth(lastPoint.users, firstPoint.users),
-          totalVehicleViews: lastPoint.vehicleViews,
-          vehicleViewsGrowth: calculateGrowth(lastPoint.vehicleViews, firstPoint.vehicleViews),
-      };
-
-
-      // 4. Return both the chart data and the summary
-      return res.status(200).json({ chartData, summary });
-
-    } catch (error) {
-      console.error("Failed to fetch analytics patterns:", error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
+adminRouter.get("/logs/login", verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "admin") {
+    return res.status(401).json({ error: "unauthorized access" });
   }
-);
+
+  try {
+    const { page, limit, filter } = req.query;
+    const pageNumber = parseInt(page as string, 10) || 1;
+    const limitNumber = parseInt(limit as string, 10) || 10;
+    const offset = (pageNumber - 1) * limitNumber;
+
+    // Parse filter object
+    let filterOptions: any = {};
+    let searchTerm = "";
+    let statusFilter = "";
+
+    if (filter) {
+      try {
+        filterOptions = JSON.parse(filter as string);
+        searchTerm = filterOptions.search?.trim() || "";
+        statusFilter = filterOptions.status?.toLowerCase() || "";
+      } catch (error) {
+        console.error("Error parsing filter:", error);
+      }
+    }
+
+    // Build WHERE conditions dynamically
+    const conditions: any[] = [];
+
+    // Search filter (search IP or user email)
+    if (searchTerm) {
+      conditions.push(
+        or(
+          ilike(adminIpLogs.ipAddress, `%${searchTerm}%`),
+          ilike(adminIpLogs.locationCity, `%${searchTerm}%`),
+          ilike(adminIpLogs.locationCountry, `%${searchTerm}%`)
+        )
+      );
+    }
+
+    // Status filter
+    if (statusFilter === "success" || statusFilter === "failed") {
+      conditions.push(eq(adminIpLogs.status, statusFilter));
+    }
+
+    const whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Get paginated results
+    const logs = await db
+      .select()
+      .from(adminIpLogs)
+      .where(whereCondition)
+      .orderBy(sql`created_at DESC`)
+      .limit(limitNumber)
+      .offset(offset);
+
+    // Get total count for pagination UI
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(adminIpLogs)
+      .where(whereCondition);
+
+    return res.json({
+      page: pageNumber,
+      totalPages: Math.ceil(count/limitNumber),
+      totalLogs: count,
+      logs: logs,
+    });
+
+  } catch (e) {
+    console.error("Error fetching admin login logs:", e);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminRouter.get("/analytics/patterns", verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== "admin") {
+    return res.status(401).json({ error: "unauthorized access" });
+  }
+
+  const { searchBy } = req.query;
+  let pastDate = new Date();
+
+  switch (searchBy) {
+    case "month":
+      pastDate.setMonth(pastDate.getMonth() - 1);
+      break;
+    case "year":
+      pastDate.setFullYear(pastDate.getFullYear() - 1);
+      break;
+    case "week":
+    default:
+      pastDate.setDate(pastDate.getDate() - 7);
+      break;
+  }
+
+  try {
+    // Select all columns to ensure we have all the data we need
+    const historicalData = await db
+      .select()
+      .from(platformSummaryHistory)
+      .where(gte(platformSummaryHistory.recorded_at, pastDate))
+      .orderBy(platformSummaryHistory.recorded_at);
+
+    // We need at least two data points to calculate growth
+    if (historicalData.length < 2) {
+      return res.status(404).json({
+        error:
+          "Not enough historical data to generate patterns for the selected period.",
+      });
+    }
+
+    const firstPoint = historicalData[0];
+    const lastPoint = historicalData[historicalData.length - 1];
+
+    const calculateGrowth = (current: number, past: number) => {
+      if (past === 0) return current > 0 ? 100 : 0; // Avoid division by zero
+      return ((current - past) / past) * 100;
+    };
+
+    // A helper to create the chart data structure
+    const createChartData = (keys: { name: string; data: number[] }[]) => {
+      const datasets: { [key: string]: number[] } = {};
+      keys.forEach((k) => {
+        datasets[k.name] = k.data;
+      });
+      return {
+        labels: historicalData.map((d) =>
+          d.recorded_at.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        ),
+        datasets,
+      };
+    };
+
+    const responsePayload = {
+      // --- OVERALL DATA ---
+      overall: {
+        summary: {
+          totalViews:
+            lastPoint.total_vehicle_views + lastPoint.total_auction_views,
+          viewsGrowth: calculateGrowth(
+            lastPoint.total_vehicle_views + lastPoint.total_auction_views,
+            firstPoint.total_vehicle_views + firstPoint.total_auction_views
+          ),
+          totalClicks:
+            lastPoint.total_vehicle_clicks + lastPoint.total_auction_clicks,
+          clicksGrowth: calculateGrowth(
+            lastPoint.total_vehicle_clicks + lastPoint.total_auction_clicks,
+            firstPoint.total_vehicle_clicks + firstPoint.total_auction_clicks
+          ),
+          totalUsers: lastPoint.total_users,
+          userGrowth: calculateGrowth(
+            lastPoint.total_users,
+            firstPoint.total_users
+          ),
+          totalListings: lastPoint.total_vehicles + lastPoint.total_auctions,
+        },
+        chartData: createChartData([
+          {
+            name: "Views",
+            data: historicalData.map(
+              (d) => d.total_vehicle_views + d.total_auction_views
+            ),
+          },
+          {
+            name: "Clicks",
+            data: historicalData.map(
+              (d) => d.total_vehicle_clicks + d.total_auction_clicks
+            ),
+          },
+        ]),
+      },
+      // --- VEHICLE-ONLY DATA ---
+      vehicle: {
+        summary: {
+          totalViews: lastPoint.total_vehicle_views,
+          viewsGrowth: calculateGrowth(
+            lastPoint.total_vehicle_views,
+            firstPoint.total_vehicle_views
+          ),
+          totalClicks: lastPoint.total_vehicle_clicks,
+          clicksGrowth: calculateGrowth(
+            lastPoint.total_vehicle_clicks,
+            firstPoint.total_vehicle_clicks
+          ),
+          totalListings: lastPoint.total_vehicles,
+        },
+        chartData: createChartData([
+          {
+            name: "Views",
+            data: historicalData.map((d) => d.total_vehicle_views),
+          },
+          {
+            name: "Clicks",
+            data: historicalData.map((d) => d.total_vehicle_clicks),
+          },
+        ]),
+      },
+      // --- AUCTION-ONLY DATA ---
+      auction: {
+        summary: {
+          totalViews: lastPoint.total_auction_views,
+          viewsGrowth: calculateGrowth(
+            lastPoint.total_auction_views,
+            firstPoint.total_auction_views
+          ),
+          totalClicks: lastPoint.total_auction_clicks,
+          clicksGrowth: calculateGrowth(
+            lastPoint.total_auction_clicks,
+            firstPoint.total_auction_clicks
+          ),
+          totalListings: lastPoint.total_auctions,
+        },
+        chartData: createChartData([
+          {
+            name: "Views",
+            data: historicalData.map((d) => d.total_auction_views),
+          },
+          {
+            name: "Clicks",
+            data: historicalData.map((d) => d.total_auction_clicks),
+          },
+        ]),
+      },
+    };
+
+    return res.status(200).json(responsePayload);
+  } catch (error) {
+    console.error("Failed to fetch analytics patterns:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // adminRouter.get(
 //   "/analytics/performance-metrics",
@@ -1496,7 +1650,7 @@ adminRouter.post("/packages/add", verifyToken, async (req, res) => {
         youtubeShowcase,
         premiumPlacement,
       })
-      .returning(); 
+      .returning();
 
     return res
       .status(201)
@@ -1509,8 +1663,48 @@ adminRouter.post("/packages/add", verifyToken, async (req, res) => {
   }
 });
 
+adminRouter.put("/packages/update/:id", verifyToken, async (req, res) => {
+  // 1. Authorization Check
+  if (!req.userId || !req.role || req.role !== "admin") {
+    return res.status(401).json({ error: "Unauthorized access" });
+  }
+
+  try {
+    const packageId = parseInt(req.params.id);
+    if (isNaN(packageId)) {
+      return res.status(400).json({ error: "Invalid package ID." });
+    }
+
+    const { ...updateData } = req.body;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: "No update data provided." });
+    }
+
+    const updatedPackage = await db
+      .update(packages)
+      .set(updateData)
+      .where(eq(packages.id, packageId))
+      .returning();
+
+    if (updatedPackage.length === 0) {
+      return res.status(404).json({ error: "Package not found." });
+    }
+
+    return res.status(200).json({
+      message: "Package updated successfully.",
+      data: updatedPackage[0],
+    });
+  } catch (error) {
+    console.error(`Error updating package with ID ${req.params.id}:`, error);
+    return res
+      .status(500)
+      .json({ error: "Internal server error while updating package." });
+  }
+});
+
 adminRouter.put(
-  "/packages/update/:id",
+  "/packages/toggle-active/:id",
   verifyToken,
   async (req, res) => {
     // 1. Authorization Check
@@ -1523,70 +1717,32 @@ adminRouter.put(
       if (isNaN(packageId)) {
         return res.status(400).json({ error: "Invalid package ID." });
       }
-
-      const { ...updateData } = req.body;
-
-      if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ error: "No update data provided." });
-      }
-
+      ``;
       const updatedPackage = await db
         .update(packages)
-        .set(updateData)
+        .set({ is_active: not(packages.is_active) })
         .where(eq(packages.id, packageId))
-        .returning();
+        .returning({ id: packages.id, is_active: packages.is_active });
 
       if (updatedPackage.length === 0) {
         return res.status(404).json({ error: "Package not found." });
       }
 
-      return res
-        .status(200)
-        .json({
-          message: "Package updated successfully.",
-          data: updatedPackage[0],
-        });
+      // 3. Send response
+      return res.status(200).json({
+        message: `Package status toggled to ${
+          updatedPackage[0].is_active ? "Active" : "Inactive"
+        }.`,
+        data: updatedPackage[0],
+      });
     } catch (error) {
-      console.error(`Error updating package with ID ${req.params.id}:`, error);
-      return res
-        .status(500)
-        .json({ error: "Internal server error while updating package." });
+      console.error(
+        `Error toggling package status for ID ${req.params.id}:`,
+        error
+      );
+      return res.status(500).json({ error: "Internal server error." });
     }
   }
 );
-
-adminRouter.put("/packages/toggle-active/:id", verifyToken, async (req, res) => {
-    // 1. Authorization Check
-    if (!req.userId || !req.role || req.role !== "admin") {
-        return res.status(401).json({ error: "Unauthorized access" });
-    }
-
-    try {
-        const packageId = parseInt(req.params.id);
-        if (isNaN(packageId)) {
-            return res.status(400).json({ error: "Invalid package ID." });
-        }
-``
-        const updatedPackage = await db
-            .update(packages)
-            .set({ is_active: not(packages.is_active) })
-            .where(eq(packages.id, packageId))
-            .returning({ id: packages.id, is_active: packages.is_active });
-
-        if (updatedPackage.length === 0) {
-            return res.status(404).json({ error: "Package not found." });
-        }
-        
-        // 3. Send response
-        return res.status(200).json({ 
-            message: `Package status toggled to ${updatedPackage[0].is_active ? 'Active' : 'Inactive'}.`,
-            data: updatedPackage[0]
-        });
-
-    } catch (error) {
-        console.error(`Error toggling package status for ID ${req.params.id}:`, error);
-        return res.status(500).json({ error: "Internal server error." });
-    }
-});
 
 export default adminRouter;

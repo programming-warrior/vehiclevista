@@ -1,0 +1,24 @@
+import axios from "axios";
+import { BACKEND_URL } from "@/lib/constants";
+
+export async function adminGetLoginLogs(query: string) {
+  try {
+    const response = await axios.get(
+      `${BACKEND_URL}/api/admin/logs/login?`+ query,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+        },
+        withCredentials: true,
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Error fetching performance metrics"
+    );
+  }
+}
+
+

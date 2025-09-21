@@ -10,6 +10,8 @@ class RedisClientSingleton {
     if (RedisClientSingleton.redisClient) {
       return RedisClientSingleton.redisClient ;
     }
+
+    console.log("processing.env.REDIS_HOSTNAME",process.env.REDIS_HOSTNAME)
    
     RedisClientSingleton.redisClient = createClient({
       url: `redis://default:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOSTNAME}:6379`,

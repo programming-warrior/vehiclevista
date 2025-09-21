@@ -540,7 +540,11 @@ vehicleRouter.post("/increase-views", async (req, res) => {
     }
     await Promise.all([
       redisClient.incr(`vehicle:${vehicleId}:views`),
-      redisClient.set(`vehicle:${vehicleId}:views:${ip}`, "1", "EX", 1 * 60),
+      redisClient.set(
+        `vehicle:${vehicleId}:views:${ip}`,
+        "1",
+        { EX: 1 } // 1 second expiry
+      ),
     ]);
     res.status(201).json({ message: "success" });
   } catch (err: any) {
@@ -592,8 +596,6 @@ vehicleRouter.post("/update-favourite", verifyToken, async (req, res) => {
   }
 });
 
-
-
 vehicleRouter.post("/increase-clicks", async (req, res) => {
   try {
     const { vehicleId } = req.body;
@@ -617,7 +619,11 @@ vehicleRouter.post("/increase-clicks", async (req, res) => {
     }
     await Promise.all([
       redisClient.incr(`vehicle:${vehicleId}:clicks`),
-      redisClient.set(`vehicle:${vehicleId}:clicks:${ip}`, "1", "EX", 1 * 60),
+      redisClient.set(
+        `vehicle:${vehicleId}:clicks:${ip}`,
+        "1",
+        { EX: 1 } // 1 second expiry
+      ),
     ]);
     res.status(201).json({ message: "success" });
   } catch (err: any) {

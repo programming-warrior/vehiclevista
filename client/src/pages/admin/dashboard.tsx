@@ -6,6 +6,7 @@ import PackageSelector from "@/components/packages/package-selector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import TopListing from "@/components/admin/top-listing";
+import IpLogsTable from "@/components/admin/ip-logs-table";
 
 export default function AdminDashboard() {
   // const { user } = useAuth();
@@ -16,21 +17,12 @@ export default function AdminDashboard() {
       <div className="space-y-8">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         
-        {/* <Tabs defaultValue="performance">
-          <TabsList>
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-            {isTraderOrGarage && (
-              <>
-                <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
-                <TabsTrigger value="packages">Packages</TabsTrigger>
-              </>
-            )}
-          </TabsList> */}
 
           {/* <TabsContent value="performance" className="space-y-8"> */}
             <PerformanceDashboard />
           
-          <TopListing/>
+          {/* <TopListing/> */}
+          <IpLogsTable/>  
           {/* </TabsContent>
 
           {isTraderOrGarage && (

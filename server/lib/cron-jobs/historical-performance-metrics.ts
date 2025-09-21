@@ -1,35 +1,60 @@
 import { db } from "../../db";
-import RedisClientSingleton from "../../utils/redis";
-import { vehicleMetricsHistory, auctionMetricsHistory, vehicles, auctions} from "../../../shared/schema";
+import { vehicles, auctions, users, platformSummaryHistory } from "../../../shared/schema";
+import { sql, sum } from "drizzle-orm";
 
-export async function FlushPastPerformanceMetrics(date: Date) {
-  
-  const promise_vehicles= db.select().from(vehicles)
-  const promise_auctions = db.select().from(auctions);
+export async function flushAndAggregateMetrics() {
+  console.log("Running analytics aggregation job...");
+  try {
+    // 1. Get current totals for everything in parallel for efficiency
+    const vehicleTotalsPromise = db
+      .select({
+        count: sql<number>`count(*)`.mapWith(Number),
+        views: sum(vehicles.views).mapWith(Number),
+        clicks: sum(vehicles.clicks).mapWith(Number),
+        leads: sum(vehicles.leads).mapWith(Number),
+      })
+      .from(vehicles);
 
-  const [_vehicles, _auctions] = await Promise.all([promise_vehicles, promise_auctions]);
+    const auctionTotalsPromise = db
+      .select({
+        count: sql<number>`count(*)`.mapWith(Number),
+        views: sum(auctions.views).mapWith(Number),
+        clicks: sum(auctions.clicks).mapWith(Number),
+        leads: sum(auctions.leads).mapWith(Number),
+      })
+      .from(auctions);
 
-  const vehicleMetrics = _vehicles.map((v)=>{
-    return {
-      vehicleId: v.id,
-      views: v.views ?? 0,
-      clicks: v.clicks ?? 0,
-      leads: v.leads ?? 0, 
-      recroded_at: date
-    }
-  }) 
+    const userTotalPromise = db
+      .select({
+        count: sql<number>`count(*)`.mapWith(Number),
+      })
+      .from(users);
 
-  const auctionMetrics = _auctions.map((a)=>{
-    return {
-        auctionId: a.id,
-        views: a.views ?? 0,
-        clicks: a.clicks ?? 0,
-        leads: a.leads ?? 0, 
-        recorded_at: date
-    }
-  })
-  
-  db.insert(vehicleMetricsHistory).values(vehicleMetrics);
-  db.insert(auctionMetricsHistory).values(auctionMetrics)
+    const [[vehicleTotals], [auctionTotals], [userTotal]] = await Promise.all([
+      vehicleTotalsPromise,
+      auctionTotalsPromise,
+      userTotalPromise,
+    ]);
+
+    // 2. Prepare the new summary record
+    const newSummary = {
+      recorded_at: new Date(),
+      total_vehicles: vehicleTotals.count || 0,
+      total_auctions: auctionTotals.count || 0,
+      total_users: userTotal.count || 0,
+      total_vehicle_views: vehicleTotals.views || 0,
+      total_vehicle_clicks: vehicleTotals.clicks || 0,
+      total_vehicle_leads: vehicleTotals.leads || 0,
+      total_auction_views: auctionTotals.views || 0,
+      total_auction_clicks: auctionTotals.clicks || 0,
+      total_auction_leads: auctionTotals.leads || 0,
+    };
+
+    // 3. Insert the new summary into the history table
+    await db.insert(platformSummaryHistory).values(newSummary);
+
+    console.log("Successfully flushed and aggregated platform metrics.");
+  } catch (error) {
+    console.error("Error running analytics aggregation job:", error);
+  }
 }
-
