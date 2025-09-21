@@ -3,13 +3,12 @@ import { hashPassword, comparePasswords } from "../utils/auth";
 import { db } from "../db";
 import { adminIpLogs, users } from "../../shared/schema";
 import { eq, or } from "drizzle-orm";
-import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
+import { ADMIN_SESSION_EXPIRY_SECONDS, createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
 import { userRegisterSchema } from "../../shared/zodSchema/userSchema";
 import RedisClientSingleton from "../utils/redis";
 import axios from "axios";
 import UAParser from 'my-ua-parser';
-import { randomBytes } from "crypto";
-import { PgTable } from "drizzle-orm/pg-core";
+
 
 const authRouter = Router();
 
@@ -140,11 +139,10 @@ authRouter.post("/login", async (req, res) => {
     let loginLog: any = null;
     if (user.role == "admin") {
       //store the login logs
-      console.log("Admin login detected, logging IP and User-Agent");
+      console.log("Admin login detected");
     
       const parser = new UAParser(req.headers["user-agent"]);
       const ua = parser.getResult();
-      console.log(ua);
       const deviceBrowser = `${ua.browser.name ?? "Unknown"} ${
         ua.browser.version ?? ""
       }`;
@@ -182,7 +180,7 @@ authRouter.post("/login", async (req, res) => {
         .where(eq(adminIpLogs.id, loginLog[0].id));
 
     res.cookie("sessionId", sessionId, {
-      maxAge: SESSION_EXPIRY_SECONDS * 1000,
+      maxAge: user.role=='admin'? ADMIN_SESSION_EXPIRY_SECONDS : SESSION_EXPIRY_SECONDS * 1000,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "none",

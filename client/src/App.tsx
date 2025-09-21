@@ -8,7 +8,6 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import Footer from "@/components/footer";
 import Home from "@/pages/home";
 import VehicleIdPage from "@/pages/vehicle/vehicle-id";
-import Search from "@/pages/search";
 import Login from "@/pages/login";
 import Navbar from "@/components/navbar";
 import NotFound from "@/pages/not-found";
@@ -57,6 +56,7 @@ import AdminBuyerSellerChatHistory from "./pages/admin/buyer-seller-chat";
 import { getRecentView } from "./api/user-api";
 import { useRecentViews } from "./hooks/use-store";
 import AdminPackagesPage from "./pages/admin/packages";
+import {useAutoLogout} from "./lib/use-auto-logout";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -148,10 +148,14 @@ export default function App() {
     };
   }, []);
 
+  //Auto logout feature for the admin
+  useAutoLogout(role);
+  
+
   if (!userId || !role) {
     if (isValidating) return <Loader />;
   }
-
+  console.log(role);
   return (
     <QueryClientProvider client={queryClient}>
       {/* <AuthProvider> */}
@@ -171,7 +175,6 @@ export default function App() {
             <Route path="/vehicle" component={VehiclePage} />
             <Route path="/vehicle/:id" component={VehicleIdPage} />
             <Route path="/vehicle/edit/:id" component={VehicleEditPage} />
-            <Route path="/search" component={Search} />
             <Route path="/makes" component={MakesPage} />
             <Route path="/makes/:brand" component={BrandPage} />
             <Route path="/auction" component={AuctionPage} />

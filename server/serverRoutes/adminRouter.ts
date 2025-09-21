@@ -131,8 +131,11 @@ interface TopListingType {
   make: string;
   model: string;
   year: number;
-}
-;
+};
+
+adminRouter.post("/keep-alive", verifyToken, (req, res) => {
+  return res.json({ ok: true });
+});
 
 adminRouter.get("/logs/login", verifyToken, async (req, res) => {
   if (!req.userId || req.role !== "admin") {
