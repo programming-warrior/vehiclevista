@@ -44,6 +44,57 @@ interface AdminLoginLog {
   createdAt: string;
 }
 
+function exportLogsAsCSV(logs: AdminLoginLog[]) {
+  if (!logs.length) return;
+
+  // Define CSV headers
+  const headers = [
+    "ID",
+    "Admin ID",
+    "IP Address",
+    "Location City",
+    "Location Country",
+    "Device Browser",
+    "Device OS",
+    "User Agent",
+    "Session Duration",
+    "Status",
+    "Login Time",
+  ];
+
+  // Map logs to CSV rows
+  const rows = logs.map((log) => [
+    log.id,
+    log.adminId,
+    `"${log.ipAddress}"`,
+    `"${log.locationCity}"`,
+    `"${log.locationCountry}"`,
+    `"${log.deviceBrowser}"`,
+    `"${log.deviceOs}"`,
+    `"${log.userAgentRaw}"`,
+    log.sessionDuration,
+    log.status,
+    `"${new Date(log.createdAt).toLocaleString()}"`,
+  ]);
+
+  // Combine headers and rows
+  const csvContent = [headers, ...rows]
+    .map((row) => row.join(","))
+    .join("\r\n");
+
+  // Create a blob and trigger download
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "admin-login-logs.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export default function IPLogsTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -54,7 +105,7 @@ export default function IPLogsTable() {
   const [limit, setLimit] = useState(10);
   const debouncedSearchTerm = useDebounce(searchTerm);
 
-  async function fetchLogs(page:number) {
+  async function fetchLogs(page: number) {
     try {
       const filter = JSON.stringify({
         status: statusFilter,
@@ -93,7 +144,10 @@ export default function IPLogsTable() {
                 information
               </p>
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => exportLogsAsCSV(loginLogs)}
+            >
               <Download className="h-4 w-4 mr-2" />
               Export Logs
             </Button>
@@ -128,9 +182,7 @@ export default function IPLogsTable() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">1</SelectItem>
                     <SelectItem value="5">5</SelectItem>
-
                     <SelectItem value="10">10</SelectItem>
                     <SelectItem value="25">25</SelectItem>
                     <SelectItem value="50">50</SelectItem>
