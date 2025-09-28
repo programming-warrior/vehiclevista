@@ -66,7 +66,7 @@ export default function RaffleHomeSection() {
           <div className="relative w-full h-64 md:h-80">
             <img
               className="w-full h-full object-contain"
-              src={raffle.images[2]}
+              src={raffle.images[0]}
               alt={`${raffle.year} ${raffle.make} ${raffle.model}`}
             />
           </div>

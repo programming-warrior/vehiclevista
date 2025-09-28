@@ -450,12 +450,12 @@ export default function RaffleForm() {
       form.reset();
       vehicleForm.reset();
       setSelectedVehicle(null);
-    } catch (error) {
+    } catch (error:any) {
       console.error("Error creating raffle:", error);
       toast({
         variant: "destructive",
         title: "Failed",
-        description: "Something went wrong",
+        description: error.message || "Something went wrong",
       });
     } finally {
       setIsSubmitting(false);

@@ -38,7 +38,7 @@ export async function createRaffle(data : any ) {
       return response.data;
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Error fetching performance metrics"
+        error.response?.data?.message || "Error creating raffle"
       );
     }
   }

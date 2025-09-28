@@ -108,6 +108,7 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
 
   ws.on("message", async (msg) => {
     try {
+      console.log(msg);
       const data = JSON.parse(msg.toString());
       console.log(data);
 
@@ -135,7 +136,9 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
         );
       } else if (data.type === "subscribe" && data.payload.raffleId) {
         const raffleId = data.payload.raffleId.toString();
-
+        console.log("trying to subscribe to raffle");
+        console.log(data.payload);
+        
         // Add client to raffle group
         if (!raffleClients[raffleId]) {
           raffleClients[raffleId] = [];
@@ -303,7 +306,7 @@ async function subscribeToRaffleTimer(raffleId: string) {
   await subscribeOnce(channel, (message, channel) => {
     console.log(`Message received from ${channel}: ${message}`);
     const data = JSON.parse(message);
-    if (data.raffleId !== raffleId) return;
+    if (data.raffleId != raffleId) return;
 
     const wsData = {
       event: "RAFFLE_TIMER",

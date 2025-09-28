@@ -4,7 +4,7 @@ import { useUser } from "@/hooks/use-store";
 import { logoutUser } from "@/api";
 import axios from "axios";
 import { BACKEND_URL } from "./constants";
-const AUTO_LOGOUT_MINUTES = 1;
+const AUTO_LOGOUT_MINUTES = 15;
 
 const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
 
@@ -14,16 +14,21 @@ export function useAutoLogout(userRole: string) {
   const { setUser } = useUser();
 
   const logout = async () => {
-    console.log("logout called");
-    localStorage.removeItem("sessionId");
-    setUser({
-      userId: "",
-      role: "",
-      card_Verified: false,
-    });
-    events.forEach((event) => window.removeEventListener(event, resetTimer));
-    await logoutUser();
-    setLocation("/login");
+    try{
+      console.log("logout called");
+      localStorage.removeItem("sessionId");
+      setUser({
+        userId: "",
+        role: "",
+        card_Verified: false,
+      });
+      events.forEach((event) => window.removeEventListener(event, resetTimer));
+      await logoutUser();
+      setLocation("/login");
+    }
+    catch(e){
+
+    }
   };
 
   let lastping = 0;

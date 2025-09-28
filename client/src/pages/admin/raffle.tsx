@@ -25,7 +25,7 @@ export default function AdminRafflePage() {
     async function fetchRaffles() {
       try {
         setLoading(true);
-        const data = await getRaffles();
+      const data = await getRaffles();
         setRaffles(data);
       } catch (e) {
         console.error("Failed to fetch raffles:", e);

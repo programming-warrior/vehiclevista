@@ -4,12 +4,12 @@
   "type": "commonjs",
   "license": "MIT",
   "scripts": {
-    "server-dev": "tsx server/index.ts",
+    "server-dev": "tsx watch server/index.ts",
     "client-dev": "vite --host",
     "client-build": "vite buid",
     "server-build": "tsc -p tsconfig.server.json",
     "server-prod": "cross-env NODE_ENV=production node dist/server/index.js",
-    "worker": "concurrently -n notification,package,payment,auction,raffle,cleanup,bid \"node ./dist/server/worker/jobs/notificationJob.js\" \"node ./dist/server/worker/jobs/packageJob.js\" \"node ./dist/server/worker/jobs/paymentProcess.js\" \"node ./dist/server/worker/jobs/auction.js\" \"node ./dist/server/worker/jobs/raffle.js\" \"node ./dist/server/worker/jobs/cleanupJob.js\" \"node ./dist/server/worker/jobs/bidProcess.js\"",
+    "worker-dev": "concurrently -n notification,package,payment,auction,raffle,cleanup,bid \"node ./dist/server/worker/jobs/notificationJob.js\" \"node ./dist/server/worker/jobs/packageJob.js\" \"node ./dist/server/worker/jobs/paymentProcess.js\" \"node ./dist/server/worker/jobs/auction.js\" \"node ./dist/server/worker/jobs/raffle.js\" \"node ./dist/server/worker/jobs/cleanupJob.js\" \"node ./dist/server/worker/jobs/bidProcess.js\"",
     "client-prod": "serve dist/client -l 5173",
     "check": "tsc",
     "db:push": "drizzle-kit push"

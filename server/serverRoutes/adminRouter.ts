@@ -131,7 +131,7 @@ interface TopListingType {
   make: string;
   model: string;
   year: number;
-};
+}
 
 adminRouter.post("/keep-alive", verifyToken, (req, res) => {
   return res.json({ ok: true });
@@ -182,7 +182,8 @@ adminRouter.get("/logs/login", verifyToken, async (req, res) => {
       conditions.push(eq(adminIpLogs.status, statusFilter));
     }
 
-    const whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereCondition =
+      conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get paginated results
     const logs = await db
@@ -201,11 +202,10 @@ adminRouter.get("/logs/login", verifyToken, async (req, res) => {
 
     return res.json({
       page: pageNumber,
-      totalPages: Math.ceil(count/limitNumber),
+      totalPages: Math.ceil(count / limitNumber),
       totalLogs: count,
       logs: logs,
     });
-
   } catch (e) {
     console.error("Error fetching admin login logs:", e);
     return res.status(500).json({ error: "Internal server error" });
@@ -1320,6 +1320,18 @@ adminRouter.post("/raffle/create", verifyToken, async (req, res) => {
       });
     }
   }
+  //check if the existing registration exits
+  const [ existing_record ] = await db
+    .select()
+    .from(raffle)
+    .where(eq(raffle.registration_num, vehicleParse.data.registration_num));
+  
+  if(existing_record){
+    return res.status(400).json({
+      error:"raffle vehicle already exists"
+    })
+  }
+
   const raffleData = {
     ...parseResult.data,
     ...vehicleParse.data,

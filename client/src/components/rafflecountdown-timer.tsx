@@ -6,9 +6,11 @@ export default function RaffleCountDownTimer({ raffle, setRaffle }: { raffle: an
   const { socket } = useWebSocket();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isSubscribedRef = useRef<boolean>(false);
-
+  console.log(isSubscribedRef.current);
   // Effect 1: Handle WebSocket subscription (only runs when socket or raffle.id changes)
   useEffect(() => {
+    console.log(socket);
+    console.log(isSubscribedRef.current);
     if (!socket || socket.readyState !== WebSocket.OPEN || isSubscribedRef.current) {
       return;
     }
@@ -32,7 +34,7 @@ export default function RaffleCountDownTimer({ raffle, setRaffle }: { raffle: an
         if (data.event === "RAFFLE_TIMER") {
           console.log("updating remainignt time");
           setRaffle((prev: any) =>
-            prev.id.toString() === data.message.raffleId
+            prev.id.toString() == data.message.raffleId
               ? { ...prev, remainingTime: data.message.remainingTime }
               : prev
           );
@@ -48,6 +50,7 @@ export default function RaffleCountDownTimer({ raffle, setRaffle }: { raffle: an
     return () => {
       console.log("WebSocket cleanup");
       if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log("sending unsubscribe message");
         socket.send(
           JSON.stringify({
             type: "unsubscribe",
@@ -67,7 +70,8 @@ export default function RaffleCountDownTimer({ raffle, setRaffle }: { raffle: an
   useEffect(() => {
     console.log('side effect of raffle remaining time udpate')
     const updateTimerDisplay = (distance: number) => {
-      if (distance <= 0) {
+    
+      if (distance < 0) {
         setTimeLeft("Ended");
         return;
       }
@@ -105,13 +109,6 @@ export default function RaffleCountDownTimer({ raffle, setRaffle }: { raffle: an
       updateTimerDisplay(raffle.remainingTime || 0);
     }
 
-    // Cleanup timer
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
   }, [raffle.remainingTime, socket]); // This can safely depend on remainingTime now
 
   // Cleanup on unmount
@@ -120,6 +117,7 @@ export default function RaffleCountDownTimer({ raffle, setRaffle }: { raffle: an
       console.log("Component unmount cleanup");
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current=null;
       }
     };
   }, []);
