@@ -44,6 +44,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.bubble.css";
 import ReportDialog from "@/components/ui/report-dialog";
 import PaymentFormWrapper from "@/components/payment-form";
+import RaffleWinnerSelector from "@/components/admin/raffle-winner-selector";
 
 export default function RaffleIdPage() {
   const { id } = useParams<{ id: string }>();
@@ -102,9 +103,7 @@ export default function RaffleIdPage() {
         //   });
         // }
         else {
-          const result = await purchaseRaffleTicket(
-            ticketQuantity.toString()
-          );
+          const result = await purchaseRaffleTicket(ticketQuantity.toString());
           setPaymentInfo({
             clientSecret: result.clientSecret,
             timeout: result.timeout,

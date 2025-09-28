@@ -30,11 +30,11 @@ const bidWorker = new Worker(
               SELECT * FROM ${auctions} WHERE ${auctions.id} = ${auctionId} FOR UPDATE
           `);
           console.log(result);
-          const row: Auction = (result?.rows[0] as Auction) ?? null;
+          const row: any = (result?.rows[0] as Auction) ?? null;
           if (!row) throw new Error("auction not found");
 
           console.log("Auction found");
-          if ((row.currentBid ?? 0) >= bidAmount) {
+          if ((row.current_bid ?? 0) >= bidAmount) {
             throw new Error(
               JSON.stringify(
                 "Bid amount needs to be greater than the currentBid"
@@ -62,7 +62,7 @@ const bidWorker = new Worker(
             .update(auctions)
             .set({
               currentBid: bidAmount,
-              totalBids: (row.totalBids ?? 0) + 1,
+              totalBids: (row.total_bids ?? 0) + 1,
             })
             .where(eq(auctions.id, auctionId));
         });
@@ -110,40 +110,48 @@ const bidWorker = new Worker(
         console.log(e);
       }
     } else if (job.name == "processRaffleTicket") {
-      const { raffleId, userId, ticketQuantity, paymentIntentId } = job.data;
+      let { raffleId, userId, ticketQuantity, paymentIntentId } = job.data;
+      if(!Number.isInteger(raffleId) || !Number.isInteger(userId) || !Number.isInteger(ticketQuantity)){
+        throw new Error("Invalid raffleId or userId or ticket quantity. Only Integer is Expected");
+      }
       let insertedBids: any;
-      console.log("received raffle ticket request");
+     
       try {
         if (!paymentIntentId) throw new Error("paymentIntentId invalid");
         await db.transaction(async (trx) => {
           const result = await trx.execute(sql`
               SELECT * FROM ${raffle} WHERE ${raffle.id} = ${raffleId} FOR UPDATE
           `);
-          const row: Raffle = (result?.rows[0] as Raffle) ?? null;
+  
+          const row:any = (result?.rows[0] as Raffle) ?? null;
+          console.log(row);
           if (!row) throw new Error("raffle not found");
 
           const now = new Date();
 
           if (
             row.status !== "RUNNING" ||
-            now < row.startDate ||
-            now > row.endDate
+            now < row.start_date ||
+            now > row.end_date
           ) {
             throw new Error("Raffle not running");
           }
-
-          if (row.ticketQuantity - row.soldTicket < ticketQuantity) {
+          console.log(row.ticket_quantity + " " + row.sold_ticket);
+          if (row.ticket_quantity - row.sold_ticket < ticketQuantity) {
             throw new Error(
               JSON.stringify("Ticket quantity exceeds issued remaining tickets")
             );
           }
-
+          console.log(raffleId);
+          console.log(userId);
+          console.log(ticketQuantity);
+          console.log("inserting into raffleTicket");
           insertedBids = await trx
             .insert(raffleTicketSale)
             .values({
               raffleId: raffleId,
-              userId: Number(userId),
-              ticketQtn: Number(ticketQuantity),
+              userId: userId,
+              ticketQtn: ticketQuantity,
               createdAt: new Date(),
             })
             .returning();
@@ -151,7 +159,7 @@ const bidWorker = new Worker(
           await trx
             .update(raffle)
             .set({
-              soldTicket: row.soldTicket + ticketQuantity,
+              soldTicket: (row.sold_ticket + ticketQuantity),
             })
             .where(eq(raffle.id, raffleId));
         });

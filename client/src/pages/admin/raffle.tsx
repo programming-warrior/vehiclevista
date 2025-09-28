@@ -5,6 +5,14 @@ import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -15,17 +23,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Clock, Car, DollarSign, Users, Tag, AlertCircle } from "lucide-react";
 import RaffleCountDownTimer from "@/components/rafflecountdown-timer";
+import RaffleWinnerSelector from "@/components/admin/raffle-winner-selector";
 
 export default function AdminRafflePage() {
   const [raffles, setRaffles] = useState<any>([]);
   const [activeTab, setActiveTab] = useState("view");
   const [loading, setLoading] = useState(true);
+  const [openWinnerDialog, setOpenWinnerDialog] = useState(false);
+  const [selectedRaffleId, setSelectedRaffleId] = useState<Number | null>(null);
 
   useEffect(() => {
     async function fetchRaffles() {
       try {
         setLoading(true);
-      const data = await getRaffles();
+        const data = await getRaffles();
         setRaffles(data);
       } catch (e) {
         console.error("Failed to fetch raffles:", e);
@@ -67,9 +78,13 @@ export default function AdminRafflePage() {
       case "running":
         return <Badge className="bg-blue-500 hover:bg-blue-600">Running</Badge>;
       case "completed":
-        return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>;
+        return (
+          <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>
+        );
       case "upcoming":
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Upcoming</Badge>;
+        return (
+          <Badge className="bg-yellow-500 hover:bg-yellow-600">Upcoming</Badge>
+        );
       case "stopped":
         return <Badge className="bg-red-500 hover:bg-red-600">Stopped</Badge>;
       default:
@@ -94,7 +109,9 @@ export default function AdminRafflePage() {
   return (
     <AdminLayout>
       <div className="container mx-auto p-4 bg-white">
-        <h1 className="text-3xl font-bold mb-6 text-black">Raffle Management</h1>
+        <h1 className="text-3xl font-bold mb-6 text-black">
+          Raffle Management
+        </h1>
 
         <Tabs
           defaultValue="view"
@@ -103,8 +120,18 @@ export default function AdminRafflePage() {
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100">
-            <TabsTrigger value="view" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">View Raffles</TabsTrigger>
-            <TabsTrigger value="create" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">Create Raffle</TabsTrigger>
+            <TabsTrigger
+              value="view"
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
+              View Raffles
+            </TabsTrigger>
+            <TabsTrigger
+              value="create"
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
+              Create Raffle
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="view" className="space-y-6">
@@ -115,12 +142,14 @@ export default function AdminRafflePage() {
             ) : raffles.length === 0 ? (
               <div className="text-center p-12 border rounded-lg bg-slate-50">
                 <AlertCircle className="mx-auto h-12 w-12 text-blue-500 mb-4" />
-                <h3 className="text-lg font-medium text-black">No raffles found</h3>
+                <h3 className="text-lg font-medium text-black">
+                  No raffles found
+                </h3>
                 <p className="text-slate-600 mt-2">
                   Create your first raffle to get started.
                 </p>
-                <Button 
-                  className="mt-4 bg-blue-500 hover:bg-blue-600 text-white" 
+                <Button
+                  className="mt-4 bg-blue-500 hover:bg-blue-600 text-white"
                   onClick={() => setActiveTab("create")}
                 >
                   Create Raffle
@@ -217,6 +246,7 @@ export default function AdminRafflePage() {
                             >
                               View Details
                             </Button>
+
                             <Button
                               variant="destructive"
                               size="sm"
@@ -242,7 +272,9 @@ export default function AdminRafflePage() {
 
                 {/* Other Raffles Section */}
                 <div>
-                  <h2 className="text-xl font-semibold mb-4 text-black">Other Raffles</h2>
+                  <h2 className="text-xl font-semibold mb-4 text-black">
+                    Other Raffles
+                  </h2>
                   <div className="overflow-x-auto rounded-lg border border-slate-200">
                     <table className="w-full border-collapse">
                       <thead>
@@ -250,10 +282,18 @@ export default function AdminRafflePage() {
                           <th className="text-left p-3 text-black">Title</th>
                           <th className="text-left p-3 text-black">Vehicle</th>
                           <th className="text-left p-3 text-black">Status</th>
-                          <th className="text-left p-3 text-black">Ticket Price</th>
-                          <th className="text-left p-3 text-black">Tickets Sold</th>
-                          <th className="text-left p-3 text-black">Date Range</th>
-                          <th className="text-center p-3 text-black">Actions</th>
+                          <th className="text-left p-3 text-black">
+                            Ticket Price
+                          </th>
+                          <th className="text-left p-3 text-black">
+                            Tickets Sold
+                          </th>
+                          <th className="text-left p-3 text-black">
+                            Date Range
+                          </th>
+                          <th className="text-center p-3 text-black">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -264,14 +304,18 @@ export default function AdminRafflePage() {
                               key={raffle.id}
                               className="border-b hover:bg-slate-50"
                             >
-                              <td className="p-3 text-slate-800">{raffle.title}</td>
+                              <td className="p-3 text-slate-800">
+                                {raffle.title}
+                              </td>
                               <td className="p-3 text-slate-800">
                                 {raffle.year} {raffle.make} {raffle.model}
                               </td>
                               <td className="p-3">
                                 {getStatusBadge(raffle.status)}
                               </td>
-                              <td className="p-3 text-slate-800">₹{raffle.ticketPrice}</td>
+                              <td className="p-3 text-slate-800">
+                                ₹{raffle.ticketPrice}
+                              </td>
                               <td className="p-3 text-slate-800">
                                 {raffle.leads || 0}/{raffle.ticketQuantity}
                               </td>
@@ -296,8 +340,21 @@ export default function AdminRafflePage() {
                                 >
                                   View
                                 </Button>
+                                <Button
+                                  className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
+                                  onClick={() => {
+                                    setOpenWinnerDialog(true);
+                                    setSelectedRaffleId(raffle.id);
+                                  }}
+                                >
+                                  Select Winner
+                                </Button>
                                 {raffle.status === "upcoming" && (
-                                  <Button size="sm" variant="default" className="bg-blue-500 hover:bg-blue-600">
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="bg-blue-500 hover:bg-blue-600"
+                                  >
                                     Start
                                   </Button>
                                 )}
@@ -339,6 +396,24 @@ export default function AdminRafflePage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={openWinnerDialog} onOpenChange={setOpenWinnerDialog}>
+        <DialogContent className="sm:max-w-3xl bg-white border-blue-100">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-blue-800">
+              Select Raffle Winner
+            </DialogTitle>
+            <DialogDescription>
+              Choose the winner for this raffle from all ticket purchasers.
+            </DialogDescription>
+          </DialogHeader>
+          <RaffleWinnerSelector
+            raffleId={selectedRaffleId as Number}
+            entrants={[]}
+            onSaved={() => setOpenWinnerDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

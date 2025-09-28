@@ -25,7 +25,7 @@ import {
   verifyTicketPayment,
   incrementRaffleClicks,
   incrementRaffleViews,
-  getBidsForRunningRaffle
+  getBidsForRunningRaffle,
 } from "@/api";
 import {
   Dialog,
@@ -44,6 +44,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.bubble.css";
 import ReportDialog from "@/components/ui/report-dialog";
 import PaymentFormWrapper from "@/components/payment-form";
+import RaffleWinnerSelector from "@/components/admin/raffle-winner-selector";
 
 export default function RunningRafflePage() {
   const { id } = useParams<{ id: string }>();
@@ -59,7 +60,6 @@ export default function RunningRafflePage() {
   const [paymentformOpen, setPaymentformOpen] = useState(false);
   const [paymentInfo, setPaymentInfo] = useState<any>({});
   const [bids, setBids] = useState<any>([]);
-  
 
   // Total cost calculation
   const totalCost = raffle?.ticketPrice
@@ -86,9 +86,9 @@ export default function RunningRafflePage() {
   }
 
   async function handlePurchaseTickets() {
-    console.log('handle purchase ticket called')
+    console.log("handle purchase ticket called");
     console.log(id);
-    if ( !purchaseError && ticketQuantity > 0) {
+    if (!purchaseError && ticketQuantity > 0) {
       try {
         if (!userId) {
           toast({
@@ -105,9 +105,7 @@ export default function RunningRafflePage() {
         //   });
         // }
         else {
-          const result = await purchaseRaffleTicket(
-            ticketQuantity.toString()
-          );
+          const result = await purchaseRaffleTicket(ticketQuantity.toString());
           setPaymentInfo({
             clientSecret: result.clientSecret,
             timeout: result.timeout,
@@ -158,7 +156,7 @@ export default function RunningRafflePage() {
       try {
         const response = await getBidsForRunningRaffle();
         // setEntries(response.entries);
-        setBids(response.purchaseHistory || [])
+        setBids(response.purchaseHistory || []);
       } catch (error) {
         console.error("Error fetching entries:", error);
       }
@@ -785,6 +783,7 @@ export default function RunningRafflePage() {
         type="raffle"
         targetId={id}
       />
+ 
     </div>
   );
 }

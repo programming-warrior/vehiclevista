@@ -124,10 +124,11 @@ raffleRouter.post("/purchase-ticket", verifyToken, async (req, res) => {
       },
     });
     const redis = await RedisClientSingleton.getRedisClient();
+    //caching on redis to reduce read operation on db
     await redis.set(
       `paymentSession:${paymentIntent.id}`,
       JSON.stringify({
-        raffleId: result[0].id.toString(),
+        raffleId: result[0].id,
         ticketQuantity: ticketQuantity,
         userId: req.userId.toString(),
         chargedAmount: totalChargedAmount,
@@ -213,14 +214,16 @@ raffleRouter.post("/purchase/verify-payment", verifyToken, async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status === "succeeded") {
+      console.log(paymentIntent.metadata);
       const { raffleId, userId, ticketQuantity, chargedAmount } =
         paymentIntent.metadata;
       await redis.del(`paymentSession:${paymentIntentId}`);
+      console.log('deleted from redis payment session');
       await bidQueue.add("processRaffleTicket", {
         userId: req.userId,
         paymentIntentId,
-        raffleId,
-        ticketQuantity,
+        raffleId: Number(raffleId),
+        ticketQuantity: Number(ticketQuantity),
       });
       return res.status(200).json({ success: true });
     } else {
