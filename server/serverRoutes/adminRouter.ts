@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { hashPassword, comparePasswords } from "../utils/auth";
 import { db } from "../db";
+import { Raffle } from "../../shared/schema";
 import {
   users,
   bids,
@@ -33,7 +34,7 @@ import {
   not,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { raffleQueue } from "../worker/queue";
+import { notificationQueue, raffleQueue } from "../worker/queue";
 
 // import { notEq } from "drizzle-orm/pg-core";
 
@@ -1294,6 +1295,80 @@ adminRouter.get("/reports/listings", verifyToken, async (req, res) => {
   });
 });
 
+adminRouter.post(
+  "/raffle/choose-winner/:raffleId",
+  verifyToken,
+  async (req, res) => {
+    if (!req.userId || req.role !== "admin") {
+      return res.status(401).json({ error: "Unauthorized access" });
+    }
+    //INPUT SANITIZATION
+    let raffleId = parseInt(req.params.raffleId ?? "");
+    let winnerUserId = parseInt(req.body.userId ?? "");
+    if (
+      isNaN(raffleId) ||
+      isNaN(winnerUserId) ||
+      raffleId < 0 ||
+      winnerUserId < 0
+    ) {
+      return res.status(400).json({
+        error: "Invalid input",
+      });
+    }
+    try {
+      //FETCH THE RAFFLE
+      const [raffleData] = (await db
+        .select()
+        .from(raffle)
+        .where(eq(raffle.id, raffleId))) as Raffle[];
+
+      if (!raffleData) {
+        return res.status(404).json({
+          error: "Raffle not found",
+        });
+      }
+      if (raffleData.winner) {
+        return res.status(400).json({
+          error: "Winner already declared",
+        });
+      }
+      const [userData] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, winnerUserId));
+      if (!userData) {
+        return res.status(400).json({
+          error: "user not found",
+        });
+      }
+      //BUSINESS LOGICS
+      //WINNER CANNOT BE CHOSEN IF THE RAFFLE IS IN RUNNING STATE
+      console.log(raffleData.status);
+      if (raffleData.status === "RUNNING") {
+        return res.status(400).json({
+          error: "Cannot choose winner for running raffle",
+        });
+      }
+      await db.update(raffle).set({
+        winner: winnerUserId,
+      }).where(eq(raffle.id, raffleId));
+      //SEND THE NOTIFICAION TO ALL THE BIDDERS ABOUT THE WINNER
+      await notificationQueue.add("raffle-winner-broadcast", {
+        raffleId,
+        winnerUserId,
+      });
+      return res.status(201).json({
+        message: "success",
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({
+        error: "server error",
+      });
+    }
+  }
+);
+
 adminRouter.post("/raffle/create", verifyToken, async (req, res) => {
   if (!req.userId || !req.role || req.role !== "admin")
     return res.status(401).json({ error: "unauthorized access" });
@@ -1321,15 +1396,15 @@ adminRouter.post("/raffle/create", verifyToken, async (req, res) => {
     }
   }
   //check if the existing registration exits
-  const [ existing_record ] = await db
+  const [existing_record] = await db
     .select()
     .from(raffle)
     .where(eq(raffle.registration_num, vehicleParse.data.registration_num));
-  
-  if(existing_record){
+
+  if (existing_record) {
     return res.status(400).json({
-      error:"raffle vehicle already exists"
-    })
+      error: "raffle vehicle already exists",
+    });
   }
 
   const raffleData = {

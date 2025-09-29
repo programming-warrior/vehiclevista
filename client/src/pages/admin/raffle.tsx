@@ -75,35 +75,19 @@ export default function AdminRafflePage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "running":
+      case "RUNNING":
         return <Badge className="bg-blue-500 hover:bg-blue-600">Running</Badge>;
-      case "completed":
+      case "ENDED":
         return (
           <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>
         );
-      case "upcoming":
+      case "UPCOMING":
         return (
           <Badge className="bg-yellow-500 hover:bg-yellow-600">Upcoming</Badge>
         );
-      case "stopped":
-        return <Badge className="bg-red-500 hover:bg-red-600">Stopped</Badge>;
       default:
         return <Badge className="bg-gray-500">{status}</Badge>;
     }
-  };
-
-  const getTimeRemaining = (endDate: string) => {
-    const end = new Date(endDate);
-    const now = new Date();
-    const diff = end.getTime() - now.getTime();
-
-    if (diff <= 0) return "Ended";
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    return `${days}d ${hours}h ${minutes}m`;
   };
 
   return (
@@ -340,15 +324,17 @@ export default function AdminRafflePage() {
                                 >
                                   View
                                 </Button>
-                                <Button
-                                  className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
-                                  onClick={() => {
-                                    setOpenWinnerDialog(true);
-                                    setSelectedRaffleId(raffle.id);
-                                  }}
-                                >
-                                  Select Winner
-                                </Button>
+                                {!raffle.winner && (
+                                  <Button
+                                    className="bg-blue-600 hover:bg-blue-700 text-white ml-2"
+                                    onClick={() => {
+                                      setOpenWinnerDialog(true);
+                                      setSelectedRaffleId(raffle.id);
+                                    }}
+                                  >
+                                    Select Winner
+                                  </Button>
+                                )}
                                 {raffle.status === "upcoming" && (
                                   <Button
                                     size="sm"

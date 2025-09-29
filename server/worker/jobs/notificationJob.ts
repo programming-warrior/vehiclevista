@@ -9,7 +9,7 @@ import {
   auctions,
   raffle,
   bids,
-  packages
+  packages,
 } from "../../../shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -332,8 +332,7 @@ const notificationWorker = new Worker(
       } catch (e) {
         console.log(e);
       }
-    }
-    else if (job.name === "listing-creation-success") {
+    } else if (job.name === "listing-creation-success") {
       const { userId, listingId, packageId } = job.data;
 
       try {
@@ -385,8 +384,7 @@ const notificationWorker = new Worker(
       } catch (e) {
         console.log(e);
       }
-    }
-      else if (job.name === "listing-creation-failed") {
+    } else if (job.name === "listing-creation-failed") {
       const { userId, draftId, packageId } = job.data;
 
       try {
@@ -435,6 +433,54 @@ const notificationWorker = new Worker(
           })
         );
         console.log("notification published");
+      } catch (e) {
+        console.log(e);
+      }
+    } else if ((job.name = "raffle-winner")) {
+      const { winnerUserId, raffleId } = job.data;
+      try {
+        const [raffleData] = await db
+          .select()
+          .from(raffle)
+          .where(eq(raffle.id, raffleId));
+        const [userData] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, winnerUserId));
+        if (!raffleData || !userData) {
+          throw new Error("invalid raffleId or winnerUserId");
+        }
+        const formattedMessage = {
+          title: `Winner Declared for Raffle ${raffleData.title}`,
+          from: {
+            name: `system-generated`,
+            email: `system-generated`,
+          },
+          body: `User ${userData.username} is the winner`,
+        };
+
+        console.log(formattedMessage);
+
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "RAFFLE",
+            sentTo: winnerUserId,
+            message: formattedMessage,
+          })
+          .returning();
+
+        console.log("notification saved");
+        await connection.publish(
+          `RECEIVE_NOTIFICATION`,
+          JSON.stringify({
+            type: "RAFFLE",
+            notificationId: notification.id,
+            to: winnerUserId,
+            message: formattedMessage,
+            createdAt: notification.createdAt,
+          })
+        );
       } catch (e) {
         console.log(e);
       }

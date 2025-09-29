@@ -272,6 +272,7 @@ export const raffle = pgTable("raffle", {
   featured: boolean().notNull().default(true),
   soldTicket: integer("sold_ticket").notNull().default(0),
   status: text("status").notNull().default("UPCOMING"), //UPCOMING, RUNNING, ENDED
+  winner: integer("winner").references(()=>users.id),
 
   createdAt: timestamp("created_at").defaultNow(),
 

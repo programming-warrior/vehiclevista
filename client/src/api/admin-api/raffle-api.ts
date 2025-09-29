@@ -22,6 +22,29 @@ export async function getRaffles(options: { page?: number; limit?: number, filte
   }
 }
 
+export async function chooseWinner(raffleId:String,userId:String) {
+    try {
+      const response = await axios.post(
+        `${BACKEND_URL}/api/admin/raffle/choose-winner/${raffleId}`,
+        {
+          userId
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+          },
+          withCredentials: true,
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || "Error selecting winner"
+      );
+    }
+  }
+
 export async function createRaffle(data : any ) {
     try {
       const response = await axios.post(

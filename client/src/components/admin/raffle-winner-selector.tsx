@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getBidsForRaffle, chooseWinner } from "@/api";
 import {
   Select,
   SelectContent,
@@ -38,66 +39,78 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useEffect, useState } from "react";
 
 type Entrant = {
-  id: string;
-  name: string;
-  tickets: number;
+  userId: number;
+  username: string;
+  ticketQtn: number;
 };
 
 type Props = {
-  // Raffle identifier used by the API route
   raffleId: Number;
-  // Optional static entrants list (unique users and their ticket counts)
-  entrants?: any;
-  // Optional URL to load entrants from. Response should be { entrants: Entrant[] }
-  entrantsApi?: string;
-  // Existing winner (if already chosen)
   currentWinnerId?: string | null;
-  // Called after a winner is saved
   onSaved?: (winnerId: string) => void;
 };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
 export function RaffleWinnerSelector({
   raffleId,
-  entrants: entrantsProp,
-  entrantsApi,
   currentWinnerId,
   onSaved,
 }: Props) {
   const { toast } = useToast();
-  //   const { data, isLoading } = useSWR<{ entrants: Entrant[] }>(
-  //     entrantsApi ? entrantsApi : null,
-  //     entrantsApi ? fetcher : null,
-  //   )
 
-  //   const entrants = React.useMemo<Entrant[]>(() => entrantsProp ?? data?.entrants ?? [], [entrantsProp, data?.entrants])
-  const entrants = entrantsProp;
-  const totalTickets = React.useMemo(
-    () => entrants.reduce((sum: any, e: any) => sum + (e.tickets || 0), 0),
-    [entrants]
+  const [bids, setBids] = useState<any>([]);
+  const entrants: Entrant[] = Object.values(
+    bids.reduce((acc: any, curr: any) => {
+      if (!acc[curr.userId]) {
+        acc[curr.userId] = {
+          userId: curr.userId,
+          username: curr.user.username,
+          ticketQtn: 0,
+        };
+      }
+      acc[curr.userId].ticketQtn += curr.ticketQtn;
+      return acc;
+    }, {})
+  );
+  const totalTickets = entrants.reduce(
+    (sum: number, e: Entrant) => sum + (e.ticketQtn || 0),
+    0
   );
 
-  const [selectedId, setSelectedId] = React.useState<string | undefined>(
-    currentWinnerId ?? undefined
+  const [selectedId, setSelectedId] = useState<number | undefined>(
+    undefined
   );
   const [submitting, setSubmitting] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Weighted random pick by tickets count
-  const pickRandomWeighted = React.useCallback(() => {
+  const pickRandomWeighted = () => {
     if (!entrants?.length || totalTickets <= 0) return;
     let r = Math.floor(Math.random() * totalTickets) + 1;
+    console.log(r);
     for (const e of entrants) {
-      r -= e.tickets;
+      r -= e.ticketQtn;
       if (r <= 0) {
-        setSelectedId(e.id);
+        console.log(e.userId)
+        setSelectedId(e.userId);
         return;
       }
     }
-  }, [entrants, totalTickets]);
+  };
+
+  useEffect(() => {
+    const fetchRaffleBids = async () => {
+      try {
+        const response = await getBidsForRaffle(raffleId.toString());
+        setBids(response.purchaseHistory || []);
+      } catch (error) {
+        console.error("Error fetching bids:", error);
+      }
+    };
+
+    fetchRaffleBids();
+  }, [raffleId]);
 
   async function saveWinner() {
     if (!selectedId) {
@@ -109,20 +122,12 @@ export function RaffleWinnerSelector({
     }
     try {
       setSubmitting(true);
-      const res = await fetch(`/api/raffles/${raffleId}/winner`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ winnerUserId: selectedId }),
-      });
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Failed to set winner");
-      }
+      await chooseWinner(raffleId.toString(), selectedId.toString());
       toast({
         title: "Winner saved",
         description: "The selected user has been recorded as the winner.",
       });
-      onSaved?.(selectedId);
+      // onSaved?.(selectedId);
     } catch (err: any) {
       toast({
         title: "Error",
@@ -149,8 +154,8 @@ export function RaffleWinnerSelector({
               Winner
             </Label>
             <Select
-              value={selectedId ?? ""}
-              onValueChange={(v) => setSelectedId(v)}
+              value={selectedId?.toString() ?? ""}
+              onValueChange={(v) => setSelectedId(Number(v))}
               disabled={isLoading || entrants.length === 0}
             >
               <SelectTrigger id="winner" className="w-full border-blue-200">
@@ -159,9 +164,9 @@ export function RaffleWinnerSelector({
                 />
               </SelectTrigger>
               <SelectContent>
-                {entrants.map((e: any) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.user?.username || e.username || e.name}{" "}
+                {entrants.map((e) => (
+                  <SelectItem key={e.userId} value={e.userId.toString()}>
+                    {e.username}{" "}
                     {e.ticketQtn > 0
                       ? `(${e.ticketQtn} ticket${e.ticketQtn > 1 ? "s" : ""})`
                       : ""}
@@ -173,7 +178,7 @@ export function RaffleWinnerSelector({
               <p className="text-sm text-blue-600">
                 Current winner:{" "}
                 <span className="font-medium">
-                  {entrants.find((e: any) => e.id === currentWinnerId)?.user
+                  {entrants.find((e: any) => e.userId === currentWinnerId)
                     ?.username ?? currentWinnerId}
                 </span>
               </p>
@@ -210,10 +215,11 @@ export function RaffleWinnerSelector({
                     <AlertDialogDescription className="text-blue-600">
                       This will record{" "}
                       <span className="font-medium">
-                        {entrants.find((e: any) => e.id === selectedId)?.user
+                        {entrants.find((e: any) => e.id === selectedId)
                           ?.username ?? "the selected user"}
                       </span>{" "}
                       as the winner for this raffle.
+                      <p className="text-red-500">This action cannot be undone </p>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -279,7 +285,7 @@ export function RaffleWinnerSelector({
                     No purchasers yet.
                   </TableCell>
                 </TableRow>
-                )}
+              )}
             </TableBody>
           </Table>
         </div>

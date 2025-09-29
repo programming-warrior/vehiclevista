@@ -84,7 +84,7 @@ import { getListingReports } from "./admin-api/repots-api";
 
 import { uploadUserReport, uploadListingReport } from "./report-api";
 
-import { createRaffle, getRaffles } from "./admin-api/raffle-api";
+import { createRaffle, getRaffles, chooseWinner } from "./admin-api/raffle-api";
 
 import {
   getPackagesWithAmount,
@@ -496,6 +496,7 @@ export {
   blacklistUser,
   unBlacklistUser,
   createRaffle,
+  chooseWinner,
   getRaffles,
   adminGetVehicles,
   adminGetLoginLogs,
