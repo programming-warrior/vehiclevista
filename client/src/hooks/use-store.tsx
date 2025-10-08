@@ -236,6 +236,47 @@ export const useHeroSectionSearch = create<HeroSectionSearchState>((set) => ({
     })),
 }));
 
+
+export type QuickSearchFilter = {
+  make:string;
+  model: string;
+  minBudget: number;
+  maxBudget: number;
+  postalCode: string;
+  latitude: string;
+  longitude: string;
+  distance: string;
+}
+type QuickSearchState = {
+  filter: QuickSearchFilter;
+  setFilter: (
+    filter: QuickSearchFilter
+  ) => void;
+  // resetFilter:() => void;
+};
+
+export const useQuickSearch = create<QuickSearchState>((set) => ({
+  filter: {
+    make: "",
+    model: "",
+    minBudget: 0,
+    maxBudget: 0,
+    postalCode: "",
+    latitude: "",
+    longitude: "",
+    distance: "National",
+  },
+  setFilter: (newSearch) =>
+    set((state) => ({
+      ...state,
+      filter: {
+        ...state.filter,
+        ...newSearch,
+      },
+    })),
+
+}))
+
 type Vehicle = {
   id: number;
   title: string;
@@ -317,7 +358,7 @@ export const useFavouriteListings = create<any>((set) => ({
     })),
 }));
 
-export type RecentViewType= {
+export type RecentViewType = {
   id: number,
   userId: number,
   auctionId: null | number,
@@ -328,24 +369,24 @@ export type RecentViewType= {
 type RecentViewStoreType = {
   recent_views: RecentViewType[];
   setRecentView: (data: RecentViewType[]) => void;
-  addToRecentView: (data: RecentViewType) =>void;
-  removeFromRecentView: (id:number)=> void;
+  addToRecentView: (data: RecentViewType) => void;
+  removeFromRecentView: (id: number) => void;
 };
 export const useRecentViews = create<RecentViewStoreType>((set) => ({
   recent_views: [],
-setRecentView: (newState: RecentViewType[]) =>
+  setRecentView: (newState: RecentViewType[]) =>
     set((state) => {
-        // To prevent duplicates when setting multiple items, you can use a Set
-        const combined = [...state.recent_views, ...newState];
-        const uniqueIds = new Set();
-        const uniqueViews = combined.filter(item => {
-            if (!uniqueIds.has(item.id)) {
-                uniqueIds.add(item.id);
-                return true;
-            }
-            return false;
-        });
-        return { recent_views: uniqueViews };
+      // To prevent duplicates when setting multiple items, you can use a Set
+      const combined = [...state.recent_views, ...newState];
+      const uniqueIds = new Set();
+      const uniqueViews = combined.filter(item => {
+        if (!uniqueIds.has(item.id)) {
+          uniqueIds.add(item.id);
+          return true;
+        }
+        return false;
+      });
+      return { recent_views: uniqueViews };
     }),
 
   // Updated this function to prevent duplicates

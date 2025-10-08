@@ -7,11 +7,10 @@ import { vehicleTypes } from "@shared/schema";
 import type { Vehicle, Auction } from "@shared/schema"; // Assuming Auction type is available
 import HeroSection from "@/components/hero-section";
 import LiveAuctionSection from "@/components/live-auction-section";
-import ExploreCategories from "@/components/explore-categories";
 import SearchMakes from "@/components/search-makes";
 import QualityBikesSection from "@/components/quality-bikes-section";
-import BikesCollection from "@/components/bikes-collection";
-import VansCollection from "@/components/vans-collection";
+
+
 import {
   getFeaturedVehicles,
   getFavouriteVehicles,
