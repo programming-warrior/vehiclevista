@@ -165,7 +165,7 @@ export default function Navbar() {
           minBudget: filteredSchema.minBudget ?? 0,
           maxBudget: filteredSchema.maxBudget ?? 0,
         });
-        setLocation("/vehicle");
+        setLocation("/classified");
       } catch (e: any) {
         toast({
           variant: "destructive",
@@ -417,7 +417,7 @@ export default function Navbar() {
                 Home
               </Link>
               <Link
-                href="/vehicle"
+                href="/classified"
                 className="text-sm font-medium hover:text-blue-200 transition-colors"
               >
                 Classified
@@ -490,7 +490,7 @@ export default function Navbar() {
                 Home
               </Link>
               <Link
-                href="/vehicle"
+                href="/classified"
                 className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >

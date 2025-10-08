@@ -110,6 +110,7 @@ authRouter.post("/google", async (req, res) => {
       card_verified: false,
     });
   } catch (err) {
+    console.log(err);
     res.status(401).json({ error: "Invalid token" });
   }
 });

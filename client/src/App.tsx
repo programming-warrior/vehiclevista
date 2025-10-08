@@ -172,7 +172,7 @@ export default function App() {
             <Route path="/login" component={Login} />
             <Route path="/register" component={Register} />
             {/* <Route path="/classified" component={Classified} /> */}
-            <Route path="/vehicle" component={VehiclePage} />
+            <Route path="/classified" component={VehiclePage} />
             <Route path="/vehicle/:id" component={VehicleIdPage} />
             <Route path="/vehicle/edit/:id" component={VehicleEditPage} />
             <Route path="/makes" component={MakesPage} />
