@@ -187,7 +187,7 @@ export const useRedirectStore = create<RedirectStore>((set) => ({
 }));
 
 type HeroSectionSearchState = {
-  brand: string;
+  make: string;
   model: string;
   variant: string;
   vehicleType: string;
@@ -211,7 +211,7 @@ type HeroSectionSearchState = {
 };
 
 export const useHeroSectionSearch = create<HeroSectionSearchState>((set) => ({
-  brand: "",
+  make: "",
   model: "",
   variant: "",
   vehicleType: "",
@@ -250,7 +250,7 @@ export type QuickSearchFilter = {
 type QuickSearchState = {
   filter: QuickSearchFilter;
   setFilter: (
-    filter: QuickSearchFilter
+    filter: Partial<QuickSearchFilter>
   ) => void;
   // resetFilter:() => void;
 };

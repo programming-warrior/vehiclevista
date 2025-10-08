@@ -29,6 +29,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import QuickVehicleSearch from "@/components/ui/quick-vehicle-search";
+import { useQuickSearch } from "@/hooks/use-store";
+import { PosAnimation } from "leaflet";
 
 // Generate year options
 const generateYearOptions = () => {
@@ -95,9 +98,8 @@ const FilterSection = ({
       <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
         <h3 className="font-medium text-blue-800">{title}</h3>
         <Filter
-          className={`h-4 w-4 text-blue-600 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`h-4 w-4 text-blue-600 transition-transform ${isOpen ? "rotate-180" : ""
+            }`}
         />
       </CollapsibleTrigger>
       <CollapsibleContent className="px-3 pt-3 pb-2">
@@ -108,9 +110,12 @@ const FilterSection = ({
 };
 
 export default function VehiclePage() {
+
+  const { filter, setFilter } = useQuickSearch();
+
   const searchState = useHeroSectionSearch();
   const {
-    brand,
+    make,
     maxBudget,
     minBudget,
     model,
@@ -129,6 +134,20 @@ export default function VehiclePage() {
     vehicleCondition,
     setSearch,
   } = searchState;
+
+
+  useEffect(() => {
+    if (Object.keys(filter).length !== 0) {
+      setSearch({
+        postalCode: filter.postalCode,
+        maxBudget: filter.maxBudget,
+        minBudget: filter.minBudget,
+        distance: filter.distance,
+        make: filter.make,
+        model: filter.model,
+      })
+    }
+  }, [filter])
 
   const { toast } = useToast();
   const { vehicles, setVehicles } = useVehicleLists();
@@ -156,8 +175,6 @@ export default function VehiclePage() {
   const debouncedColor = useDebounce(color);
   const debouncedPostalCode = useDebounce(postalCode);
 
-  console.log(debouncedColor);
-
   // Build search parameters more cleanly
   const buildSearchParams = () => {
     const params = new URLSearchParams();
@@ -169,8 +186,9 @@ export default function VehiclePage() {
     }
 
     const filterMap = {
-      brand,
+      make,
       model,
+      postalCode,
       minBudget: minBudget > 0 ? minBudget.toString() : "",
       maxBudget: maxBudget > 0 ? maxBudget.toString() : "",
       type: vehicleType,
@@ -228,7 +246,7 @@ export default function VehiclePage() {
     })();
   }, [
     page,
-    brand,
+    make,
     model,
     minBudget,
     maxBudget,
@@ -273,7 +291,7 @@ export default function VehiclePage() {
     setSearch({
       minBudget: 0,
       maxBudget: 0,
-      brand: "",
+      make: "",
       model: "",
       vehicleType: "",
       transmissionType: "",
@@ -298,9 +316,8 @@ export default function VehiclePage() {
   // Memoize the FilterSidebar to prevent unnecessary re-renders
   const FilterSidebar = useMemo(() => (
     <div
-      className={`${showFilters ? "fixed inset-0 z-50 bg-white" : "w-80"} ${
-        showFilters ? "overflow-y-auto" : ""
-      } p-6 border-r`}
+      className={`${showFilters ? "fixed inset-0 z-50 bg-white" : "w-80"} ${showFilters ? "overflow-y-auto" : ""
+        } p-6 border-r`}
     >
       {showFilters && (
         <div className="flex items-center justify-between mb-4">
@@ -317,8 +334,8 @@ export default function VehiclePage() {
       )}
 
       <div className="space-y-4">
-        <FilterSection 
-          title="Location" 
+        <FilterSection
+          title="Location"
           isOpen={openSections.location}
           onToggle={() => toggleSection('location')}
         >
@@ -356,8 +373,8 @@ export default function VehiclePage() {
           </div>
         </FilterSection>
 
-        <FilterSection 
-          title="Price Range" 
+        <FilterSection
+          title="Price Range"
           isOpen={openSections.priceRange}
           onToggle={() => toggleSection('priceRange')}
         >
@@ -405,17 +422,17 @@ export default function VehiclePage() {
           </div>
         </FilterSection>
 
-        <FilterSection 
+        <FilterSection
           title="Make & Model"
           isOpen={openSections.makeModel}
           onToggle={() => toggleSection('makeModel')}
         >
           <div className="space-y-3">
             <Select
-              value={brand}
+              value={make}
               onValueChange={(value) =>
                 setSearch({
-                  brand: value,
+                  make: value,
                   model: value === "All" ? "" : model,
                 })
               }
@@ -435,7 +452,7 @@ export default function VehiclePage() {
 
             <Select
               value={model}
-              disabled={!brand || brand === "All"}
+              disabled={!make || make === "All"}
               onValueChange={(value) => setSearch({ model: value })}
             >
               <SelectTrigger className="border-blue-200 focus:ring-blue-500">
@@ -443,7 +460,7 @@ export default function VehiclePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Models</SelectItem>
-                {MAKE_MODEL_MAP[brand]?.map((model) => (
+                {MAKE_MODEL_MAP[make]?.map((model) => (
                   <SelectItem key={model} value={model}>
                     {model}
                   </SelectItem>
@@ -453,7 +470,7 @@ export default function VehiclePage() {
           </div>
         </FilterSection>
 
-        <FilterSection 
+        <FilterSection
           title="Vehicle Specifications"
           isOpen={openSections.vehicleSpecs}
           onToggle={() => toggleSection('vehicleSpecs')}
@@ -518,7 +535,7 @@ export default function VehiclePage() {
           </div>
         </FilterSection>
 
-        <FilterSection 
+        <FilterSection
           title="Year Range"
           isOpen={openSections.yearRange}
           onToggle={() => toggleSection('yearRange')}
@@ -567,7 +584,7 @@ export default function VehiclePage() {
           </div>
         </FilterSection>
 
-        <FilterSection 
+        <FilterSection
           title="Mileage Range"
           isOpen={openSections.mileageRange}
           onToggle={() => toggleSection('mileageRange')}
@@ -620,7 +637,7 @@ export default function VehiclePage() {
           </div>
         </FilterSection>
 
-        <FilterSection 
+        <FilterSection
           title="Other"
           isOpen={openSections.other}
           onToggle={() => toggleSection('other')}
@@ -684,7 +701,7 @@ export default function VehiclePage() {
     distance,
     minBudget,
     maxBudget,
-    brand,
+    make,
     model,
     vehicleType,
     transmissionType,
@@ -696,6 +713,16 @@ export default function VehiclePage() {
     color,
     vehicleCondition
   ]);
+
+  if (!filter.postalCode || !filter.maxBudget || !filter.minBudget) {
+    return <>
+      <div className="flex relative min-h-[600px] bg-cover bg-center border-none">
+        <div className="max-w-2xl ml-20 mt-20 ">
+          <QuickVehicleSearch />
+        </div>
+      </div>
+    </>
+  }
 
   return (
     <div className="flex min-h-screen">

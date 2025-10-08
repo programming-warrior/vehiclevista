@@ -236,7 +236,6 @@ export async function fetchVehicleCount(
     model?: string;
     minBudget?: number;
     maxBudget?: number;
-    transmissionType?: string;
   } = {}
 ) {
   try {

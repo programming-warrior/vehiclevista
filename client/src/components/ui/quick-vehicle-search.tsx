@@ -22,17 +22,17 @@ const QuickVehicleSearch = () => {
 
     const formSchema = z
         .object({
-            postalCode: z.string(),
-            distance: z.string(),
+            postalCode: z.string().min(1, "Postal code is required"),
+            distance: z.string().min(1, "Distance is required"),
             make: z.string(),
             model: z.string(),
             minBudget: z.coerce.number(),
             maxBudget: z.coerce.number(),
-            latitude: z.string(),
-            longitude: z.string(),
+            latitude: z.string().optional(),
+            longitude: z.string().optional(),
         })
-        .refine((data) => data.minBudget <= data.maxBudget, {
-            message: "Minimum budget must be less than maximum budget",
+        .refine((data) => data.maxBudget > 0 && data.minBudget > 0, {
+            message: "Both minimum and maximum budget must be greater than zero",
             path: ["minBudget"],
         })
         .refine((data) => data.maxBudget >= data.minBudget, {
@@ -97,7 +97,7 @@ const QuickVehicleSearch = () => {
                 setisLoading(false);
             }
         }
-        console.log("fetch vehicle count");
+
         if (canDo) {
             fetch();
         }
@@ -112,29 +112,29 @@ const QuickVehicleSearch = () => {
         form.watch("minBudget"),
     ]);
 
+    console.log(form.getValues("postalCode"));
+
     const debouncedPostalCode = useDebounce(form.getValues("postalCode"));
 
+    console.log("debounced postal value" + debouncedPostalCode);
+
     useEffect(() => {
-        let ignore = false;
-        // async function fetch() {
-        //     try {
-        //         if (!debouncedPostalCode) return;
-        //         const res = await validatePostalCode(debouncedPostalCode);
-        //         form.setValue("latitude", res.data.result.latitude.toLocaleString());
-        //         form.setValue("longitude", res.data.result.longitude.toLocaleString());
-        //         form.clearErrors("postalCode");
-        //     } catch (e) {
-        //         console.log("before setting error");
-        //         form.setError("postalCode", {
-        //             type: "manual",
-        //             message: "Invalid UK postal code",
-        //         });
-        //     }
-        // }
-        // fetch();
-        return () => {
-            ignore = true;
-        };
+        async function fetch() {
+            try {
+                if (!debouncedPostalCode) return;
+                const res = await validatePostalCode(debouncedPostalCode);
+                form.setValue("latitude", res.data.result.latitude.toLocaleString());
+                form.setValue("longitude", res.data.result.longitude.toLocaleString());
+                form.clearErrors("postalCode");
+            } catch (e) {
+                console.log("before setting error");
+                form.setError("postalCode", {
+                    type: "manual",
+                    message: "Invalid UK postal code",
+                });
+            }
+        }
+        fetch();
     }, [debouncedPostalCode]);
 
 

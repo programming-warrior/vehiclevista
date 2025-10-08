@@ -21,6 +21,8 @@ import multer from "multer";
 import { vehicleTypes, vehicleTypesEnum } from "../../shared/schema";
 import { deleteImagesFromS3 } from "server/utils/s3";
 import { cleanupQueue } from "../worker/queue";
+import { VehicleService } from "server/services/vehicleService";
+import { DBResult } from "drizzle-orm/sqlite-core";
 
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 
@@ -30,84 +32,10 @@ const vehicleRouter = Router();
 
 vehicleRouter.get("/get-vehicle-count", async (req, res) => {
   try {
-    console.log(req.query);
-    const {
-      longitude,
-      latitude,
-      distance,
-      make,
-      model,
-      type,
-      transmissionType,
-      color,
-      bodyType,
-      fuelType,
-      minBudget,
-      maxBudget,
-    } = req.query;
 
-    const conditions = [];
-
-    if (make && String(make).toLowerCase() !== "all")
-      conditions.push(eq(vehicles.make, String(make)));
-    if (model && String(model).toLowerCase() !== "all")
-      conditions.push(eq(vehicles.model, String(model)));
-    if (
-      type &&
-      String(type).toLowerCase() !== "all" &&
-      (type as (typeof vehicleTypesEnum.enumValues)[number])
-    )
-      conditions.push(
-        eq(vehicles.type, type as (typeof vehicleTypesEnum.enumValues)[number])
-      );
-    if (transmissionType && String(transmissionType).toLowerCase() !== "all")
-      conditions.push(eq(vehicles.transmission, String(transmissionType)));
-    if (fuelType && String(fuelType).toLowerCase() !== "all")
-      conditions.push(eq(vehicles.fuelType, String(fuelType)));
-    if (bodyType && String(bodyType).toLowerCase() !== "all")
-      conditions.push(eq(vehicles.bodyType, String(bodyType)));
-    if (color && String(color).toLowerCase() !== "all")
-      conditions.push(ilike(vehicles.color, String(color)));
-    if (!isNaN(Number(minBudget)) && Number(minBudget) > 0)
-      conditions.push(gte(vehicles.price, Number(minBudget)));
-    if (!isNaN(Number(maxBudget)) && Number(maxBudget) > 0)
-      conditions.push(lte(vehicles.price, Number(maxBudget)));
-
-    //logic to fetch vehicles based on the postal code and distance
-    if (
-      latitude &&
-      longitude &&
-      !isNaN(parseFloat(latitude as string)) &&
-      !isNaN(parseFloat(longitude as string))
-    ) {
-      const distanceString: string =
-        distance || (distance as string).toLowerCase() !== "national"
-          ? (distance as string).toLowerCase()
-          : "";
-      const match = distanceString.match(/^within\s+(\d+)\s+mile(s)?$/i);
-      if (match) {
-        const distanceValue = parseInt(match[1], 10);
-        console.log("Extracted number:", distanceValue);
-        const lat = parseFloat(latitude as string);
-        const lon = parseFloat(longitude as string);
-        //haversine formula
-        //3969 ---> Earth's radius in miles
-        conditions.push(sql`
-      3959 * acos(
-        cos(radians(${lat})) *
-        cos(radians(${vehicles.latitude})) *
-        cos(radians(${vehicles.longitude}) - radians(${lon})) +
-        sin(radians(${lat})) *  
-        sin(radians(${vehicles.latitude}))
-      ) <= ${distanceValue}
-    `);
-      } else {
-        console.log(distanceString);
-        console.log("Invalid format: expected 'within <number> miles'");
-      }
-    }
-
-    console.log(conditions);
+    const conditions = VehicleService.buildbuildSearchConditions({
+      ...req.query
+    })
 
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
@@ -127,138 +55,26 @@ vehicleRouter.get("/get-vehicle-count", async (req, res) => {
 
 vehicleRouter.get("/", async (req, res) => {
   try {
-    console.log(req.query);
     const {
-      brand,
-      model,
-      type,
-      transmissionType,
-      color,
-      bodyType,
-      fuelType,
-      minBudget,
-      maxBudget,
-      latitude,
-      longitude,
-      distance,
-      vehicleCondition,
-      fromYear,
-      toYear,
-      minMileage,
-      maxMileage,
       page = "1",
       limit = "10",
+      latitude,
+      longitude,
       sortBy,
     } = req.query;
 
-    const conditions = [];
-
-    if (brand && String(brand).toLowerCase() !== "all")
-      conditions.push(eq(vehicles.make, String(brand)));
-    if (model && String(model).toLowerCase() !== "all")
-      conditions.push(eq(vehicles.model, String(model)));
-    if (
-      type &&
-      String(type).toLowerCase() !== "all" &&
-      (type as (typeof vehicleTypesEnum.enumValues)[number])
-    )
-      conditions.push(
-        eq(vehicles.type, type as (typeof vehicleTypesEnum.enumValues)[number])
-      );
-    if (transmissionType && String(transmissionType).toLowerCase() !== "all")
-      conditions.push(eq(vehicles.transmission, String(transmissionType)));
-    if (fuelType && String(fuelType).toLowerCase() !== "all")
-      conditions.push(eq(vehicles.fuelType, String(fuelType)));
-    if (bodyType && String(bodyType).toLowerCase() !== "all")
-      conditions.push(eq(vehicles.bodyType, String(bodyType)));
-    if (
-      vehicleCondition &&
-      vehicleConditionsEnum.enumValues.includes(vehicleCondition as any)
-    ) {
-      conditions.push(eq(vehicles.condition, vehicleCondition as any));
-    }
-    if (color && String(color).toLowerCase() !== "all")
-      conditions.push(ilike(vehicles.color, String(color)));
-    if (!isNaN(Number(minBudget)) && Number(minBudget) > 0)
-      conditions.push(gte(vehicles.price, Number(minBudget)));
-    if (!isNaN(Number(maxBudget)) && Number(maxBudget) > 0)
-      conditions.push(lte(vehicles.price, Number(maxBudget)));
-    if (!isNaN(Number(fromYear)))
-      conditions.push(gte(vehicles.year, Number(fromYear)));
-    if (!isNaN(Number(toYear)))
-      conditions.push(lte(vehicles.year, Number(toYear)));
-    if (!isNaN(Number(minMileage)))
-      conditions.push(gte(vehicles.mileage, Number(minMileage)));
-    if (!isNaN(Number(maxMileage)))
-      conditions.push(lte(vehicles.mileage, Number(maxMileage)));
-
-    //logic to fetch vehicles based on the postal code and distance
-    if (
-      latitude &&
-      longitude &&
-      !isNaN(parseFloat(latitude as string)) &&
-      !isNaN(parseFloat(longitude as string))
-    ) {
-      const distanceString: string =
-        distance || (distance as string).toLowerCase() !== "national"
-          ? (distance as string).toLowerCase()
-          : "";
-      const match = distanceString.match(/^within\s+(\d+)\s+mile(s)?$/i);
-      if (match) {
-        const distanceValue = parseInt(match[1], 10);
-        console.log("Extracted number:", distanceValue);
-        const lat = parseFloat(latitude as string);
-        const lon = parseFloat(longitude as string);
-        //haversine formula
-        //3969 ---> Earth's radius in miles
-        conditions.push(sql`
-      3959 * acos(
-        cos(radians(${lat})) *
-        cos(radians(${vehicles.latitude})) *
-        cos(radians(${vehicles.longitude}) - radians(${lon})) +
-        sin(radians(${lat})) *  
-        sin(radians(${vehicles.latitude}))
-      ) <= ${distanceValue}
-    `);
-      } else {
-        console.log(distanceString);
-        console.log("Invalid format: expected 'within <number> miles'");
-      }
-    }
 
     const pageNum = parseInt(page as string, 10);
-    const pageSize = parseInt(limit as string, 10);
+    let pageSize = parseInt(limit as string, 10);
+    pageSize = Math.min(50, pageSize);
     const offset = (pageNum - 1) * pageSize;
 
-    console.log(conditions);
+    const conditions = VehicleService.buildbuildSearchConditions({
+      ...req.query
+    });
+    let orderByClause = VehicleService.buildSortOption(sortBy as string | undefined, latitude as string | undefined, longitude as string | undefined)
 
-    let orderByClause = sql`${vehicles.createdAt} DESC`;
-
-    if (sortBy === "oldest") {
-      orderByClause = sql`${vehicles.createdAt} ASC`;
-    } else if (sortBy === "price_low") {
-      orderByClause = sql`${vehicles.price} ASC`;
-    } else if (sortBy === "price_high") {
-      orderByClause = sql`${vehicles.price} DESC`;
-    } else if (sortBy === "mileage_low") {
-      orderByClause = sql`${vehicles.mileage} ASC`;
-    } else if (sortBy === "mileage_high") {
-      orderByClause = sql`${vehicles.mileage} ASC`;
-    } else if (sortBy === "nearest_first" && latitude && longitude) {
-      const lat = parseFloat(latitude as string);
-      const lon = parseFloat(longitude as string);
-      orderByClause = sql`
-      3959 * acos(
-        cos(radians(${lat})) *
-        cos(radians(${vehicles.latitude})) *
-        cos(radians(${vehicles.longitude}) - radians(${lon})) +
-        sin(radians(${lat})) *  
-        sin(radians(${vehicles.latitude}))
-      ) ASC
-    `;
-    }
-
-    const result = await db
+    const dbResult = await db
       .select()
       .from(vehicles)
       .where(conditions.length ? and(...conditions) : undefined)
@@ -266,9 +82,17 @@ vehicleRouter.get("/", async (req, res) => {
       .limit(pageSize + 1)
       .offset(offset);
 
-    console.log(result[0]?.model);
-    console.log(model);
-    console.log(model === result[0]?.model);
+    const externalApiCallNeeded = true;
+
+    let externalApiCallResult = [];
+
+    if (externalApiCallNeeded) {
+      externalApiCallResult = await VehicleService.externalApiCall({ ...req.query });
+    }
+    
+    console.log(externalApiCallResult);
+
+    const result = [...dbResult, ...externalApiCallResult];
 
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
@@ -276,12 +100,13 @@ vehicleRouter.get("/", async (req, res) => {
       .where(conditions.length ? and(...conditions) : undefined);
 
     res.status(200).json({
-      vehicles: result.splice(0, pageSize),
-      totalVehicles: count,
-      totalPages: Math.ceil(count / pageSize),
+      vehicles: result,
+      totalVehicles: count + externalApiCallResult.length,
+      totalPages: Math.ceil((count + externalApiCallResult) / pageSize),
       currentPage: pageNum,
       hasNextPage: result.length > pageSize,
     });
+
   } catch (err: any) {
     console.error("Error fetching vehicles:", err);
     res
@@ -395,7 +220,7 @@ vehicleRouter.post("/look-up", async (req, res) => {
       try {
         const apiResponse = await axios.get(
           "https://sandbox.oneautoapi.com/autotrader/vehiclelookupfromvrm/v2?vehicle_registration_mark=" +
-            registration_num,
+          registration_num,
           {
             headers: {
               "x-api-key": oneAutoApiKey,
