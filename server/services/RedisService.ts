@@ -25,4 +25,17 @@ export class RedisService {
             return null;
         }
     }
+    static async acquireLock(lockKey: string, expiryInSeconds:number): Promise<boolean> {
+        try {
+            const client = await RedisClientSingleton.getRedisClient();
+            const result = await client.set(lockKey, 'locked', {
+                NX: true,
+                EX: expiryInSeconds
+            });
+            return result === 'OK';
+        } catch (error) {
+            console.error("Error acquiring lock in Redis:", error);
+            return false;
+        }
+    }
 }

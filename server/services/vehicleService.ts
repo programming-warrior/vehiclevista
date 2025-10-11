@@ -8,6 +8,7 @@ import { REDIS_KEYS } from "server/utils/constants";
 export class VehicleService {
 
     static async externalApiCall({ postalCode, maxBudget, minBudget, distance }: any): Promise<any> {
+
         const apiKey = process.env.ONE_AUTO_API_KEY;
         const url = process.env.ONT_AUTO_VEHICLE_API_URL;
         if (!apiKey || !url) {
@@ -27,18 +28,19 @@ export class VehicleService {
                 return [];
             }
             //verfy the postal code 
-            let validUkPostalCode = await this.validatePostalCode(postalCode);
+            // let validUkPostalCode = await this.validatePostalCode(postalCode);
 
-            if (!validUkPostalCode){
-                console.error("Invalid UK postal code");
-                return [];
-            }
+            // if (!validUkPostalCode){
+            //     console.error("Invalid UK postal code");
+            //     return [];
+            // }
 
             //restrict the min and max range 
             if (_minBudget < 1000 || _minBudget > 1000000 || _maxBudget < 1000 || _maxBudget > 1000000 || _minBudget > _maxBudget) {
                 console.error("Invalid budget range");
                 return [];
             }
+
 
             const params = new URLSearchParams({
                 postal_code: postalCode,
@@ -48,12 +50,21 @@ export class VehicleService {
             // if (_distance !== null) {
             //     params.append("radius_miles", _distance.toString());
             // }
+
+            //CHECK AND ACQUIRE THE LOCK BEFORE MAKING THE EXTERNAL API CALL
+            const lockKey = `${REDIS_KEYS.LOCK}:${REDIS_KEYS.EXTERNAL_CLASSIFIED_LISTING}:${postalCode}-${_minBudget}-${_maxBudget}`;
+            const acquireLock = await RedisService.getCache(lockKey);
+            if (acquireLock) {
+                console.log("Another process is fetching the external data. Please try again later.");
+                return [];
+            }
+            await RedisService.acquireLock(lockKey, 10); // 10 seconds lock
+
             const response = await axios.get(`${url}?${params.toString()}`, {
                 headers: {
                     'x-api-key': apiKey
                 }
             });
-
 
             console.log(response.data);
 
