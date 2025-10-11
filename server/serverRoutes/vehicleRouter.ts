@@ -62,8 +62,7 @@ vehicleRouter.get("/", async (req, res) => {
       limit = "10",
       latitude,
       longitude,
-      sortBy,
-      externalStartIndex, //this is to track how many external records we have already taken
+      sortBy
     } = req.query;
 
 
@@ -77,42 +76,50 @@ vehicleRouter.get("/", async (req, res) => {
     });
     let orderByClause = VehicleService.buildSortOption(sortBy as string | undefined, latitude as string | undefined, longitude as string | undefined)
 
+    const [{ count:internalCount }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(vehicles)
+    .where(conditions.length ? and(...conditions) : undefined);
     const dbResult = await db
       .select()
       .from(vehicles)
       .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(orderByClause)
-      .limit(pageSize + 1)
+      .limit(pageSize)
       .offset(offset);
 
     let externalApiCallResult:any = [];
+    
+    const result = [...dbResult];
       
     if (dbResult.length < pageSize ){
-        const externalCachedData = await RedisService.getCache(REDIS_KEYS.EXTERNAL_CLASSIFIED_LISTING + `:postal_code:${req.query.postalCode}-minBudget:${req.query.minBudget}-maxBudget:${req.query.maxBudget}`);
-        if (externalCachedData == null){
-            externalApiCallResult = await VehicleService.externalApiCall({ ...req.query });
-        }
-        else{
-          externalApiCallResult = externalCachedData;
-        }
+        const externalStartIdx = Math.max(0, (pageNum - 1) * pageSize - internalCount);
+        const externalPage = Math.floor(externalStartIdx / 50 ) + 1;
+        externalApiCallResult = await VehicleService.externalApiCall({ ...req.query, externalPage });
+        console.log("externalStartIdx", externalStartIdx, "externalPage", externalPage, "externalApiCallResult.length", externalApiCallResult.length);
+        const neededFromExternal = Math.max(0, pageSize - dbResult.length);
+        const filteredExternalApiCallResult = externalApiCallResult.filter((v: any) => {
+          //TODO
+            return !result.find(r => r.registration_num === v.registration_num);
+        });
+
+        const slicedExternalApiCallResult = externalApiCallResult.slice(externalStartIdx, externalStartIdx + neededFromExternal);
+        result.push(...slicedExternalApiCallResult);
     }
 
-    let externalStartIdx = Number(req.query.externalStartIndex || '0');
-    const slicedExternalApiCallResult = externalApiCallResult.slice(externalStartIdx, pageSize - dbResult.length);
 
-    const result = [...dbResult, ...slicedExternalApiCallResult];
-
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(vehicles)
-      .where(conditions.length ? and(...conditions) : undefined);
-
+    const externalCountData= await RedisService.getCache(REDIS_KEYS.EXTERNAL_CLASSIFIED_LISTING_TOTAL_COUNT + `:${req.query.postalCode || ''}-${req.query.minBudget || ''}-${req.query.maxBudget || ''}`);
+    console.log(externalCountData);
+    const externalCount:number = (externalCountData?.count || 0) + pageSize ; // we can always fetch more from external api, that's why addding pageSize
+    
+    console.log("internalCount", internalCount, "externalCount", externalCount);
+    let totalVechicles = Number(internalCount) + Number(externalCount);
     res.status(200).json({
       vehicles: result,
-      totalVehicles: count + externalApiCallResult.length,
-      totalPages: Math.ceil((count + externalApiCallResult) / pageSize),
+      totalVehicles: totalVechicles,
+      totalPages: Math.ceil((totalVechicles) / pageSize),
       currentPage: pageNum,
-      hasNextPage: result.length > pageSize,
+      hasNextPage: pageNum * pageSize < (totalVechicles),
     });
 
   } catch (err: any) {

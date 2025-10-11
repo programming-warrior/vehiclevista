@@ -7,7 +7,7 @@ import { REDIS_KEYS } from "server/utils/constants";
 
 export class VehicleService {
 
-    static async externalApiCall({ postalCode, maxBudget, minBudget, distance }: any): Promise<any> {
+    static async externalApiCall({ postalCode, maxBudget, minBudget, distance, externalPage }: any): Promise<any> {
 
         const apiKey = process.env.ONE_AUTO_API_KEY;
         const url = process.env.ONT_AUTO_VEHICLE_API_URL;
@@ -16,7 +16,13 @@ export class VehicleService {
             return [];
         }
         try {
+            
+            const cacheKey = `${REDIS_KEYS.EXTERNAL_CLASSIFIED_LISTING}:page:${externalPage}:postal_code:${postalCode}-minBudget:${minBudget}-maxBudget:${maxBudget}`;
+            let cachedData = await RedisService.getCache(cacheKey);
 
+            if (cachedData) {
+                return cachedData; // HIT! Return cached page data (cost avoided)
+            }
 
             let _maxBudget = parseInt(maxBudget || "");
             let _minBudget = parseInt(minBudget || "");
@@ -58,14 +64,17 @@ export class VehicleService {
                 console.log("Another process is fetching the external data. Please try again later.");
                 return [];
             }
+            console.log("Acquiring lock and making external API call");
             await RedisService.acquireLock(lockKey, 10); // 10 seconds lock
 
+            console.log('making request to external api');
             const response = await axios.get(`${url}?${params.toString()}`, {
                 headers: {
                     'x-api-key': apiKey
                 }
             });
 
+            console.log("response data");
             console.log(response.data);
 
             if (!response.data || !response.data.result || !Array.isArray(response.data.result.advert_list || response.data.result.advert_list.length == 0)) {
@@ -77,7 +86,12 @@ export class VehicleService {
 
             //CACHE IT
             const cacheDuration = 10 * 60 * 60; //10 hours
-            await RedisService.addCache(REDIS_KEYS.EXTERNAL_CLASSIFIED_LISTING + `:postal_code:${postalCode}-minBudget:${_minBudget}-maxBudget:${_maxBudget}`, transformed_result, cacheDuration);
+            await RedisService.addCache(cacheKey, transformed_result, cacheDuration);
+
+            console.log("Setting count cache")
+            const totalExternalCount = {count: response.data.result.advert_qty || 0}; // Adjust field name as necessary
+            await RedisService.addCache(REDIS_KEYS.EXTERNAL_CLASSIFIED_LISTING_TOTAL_COUNT + `:${postalCode}-${minBudget}-${maxBudget}`, totalExternalCount, cacheDuration);
+            
 
             return transformed_result;
 
@@ -209,14 +223,14 @@ export class VehicleService {
                 //haversine formula
                 //3969 ---> Earth's radius in miles
                 conditions.push(sql`
-             3959 * acos(
-               cos(radians(${lat})) *
-               cos(radians(${vehicles.latitude})) *
-               cos(radians(${vehicles.longitude}) - radians(${lon})) +
-               sin(radians(${lat})) *  
-               sin(radians(${vehicles.latitude}))
-             ) <= ${distanceValue}
-           `);
+                3959 * acos(
+                cos(radians(${lat})) *
+                cos(radians(${vehicles.latitude})) *
+                cos(radians(${vehicles.longitude}) - radians(${lon})) +
+                sin(radians(${lat})) *  
+                sin(radians(${vehicles.latitude}))
+                ) <= ${distanceValue}
+            `);
             } else {
                 console.warn("Invalid format: expected 'within <number> miles'");
             }
@@ -241,14 +255,14 @@ export class VehicleService {
             const lat = parseFloat(latitude as string);
             const lon = parseFloat(longitude as string);
             orderByClause = sql`
-              3959 * acos(
-                cos(radians(${lat})) *
-                cos(radians(${vehicles.latitude})) *
-                cos(radians(${vehicles.longitude}) - radians(${lon})) +
-                sin(radians(${lat})) *  
-                sin(radians(${vehicles.latitude}))
-              ) ASC
-            `;
+                3959 * acos(
+                    cos(radians(${lat})) *
+                    cos(radians(${vehicles.latitude})) *
+                    cos(radians(${vehicles.longitude}) - radians(${lon})) +
+                    sin(radians(${lat})) *  
+                    sin(radians(${vehicles.latitude}))
+                ) ASC
+                `;
         }
         return orderByClause;
     }

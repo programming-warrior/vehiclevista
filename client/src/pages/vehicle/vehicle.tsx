@@ -152,7 +152,7 @@ export default function VehiclePage() {
   const { toast } = useToast();
   const { vehicles, setVehicles } = useVehicleLists();
 
-  const limit = 6;
+  const limit = 10;
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalVehicles, setTotalVehicles] = useState(0);
