@@ -22,7 +22,9 @@ import { vehicleTypes, vehicleTypesEnum } from "../../shared/schema";
 import { deleteImagesFromS3 } from "server/utils/s3";
 import { cleanupQueue } from "../worker/queue";
 import { VehicleService } from "server/services/vehicleService";
+import { RedisService } from "server/services/RedisService";
 import { DBResult } from "drizzle-orm/sqlite-core";
+import { REDIS_KEYS } from "server/utils/constants";
 
 // const redisClient = RedisClientSingleton.getInstance().getRedisClient();
 
@@ -61,6 +63,7 @@ vehicleRouter.get("/", async (req, res) => {
       latitude,
       longitude,
       sortBy,
+      externalStartIndex, //this is to track how many external records we have already taken
     } = req.query;
 
 
@@ -82,17 +85,22 @@ vehicleRouter.get("/", async (req, res) => {
       .limit(pageSize + 1)
       .offset(offset);
 
-    const externalApiCallNeeded = true;
-
-    let externalApiCallResult = [];
-
-    if (externalApiCallNeeded) {
-      externalApiCallResult = await VehicleService.externalApiCall({ ...req.query });
+    let externalApiCallResult:any = [];
+      
+    if (dbResult.length < pageSize ){
+        const externalCachedData = await RedisService.getCache(REDIS_KEYS.EXTERNAL_CLASSIFIED_LISTING + `:postal_code:${req.query.postalCode}-minBudget:${req.query.minBudget}-maxBudget:${req.query.maxBudget}`);
+        if (externalCachedData == null){
+            externalApiCallResult = await VehicleService.externalApiCall({ ...req.query });
+        }
+        else{
+          externalApiCallResult = externalCachedData;
+        }
     }
-    
-    console.log(externalApiCallResult);
 
-    const result = [...dbResult, ...externalApiCallResult];
+    let externalStartIdx = Number(req.query.externalStartIndex || '0');
+    const slicedExternalApiCallResult = externalApiCallResult.slice(externalStartIdx, pageSize - dbResult.length);
+
+    const result = [...dbResult, ...slicedExternalApiCallResult];
 
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })

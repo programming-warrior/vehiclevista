@@ -1,11 +1,13 @@
 import { eq, gte, ilike, lte, min, SQL, sql } from "drizzle-orm";
 import { vehicles, vehicleTypesEnum, vehicleConditionsEnum } from "../../shared/schema";
+import { RedisService } from "./RedisService";
 import axios from "axios";
+import { REDIS_KEYS } from "server/utils/constants";
 
 
 export class VehicleService {
 
-    static async externalApiCall({ postalCode, maxBudget, minBudget, make, model, distance, minMileage, maxMileage }: any): Promise<any> {
+    static async externalApiCall({ postalCode, maxBudget, minBudget, distance }: any): Promise<any> {
         const apiKey = process.env.ONE_AUTO_API_KEY;
         const url = process.env.ONT_AUTO_VEHICLE_API_URL;
         if (!apiKey || !url) {
@@ -13,41 +15,71 @@ export class VehicleService {
             return [];
         }
         try {
-            let _maxBudget = parseFloat(maxBudget || "");
-            let _minBudget = parseFloat(minBudget || "");
-            let _distance = this.extractDistanceValue(distance as string);
+
+
+            let _maxBudget = parseInt(maxBudget || "");
+            let _minBudget = parseInt(minBudget || "");
+            // let _distance = this.extractDistanceValue(distance as string);
             //these three are the conditions to make the external API call
             //TODO: validate uk postal code before making the call 
             if (!postalCode || postalCode.trim() === "" || isNaN(_maxBudget) || isNaN(_minBudget)) {
                 console.error("Postal code, maxBudget, minBudget are required for external API call");
                 return [];
             }
+            //verfy the postal code 
+            let validUkPostalCode = await this.validatePostalCode(postalCode);
+
+            if (!validUkPostalCode){
+                console.error("Invalid UK postal code");
+                return [];
+            }
+
+            //restrict the min and max range 
+            if (_minBudget < 1000 || _minBudget > 1000000 || _maxBudget < 1000 || _maxBudget > 1000000 || _minBudget > _maxBudget) {
+                console.error("Invalid budget range");
+                return [];
+            }
+
             const params = new URLSearchParams({
                 postal_code: postalCode,
-                required_manufacturers: make || "",
                 price_from_gbp: minBudget || "",
                 price_to_gbp: maxBudget || "",
             });
-            if (_distance !== null) {
-                params.append("radius_miles", _distance.toString());
-            }
-            const response = await axios.get(`${url}?${params.toString()}`,{
+            // if (_distance !== null) {
+            //     params.append("radius_miles", _distance.toString());
+            // }
+            const response = await axios.get(`${url}?${params.toString()}`, {
                 headers: {
                     'x-api-key': apiKey
                 }
             });
 
-            console.log(response.data);
-            return this.transformExternalToInternal(response.data);
 
-        } catch (error:any) {
+            console.log(response.data);
+
+            if (!response.data || !response.data.result || !Array.isArray(response.data.result.advert_list || response.data.result.advert_list.length == 0)) {
+                console.error("Invalid response structure from external API");
+                return [];
+            }
+
+            const transformed_result = this.transformExternalToInternal(response.data);
+
+            //CACHE IT
+            const cacheDuration = 10 * 60 * 60; //10 hours
+            await RedisService.addCache(REDIS_KEYS.EXTERNAL_CLASSIFIED_LISTING + `:postal_code:${postalCode}-minBudget:${_minBudget}-maxBudget:${_maxBudget}`, transformed_result, cacheDuration);
+
+            return transformed_result;
+
+        } catch (error: any) {
             console.error("Error during external API call:", error.message);
             return [];
         }
     }
 
     private static transformExternalToInternal(externalData: any): any[] {
+        let index = 0;
         return externalData.result.advert_list.map((advert: any) => ({
+            index: index++,
             id: `ext_${advert.advert_id}`, // Prefix to identify external sources
             make: advert.vehicle_data.manufacturer_desc,
             model: advert.vehicle_data.model_range_desc,
@@ -68,17 +100,30 @@ export class VehicleService {
     }
 
     static extractDistanceValue(distance: string): number | null {
-         const distanceString: string =
-                distance || (distance as string).toLowerCase() !== "national"
-                    ? (distance as string).toLowerCase()
-                    : "";
-            const match = distanceString.match(/^within\s+(\d+)\s+mile(s)?$/i);
-            if(match){
-                 const distanceValue = parseInt(match[1], 10);
-                 return distanceValue;
-            }
-            return null;
+        const distanceString: string =
+            distance || (distance as string).toLowerCase() !== "national"
+                ? (distance as string).toLowerCase()
+                : "";
+        const match = distanceString.match(/^within\s+(\d+)\s+mile(s)?$/i);
+        if (match) {
+            const distanceValue = parseInt(match[1], 10);
+            return distanceValue;
+        }
+        return null;
     }
+
+    private static async validatePostalCode(postalCode: string) {
+        try {
+            const response = await axios.get(
+                "https://api.postcodes.io/postcodes/" + postalCode
+            );
+            return response;
+        } catch (e) {
+            console.error("Error validating postcal code: ", e);
+            return null;
+        }
+    }
+
     static buildbuildSearchConditions({
         make,
         model,
