@@ -22,6 +22,7 @@ import { eq, or, sql, and, ilike, hasOwnEntityKind } from "drizzle-orm";
 import { createUserSession, SESSION_EXPIRY_SECONDS } from "../utils/session";
 import { userRegisterSchema } from "../../shared/zodSchema/userSchema";
 import RedisClientSingleton from "../utils/redis";
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import { verifyToken } from "../middleware/authMiddleware";
 import { userSessionSchema } from "../utils/session";
 import { notificationQueue, cleanupQueue } from "../worker/queue";
@@ -54,8 +55,35 @@ userRouter.post("/send-otp", async (req, res) => {
     // Set resend cooldown 60s
     await redisClient.set(cooldownKey, "1", { EX: 60 });
 
-    // TODO: Replace with real email sending (SES/SNS/third-party)
-    console.log(`Send OTP to ${email}: ${otp}`);  
+    // Try to send via AWS SES when configured
+    const region = process.env.AWS_REGION;
+    const fromEmail = process.env.AWS_SES_FROM_EMAIL;
+    if (region && fromEmail) {
+      try {
+        const ses = new SESClient({ region });
+        const params = {
+          Destination: { ToAddresses: [email] },
+          Message: {
+            Body: {
+              Text: { Data: `Your verification code is: ${otp}` },
+            },
+            Subject: { Data: "Your verification code" },
+          },
+          Source: fromEmail,
+        } as any;
+
+        const cmd = new SendEmailCommand(params);
+        await ses.send(cmd);
+      } catch (sesErr: any) {
+        console.error("SES send error, falling back to console.log:", sesErr);
+        console.log(`Send OTP to ${email}: ${otp}`);
+        throw new Error(sesErr.message);
+      }
+    } else {
+      console.error("SES not configured, falling back to console.log");
+      console.warn(`Send OTP to ${email}: ${otp}`);
+      throw new Error("SES not configured");
+    }
 
     return res.status(200).json({ message: "OTP sent" });
   } catch (e: any) {
