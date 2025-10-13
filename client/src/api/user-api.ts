@@ -13,7 +13,7 @@ export async function registerUser(
     );
     return response.data;
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Registration failed");
+    throw new Error(error.response?.data?.error || "Registration failed");
   }
 }
 
@@ -451,5 +451,29 @@ export async function validateSession() {
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.error || "Authentication failed");
+  }
+}
+
+export async function sendRegistrationOtp(email: string) {
+  if (!email) throw new Error("Email is required");
+  try {
+    const response = await axios.post(`${BACKEND_URL}/api/user/send-otp`, { email }, {
+      headers: { "Content-Type": "application/json" },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || "Failed to send OTP");
+  }
+}
+
+export async function verifyRegistrationOtp(email: string, otp: string) {
+  if (!email || !otp) throw new Error("Email and OTP are required");
+  try {
+    const response = await axios.post(`${BACKEND_URL}/api/user/verify-otp`, { email, otp }, {
+      headers: { "Content-Type": "application/json" },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || "Failed to verify OTP");
   }
 }

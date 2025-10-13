@@ -30,6 +30,62 @@ import { MAX_RECENT_VIEW_RECORD_PER_USER } from "../utils/constants";
 
 const userRouter = Router();
 
+// Helper to generate 6-digit OTP
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Send OTP to email (stores in Redis). OTP valid for 5 minutes. Resend cooldown 60 seconds.
+userRouter.post("/send-otp", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Email required" });
+  try {
+    const redisClient = await RedisClientSingleton.getRedisClient();
+    const cooldownKey = `otp:cooldown:${email}`;
+    const otpKey = `otp:${email}`;
+
+    const onCooldown = await redisClient.get(cooldownKey);
+    if (onCooldown)
+      return res.status(429).json({ error: "Please wait before requesting another OTP" });
+
+    const otp = generateOtp();
+    // Store OTP with 5 minute expiry
+    await redisClient.set(otpKey, otp, { EX: 60 * 5 });
+    // Set resend cooldown 60s
+    await redisClient.set(cooldownKey, "1", { EX: 60 });
+
+    // TODO: Replace with real email sending (SES/SNS/third-party)
+    console.log(`Send OTP to ${email}: ${otp}`);  
+
+    return res.status(200).json({ message: "OTP sent" });
+  } catch (e: any) {
+    console.error("Error sending OTP:", e);
+    return res.status(500).json({ error: "Failed to send OTP" });
+  }
+});
+
+userRouter.post("/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
+  try {
+    const redisClient = await RedisClientSingleton.getRedisClient();
+    const otpKey = `otp:${email}`;
+    const stored = await redisClient.get(otpKey);
+    if (!stored) return res.status(400).json({ error: "OTP expired or not found" });
+    if (stored !== otp) return res.status(400).json({ error: "Invalid OTP" });
+
+    // OTP correct - delete key and respond success
+  await redisClient.del(otpKey);
+  // set a short-lived verification marker so other routes (like registration) can see the email was verified
+  const verifiedKey = `otp:verified:${email}`;
+  await redisClient.set(verifiedKey, "1", { EX: 60 * 10 }); // marker valid for 10 minutes
+  return res.status(200).json({ message: "OTP verified" });
+  } catch (e: any) {
+    console.error("Error verifying OTP:", e);
+    return res.status(500).json({ error: "Failed to verify OTP" });
+  }
+});
+
 userRouter.get("/", verifyToken, async (req, res) => {
   if (!req.userId) return res.status(401).json({ error: "No user found" });
   const userId = req.userId;
@@ -322,7 +378,8 @@ userRouter.get("/listings/auction", verifyToken, async (req, res) => {
           item: vehicle
             ? {
                 type: "VEHICLE",
-                registration_num: vehicle.registration_num,
+                
+                _num: vehicle.registration_num,
                 make: vehicle.make,
                 model: vehicle.model,
                 year: vehicle.year,

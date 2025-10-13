@@ -350,6 +350,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull(),
+  emailVerified: boolean("email_verified").notNull().default(false),
   role: userRolesEnum().notNull().default("buyer"), // "admin", "buyer", "seller", "trader", "garage"
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
   status: blacklistStatusEnum().notNull().default("active"),

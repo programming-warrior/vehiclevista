@@ -40,10 +40,19 @@ authRouter.post("/register", async (req, res) => {
 
   const hashedPassword: string = await hashPassword(user.password);
   // If no existing user, proceed with registration
+  // Check redis verification marker
+  const redisClient = await RedisClientSingleton.getRedisClient();
+  const verifiedKey = `otp:verified:${user.email}`;
+  const verifiedMarker = await redisClient.get(verifiedKey);
+  const emailVerified = verifiedMarker ? true : false;
+
   let [savedUser] = await db
     .insert(users)
-    .values({ ...user, password: hashedPassword })
+    .values({ ...user, password: hashedPassword, emailVerified })
     .returning();
+
+  // remove the verification marker after consuming it
+  if (verifiedMarker) await redisClient.del(verifiedKey);
 
   //CREATE USER SESSIONS
   const sessionId = await createUserSession(savedUser);
