@@ -337,8 +337,18 @@ vehicleRouter.get("/seller/listings", verifyToken, async (req, res) => {
 vehicleRouter.get("/:vehicleId", async (req, res) => {
   try {
     const { vehicleId } = req.params;
-    if (!vehicleId || isNaN(parseInt(vehicleId)))
+    if (!vehicleId)
       return res.status(400).json({ error: "Vehicle ID is required" });
+
+    const data= await RedisService.getCache(`${REDIS_KEYS.VEHICLE_DETAILS}:${vehicleId}`);
+    if(data){
+      return res.status(200).json(data); 
+    }
+    //if the cache is not present then only internal data can be expected from db
+    //vehicleId is expected to be a number
+    if(isNaN(parseInt(vehicleId))){
+      return res.status(404).json({ error: "Vehicle not found" });
+    }
     const [vehicle] = await db
       .select()
       .from(vehicles)

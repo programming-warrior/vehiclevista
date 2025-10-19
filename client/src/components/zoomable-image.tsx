@@ -44,7 +44,7 @@ const ZoomableImage = ({ src, alt }:any) => {
           ref={imageRef}
           src={src}
           alt={alt}
-          className="object-cover  w-full h-full"
+          className="object-contain  w-full h-full"
         />
       </div>
       

@@ -3,6 +3,7 @@ import { vehicles, vehicleTypesEnum, vehicleConditionsEnum } from "../../shared/
 import { RedisService } from "./RedisService";
 import axios from "axios";
 import { REDIS_KEYS } from "server/utils/constants";
+import Redis from "ioredis";
 
 
 export class VehicleService {
@@ -87,14 +88,13 @@ export class VehicleService {
             //CACHE IT
             const cacheDuration = 10 * 60 * 60; //10 hours
             await RedisService.addCache(cacheKey, transformed_result, cacheDuration);
-
+            for(let vehicle of transformed_result){
+                await RedisService.addCache(`${REDIS_KEYS.VEHICLE_DETAILS}:${vehicle.id}`, vehicle, cacheDuration);
+            }
             console.log("Setting count cache")
             const totalExternalCount = {count: response.data.result.advert_qty || 0}; // Adjust field name as necessary
             await RedisService.addCache(REDIS_KEYS.EXTERNAL_CLASSIFIED_LISTING_TOTAL_COUNT + `:${postalCode}-${minBudget}-${maxBudget}`, totalExternalCount, cacheDuration);
-            
-
             return transformed_result;
-
         } catch (error: any) {
             console.error("Error during external API call:", error.message);
             return [];

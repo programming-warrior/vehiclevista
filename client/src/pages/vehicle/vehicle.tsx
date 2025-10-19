@@ -595,7 +595,7 @@ export default function VehiclePage() {
                 Min Mileage
               </label>
               <Select
-                value={minMileage > 0 ? minMileage.toString() : ""}
+                value={minMileage > 0 ? minMileage?.toString() : ""}
                 onValueChange={(value) =>
                   setSearch({ minMileage: value ? Number(value) : 0 })
                 }
