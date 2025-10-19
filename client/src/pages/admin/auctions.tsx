@@ -48,6 +48,7 @@ import { useLocation } from "wouter";
 import { adminToggleAuctionVisibility } from "@/api";
 import { Separator } from "@radix-ui/react-select";
 import { toast } from "@/hooks/use-toast";
+import { useSystemConfigStore } from "@/hooks/use-store";
 
 export default function AdminAuctions() {
   const [auctions, setAuctions] = useState<any>([]);
@@ -64,7 +65,8 @@ export default function AdminAuctions() {
   const [totalAuctions, setTotalAuctions] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
-  const [visibilityAction, setVisibilityAction] = useState<"enable" | "disable">("enable");
+  const {systemConfig, setSystemConfig} = useSystemConfigStore();
+  const [visibilityAction, setVisibilityAction] = useState<"enable" | "disable">(systemConfig && systemConfig.isAuctionVisible ? "enable" : "disable");
 
   const [, setLocation] = useLocation();
 
@@ -137,6 +139,10 @@ export default function AdminAuctions() {
         description: `Auctions visibility ${visibilityAction == 'enable' ? "disabled" : "enabled"}, successfully.`,
       })
       setVisibilityAction(visibilityAction === "enable" ? "disable" : "enable");
+      console.log("systemConfig " , systemConfig.isAuctionVisible)
+      setSystemConfig({
+        isAuctionVisible: !systemConfig.isAuctionVisible
+      })
     } catch (err:any) {
       console.error(err);
       setVisibilityDialogOpen(false);

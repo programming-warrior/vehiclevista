@@ -186,6 +186,24 @@ export const useRedirectStore = create<RedirectStore>((set) => ({
   clearRedirectUrl: () => set({ redirectUrl: null }),
 }));
 
+
+type SystemConfig = {
+  systemConfig: any;
+  setSystemConfig: (newConfig: any) => void;
+};
+
+export const useSystemConfigStore = create<SystemConfig>((set) => ({
+  systemConfig: null,
+  setSystemConfig: (newConfig:any)=>
+    set((state)=>({
+        ...state,
+        systemConfig:{
+          ...state.systemConfig,
+          ...newConfig
+        }
+    }))
+}));
+
 type HeroSectionSearchState = {
   make: string;
   model: string;

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VehicleCard from "@/components/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { vehicleTypes } from "@shared/schema";
+import { systemConfig, vehicleTypes } from "@shared/schema";
 import type { Vehicle, Auction } from "@shared/schema"; // Assuming Auction type is available
 import HeroSection from "@/components/hero-section";
 import LiveAuctionSection from "@/components/live-auction-section";
@@ -17,6 +17,7 @@ import {
   getFavouriteAuctions,
   getVehicleById,
   getAuctionById,
+  getSystemConfig
 } from "@/api";
 import { useUser } from "@/hooks/use-store";
 import Navbar from "@/components/navbar";
@@ -36,6 +37,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel"; // Make sure to import Carousel components
 import AuctionCard from "@/components/auction-card";
+import { useSystemConfigStore } from "@/hooks/use-store";
 
 
 const RecentViewItem = ({ view }: { view: RecentViewType }) => {
@@ -102,6 +104,8 @@ export default function Home() {
   const { vehicles, addVehicleToFavourite, auctions, addAuctionToFavourite } =
     useFavouriteListings();
   const { recent_views } = useRecentViews(); // Get recent views from the store
+  const { systemConfig , setSystemConfig} = useSystemConfigStore();
+
 
   console.log(recent_views);
   useEffect(() => {
@@ -120,6 +124,8 @@ export default function Home() {
   }, [activeCategory]);
 
   useEffect(() => {
+
+    
     async function fetchFav() {
       getFavouriteVehicles()
         .then((data) => {

@@ -19,12 +19,12 @@ import {
   TicketCheckIcon,
   CheckCheck,
 } from "lucide-react";
-import SearchBar from "./search-bar";
 import { useState, useEffect, useRef } from "react";
 import {
   useUser,
   useHeroSectionSearch,
   useNotification,
+  useSystemConfigStore
 } from "@/hooks/use-store";
 import { logoutUser, advanceVehicleSearch, getNotifications } from "@/api";
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +52,7 @@ export default function Navbar() {
   } = useNotification();
   const [filteredNotification, setFilteredNotification] = useState<any>([]);
   const { globalLoading, setGlobalLoading } = useGlobalLoading();
+  const { systemConfig } = useSystemConfigStore();
 
   const handleLogout = async () => {
     try {
@@ -112,14 +113,14 @@ export default function Navbar() {
     }
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     console.log(notifications);
     setFilteredNotification(
       notifications
-      .filter(n => !n.isRead)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .filter(n => !n.isRead)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     );
-  },[notifications])
+  }, [notifications])
 
   console.log(filteredNotification);
 
@@ -273,12 +274,12 @@ export default function Navbar() {
                     <h3 className="font-semibold text-gray-900">
                       Notifications
                     </h3>
-               
+
                   </div>
                 </div>
                 {notifications.length > 0 ? (
                   <div className="py-1">
-                    {filteredNotification.map((notification:any, index:number) => {
+                    {filteredNotification.map((notification: any, index: number) => {
                       const messageData =
                         typeof notification.message === "string"
                           ? JSON.parse(notification.message)
@@ -287,7 +288,7 @@ export default function Navbar() {
                       return (
                         <div
                           key={notification.id}
-                          onClick={() =>{
+                          onClick={() => {
                             setNotificationMenuOpen(false);
                             setLocation("/notifications")
                           }}
@@ -422,12 +423,15 @@ export default function Navbar() {
               >
                 Classified
               </Link>
-              <Link
-                href="/auction"
-                className="text-sm font-medium hover:text-blue-200 transition-colors"
-              >
-                Auction
-              </Link>
+              {
+                systemConfig && systemConfig.isAuctionVisible &&
+                <Link
+                  href="/auction"
+                  className="text-sm font-medium hover:text-blue-200 transition-colors"
+                >
+                  Auction
+                </Link>
+              }
               <Link
                 href="/about"
                 className="text-sm font-medium hover:text-blue-200 transition-colors"

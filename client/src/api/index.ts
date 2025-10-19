@@ -112,6 +112,17 @@ async function getLocationSuggestion(location: string) {
   }
 }
 
+export async function getSystemConfig() {
+  try {
+    const res = await axios.get(
+      BACKEND_URL + "/api/system-config"
+    );
+    return res.data;
+  } catch (e) {
+    throw e;
+  }
+}
+
 export async function vehicleLookUp(
   registration_num: string,
   current_mileage: number
@@ -146,11 +157,11 @@ export async function getSellerDetais(sellerId: number) {
 }
 
 // Admin: toggle auction visibility (enabled/disabled)
-export async function adminToggleAuctionVisibility(auctionVisibilityAction: "enable"|"disable") {
+export async function adminToggleAuctionVisibility(auctionVisibilityAction: "enable" | "disable") {
   try {
     const res = await axios.patch(
       `${BACKEND_URL}/api/admin/auctions/toggle-visibility`,
-      {  auctionVisibilityAction },
+      { auctionVisibilityAction },
       {
         withCredentials: true,
         headers: {

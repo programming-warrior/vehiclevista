@@ -54,9 +54,10 @@ import RunningRafflePage from "./pages/raffle/raffle";
 import AdminPaymentHistory from "./pages/admin/payment-history";
 import AdminBuyerSellerChatHistory from "./pages/admin/buyer-seller-chat";
 import { getRecentView } from "./api/user-api";
-import { useRecentViews } from "./hooks/use-store";
+import { useRecentViews, useSystemConfigStore } from "./hooks/use-store";
 import AdminPackagesPage from "./pages/admin/packages";
-import {useAutoLogout} from "./lib/use-auto-logout";
+import { getSystemConfig } from "./api";
+import { useAutoLogout } from "./lib/use-auto-logout";
 
 export default function App() {
   const { userId, role, card_verified } = useUser();
@@ -70,6 +71,7 @@ export default function App() {
     setTotalNotifications,
   } = useNotification();
   const { setRecentView } = useRecentViews();
+  const {setSystemConfig} = useSystemConfigStore();
 
   useEffect(() => {
     const sessionId = localStorage.getItem("sessionId");
@@ -81,6 +83,14 @@ export default function App() {
         setRecentView(data);
       })
       .catch((e) => console.log(e));
+    //store the system config fetched from the db
+    getSystemConfig().then(config => {
+      setSystemConfig({
+        ...config
+      })
+    }).catch(e => {
+
+    })
 
     if (!socket) {
       let ws;
@@ -150,7 +160,7 @@ export default function App() {
 
   //Auto logout feature for the admin
   useAutoLogout(role);
-  
+
 
   if (!userId || !role) {
     if (isValidating) return <Loader />;
@@ -201,8 +211,8 @@ export default function App() {
               <ProtectedRoute component={AdminUsers} adminOnly />
             </Route>
             <Route path="/admin/packages">
-                <ProtectedRoute component={AdminPackagesPage} adminOnly />
-              </Route>
+              <ProtectedRoute component={AdminPackagesPage} adminOnly />
+            </Route>
             <Route path="/admin/auctions">
               <ProtectedRoute component={AdminAuctions} adminOnly />
             </Route>

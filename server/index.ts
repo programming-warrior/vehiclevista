@@ -23,6 +23,11 @@ import raffleRouter from "./serverRoutes/raffleRouter";
 import brandRouter from "./serverRoutes/brandRouter";
 import packageRouter from "./serverRoutes/packageRouter";
 import sellerRouter from "./serverRoutes/sellerRouter";
+import { systemConfig } from "../shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import { RedisService } from "./services/RedisService";
+import { REDIS_KEYS } from "./utils/constants";
 // import { seedValueToMakeTable } from "./serverRoutes/brandRouter";
 
 
@@ -36,7 +41,7 @@ declare global {
     interface Request {
       userId?: number;
       role?: string;
-      card_verified? : boolean;
+      card_verified?: boolean;
     }
   }
 }
@@ -62,9 +67,9 @@ app.use("/api/user", userRouter)
 app.use("/api/admin", adminRouter)
 app.use("/api/report", reportRouter)
 app.use("/api/raffle", raffleRouter)
-app.use('/api/brand',brandRouter);
-app.use('/api/package',packageRouter);
-app.use('/api/seller',sellerRouter);
+app.use('/api/brand', brandRouter);
+app.use('/api/package', packageRouter);
+app.use('/api/seller', sellerRouter);
 
 
 // Add diagnostic endpoint
@@ -72,26 +77,47 @@ app.get("/ping", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-
-
+app.get("/api/system-config", async (req, res) => {
+  // const configFromCache = await RedisService.getCache(REDIS_KEYS.SYSTEM_CONFIG);
+  // console.log(configFromCache);
+  // if (configFromCache) {
+  //   return res.status(200).json({
+  //     ...configFromCache
+  //   })
+  // }
+  const [config] = await db.select({
+    isAuctionVisible: systemConfig.isAuctionVisible,
+  }).from(systemConfig)
+    .where(eq(systemConfig.id, 1));
+  if (!config) {
+    console.error("sysemConfig table is not prehydrated");
+    return res.status(500).json({
+      error: "server error"
+    })
+  }
+  await RedisService.addCache(REDIS_KEYS.SYSTEM_CONFIG, config, 1 * 60 * 60) // 1 hr expiration
+  return res.status(200).json({
+    ...config
+  })
+})
 
 app.post('/api/presigned-url', verifyToken, async (req: Request, res: Response) => {
   try {
-    if(!req.userId) return res.status(403).json({ message: "User ID not found" });
+    if (!req.userId) return res.status(403).json({ message: "User ID not found" });
     const { files } = req.body;
     console.log(files);
     // Validate request body
     if (!files || !Array.isArray(files) || files.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Files array is required in the request body' 
+      return res.status(400).json({
+        success: false,
+        message: 'Files array is required in the request body'
       });
     }
 
     // Generate presigned URLs for each file
     const presignedUrlPromises = files.map(async (file: { fileName: string, contentType: string }) => {
       const { fileName, contentType } = file;
-      
+
       // Validate file information
       if (!fileName || !contentType) {
         throw new Error('fileName and contentType are required for each file');
@@ -99,7 +125,7 @@ app.post('/api/presigned-url', verifyToken, async (req: Request, res: Response) 
 
       // Create a unique key for the S3 object
       const key = `vehicles/${req.userId}/${Date.now()}-${fileName.split(' ').join('_')}`;
-      
+
       // Create the command to put an object in S3
       const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
@@ -158,7 +184,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  
+
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
