@@ -65,6 +65,12 @@ export const auctionStatus = [
 ] as const;
 export const auctinStatusEnum = pgEnum("auction_status", auctionStatus);
 
+
+export const systemConfig = pgTable("system_config",{
+  id: serial("id").primaryKey(),
+  isAuctionVisible: boolean('is_auction_visible').notNull().default(true),
+})
+
 // Update vehicles table with classified listing fields
 export const vehicles = pgTable("vehicles", {
   id: serial("id").primaryKey(),

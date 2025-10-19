@@ -145,6 +145,27 @@ export async function getSellerDetais(sellerId: number) {
   }
 }
 
+// Admin: toggle auction visibility (enabled/disabled)
+export async function adminToggleAuctionVisibility(auctionVisibilityAction: "enable"|"disable") {
+  try {
+    const res = await axios.patch(
+      `${BACKEND_URL}/api/admin/auctions/toggle-visibility`,
+      {  auctionVisibilityAction },
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("sessionId")}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return res.data;
+  } catch (e) {
+    console.error("Error toggling auction visibility:", e);
+    throw e;
+  }
+}
+
 async function dvsaApi(registration_num: string) {
   try {
     const res = await axios.post(

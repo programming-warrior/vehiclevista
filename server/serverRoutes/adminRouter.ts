@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { hashPassword, comparePasswords } from "../utils/auth";
 import { db } from "../db";
-import { Raffle } from "../../shared/schema";
+import { Raffle, systemConfig } from "../../shared/schema";
 import {
   users,
   bids,
@@ -527,9 +527,9 @@ adminRouter.get("/analytics/top-listings", verifyToken, async (req, res) => {
       vehicleIdx++;
     } else if (
       (topVehicles[vehicleIdx].vehicles?.clicks ?? 0) ===
-        (topAuctions[auctionIdx].auctions?.clicks ?? 0) &&
+      (topAuctions[auctionIdx].auctions?.clicks ?? 0) &&
       (topVehicles[vehicleIdx].vehicles?.views ?? 0) >=
-        (topAuctions[auctionIdx].auctions?.views ?? 0)
+      (topAuctions[auctionIdx].auctions?.views ?? 0)
     ) {
       topListings.push({
         vehicleId: topVehicles[vehicleIdx].vehicles?.id ?? 0,
@@ -1162,6 +1162,54 @@ adminRouter.get("/auctions", verifyToken, async (req, res) => {
   });
 });
 
+
+adminRouter.patch('/auctions/toggle-visibility', verifyToken, async (req, res) => {
+  if (!req.userId || req.role !== 'admin') {
+    return res.status(401).json({ error: "unauthorized access" });
+  }
+  const { auctionVisibilityAction } = req.body;
+  if (auctionVisibilityAction !== 'enable' && auctionVisibilityAction !== 'disable') {
+    return res.status(400).json({
+      error: "invalid visibility action value"
+    })
+  }
+  try {
+    await db.transaction(async (trx) => {
+      const result = await trx.execute(sql`
+              SELECT * FROM ${systemConfig} WHERE ${systemConfig.id} = 1 FOR UPDATE
+          `);
+      const config: any = result?.rows[0] || null;
+      console.log(config);
+      if (!config) {
+        console.error("systemConfig table has not been prehydrated");
+        throw new Error("Server Error");
+
+      }
+      if ((config.is_auction_visible && auctionVisibilityAction == 'enable') || (!config.is_auction_visible && auctionVisibilityAction == 'disable')) {
+        throw new Error("Auction visibility state is already the same")
+      }
+
+      const visibility = config.is_auction_visible ? false : true;
+     
+      await trx
+        .update(systemConfig)
+        .set({
+          isAuctionVisible: visibility
+        })
+        .where(eq(systemConfig.id, 1));
+    })
+    return res.status(201).json({
+      message:"success"
+    })
+  }
+  catch (e:any) {
+    console.error(e);
+    return res.status(500).json({
+      error:e.message || "Server Error"
+    })
+  }
+})
+
 adminRouter.get("/reports/listings", verifyToken, async (req, res) => {
   if (!req.userId || req.role !== "admin")
     return res.status(401).json({ error: "unauthorized access" });
@@ -1245,44 +1293,44 @@ adminRouter.get("/reports/listings", verifyToken, async (req, res) => {
     },
     reportedVehicle: report.reportedVehicle
       ? {
-          id: report.reportedVehicle.id,
-          title: report.reportedVehicle.title,
-          make: report.reportedVehicle.make,
-          model: report.reportedVehicle.model,
-          year: report.reportedVehicle.year,
-          image_url: report.reportedVehicle.images[0],
-          seller: report.vehicleSeller
-            ? {
-                id: report.vehicleSeller.id,
-                username: report.vehicleSeller.username,
-                email: report.vehicleSeller.email,
-              }
-            : null,
-        }
+        id: report.reportedVehicle.id,
+        title: report.reportedVehicle.title,
+        make: report.reportedVehicle.make,
+        model: report.reportedVehicle.model,
+        year: report.reportedVehicle.year,
+        image_url: report.reportedVehicle.images[0],
+        seller: report.vehicleSeller
+          ? {
+            id: report.vehicleSeller.id,
+            username: report.vehicleSeller.username,
+            email: report.vehicleSeller.email,
+          }
+          : null,
+      }
       : null,
     reportedAuction: report.reportedAuction
       ? {
-          id: report.reportedAuction.id,
-          title: report.reportedAuction.title,
-          startingPrice: report.reportedAuction.startingPrice,
-          seller: report.auctionSeller
-            ? {
-                id: report.auctionSeller.id,
-                username: report.auctionSeller.username,
-                email: report.auctionSeller.email,
-              }
-            : null,
-          vehicle: report.auctionVehicle
-            ? {
-                id: report.auctionVehicle.id,
-                title: report.auctionVehicle.title,
-                make: report.auctionVehicle.make,
-                model: report.auctionVehicle.model,
-                year: report.auctionVehicle.year,
-                image_url: report.auctionVehicle.images[0],
-              }
-            : null,
-        }
+        id: report.reportedAuction.id,
+        title: report.reportedAuction.title,
+        startingPrice: report.reportedAuction.startingPrice,
+        seller: report.auctionSeller
+          ? {
+            id: report.auctionSeller.id,
+            username: report.auctionSeller.username,
+            email: report.auctionSeller.email,
+          }
+          : null,
+        vehicle: report.auctionVehicle
+          ? {
+            id: report.auctionVehicle.id,
+            title: report.auctionVehicle.title,
+            make: report.auctionVehicle.make,
+            model: report.auctionVehicle.model,
+            year: report.auctionVehicle.year,
+            image_url: report.auctionVehicle.images[0],
+          }
+          : null,
+      }
       : null,
   }));
 
@@ -1820,9 +1868,8 @@ adminRouter.put(
 
       // 3. Send response
       return res.status(200).json({
-        message: `Package status toggled to ${
-          updatedPackage[0].is_active ? "Active" : "Inactive"
-        }.`,
+        message: `Package status toggled to ${updatedPackage[0].is_active ? "Active" : "Inactive"
+          }.`,
         data: updatedPackage[0],
       });
     } catch (error) {
