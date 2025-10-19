@@ -717,7 +717,7 @@ export default function VehiclePage() {
   if (!filter.postalCode || !filter.maxBudget || !filter.minBudget) {
     return <>
       <div className="flex relative min-h-[600px] bg-cover bg-center border-none">
-        <div className="max-w-2xl ml-20 mt-20 ">
+        <div className="max-w-2xl sm:ml-20 sm:justify-start mt-10 mx-2 justify-center ">
           <QuickVehicleSearch />
         </div>
       </div>

@@ -13,6 +13,7 @@ const conditionColors = {
   catS: "bg-red-100 text-red-800",
   catA: "bg-yellow-100 text-yellow-800",
   catN: "bg-orange-100 text-orange-800",
+  used: ""
 } as const;
 
 const conditionLabels = {
@@ -80,12 +81,16 @@ vehicle: Vehicle;
                 conditionColors[
                   vehicle.condition as keyof typeof conditionColors
                 ]
-              } border-none font-bold px-3 py-1 shadow-md`}
+                || 
+                "bg-green-100 text-green-800"
+              }  border-none font-bold px-3 py-1 shadow-md`}
             >
               {
                 conditionLabels[
                   vehicle.condition as keyof typeof conditionLabels
-                ]
+                ] 
+                || 
+                vehicle.condition
               }
             </Badge>
           </div>
@@ -105,7 +110,7 @@ vehicle: Vehicle;
 
           <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-4">
             <p className="text-white font-bold text-xl drop-shadow-md">
-              ${vehicle.price.toLocaleString()}
+              £{vehicle.price.toLocaleString()}
             </p>
           </div>
         </div>
@@ -122,7 +127,11 @@ vehicle: Vehicle;
             <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">
               <Gauge className="h-5 w-5 text-gray-700 mb-1" />
               <span className="text-xs font-medium text-center">
-                {vehicle.mileage.toLocaleString()} mi
+                {
+                  vehicle.mileage ? 
+                  `${vehicle.mileage.toLocaleString()} mi`
+                  : "not available"
+                }
               </span>
             </div>
             <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg">

@@ -141,7 +141,7 @@ const QuickVehicleSearch = () => {
 
     return (
         <div className="bg-white rounded-3xl p-8 shadow-lg">
-            <h2 className="text-2xl font-semibold mb-6">
+            <h2 className="sm:text-2xl text-xl font-semibold mb-6">
                 Find your vehicle with quick finder
             </h2>
 
@@ -412,7 +412,7 @@ const QuickVehicleSearch = () => {
                     </div>
                     <Button
                         type="submit"
-                        className="w-full mt-6 h-12 bg-blue-600 hover:bg-blue-700 text-white text-lg"
+                        className="w-full mt-6 h-12 bg-blue-600 hover:bg-blue-700 text-white sm:text-lg text-base"
                     >
                         {error ? `something went wrong` : ""}
                         {isLoading && (
