@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { hashPassword, comparePasswords } from "../utils/auth";
 import { db } from "../db";
-import { Raffle, systemConfig } from "../../shared/schema";
+import { Raffle, systemConfig, traderRequests } from "../../shared/schema";
 import {
   users,
   bids,
@@ -32,6 +32,7 @@ import {
   and,
   gte,
   not,
+  desc,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { notificationQueue, raffleQueue } from "../worker/queue";
@@ -41,6 +42,7 @@ import { notificationQueue, raffleQueue } from "../worker/queue";
 import { verifyToken } from "../middleware/authMiddleware";
 import { z } from "zod";
 import { parse } from "path";
+import { updateUserRoleInSession } from "../utils/session";
 
 // --- Place these at the top of your file or in a shared location ---
 const vehicleTypes = ["car", "bike", "truck", "van"] as const;
@@ -1881,5 +1883,169 @@ adminRouter.put(
     }
   }
 );
+
+// ==================== TRADER REQUEST MANAGEMENT ====================
+
+// Get all trader requests with optional status filter
+adminRouter.get("/trader-requests", verifyToken, async (req, res) => {
+  try {
+    if (req.role !== "admin") {
+      return res.status(401).json({ error: "Unauthorized access" });
+    }
+
+    const { status } = req.query;
+
+    let baseQuery = db
+      .select({
+        id: traderRequests.id,
+        userId: traderRequests.userId,
+        ukCompanyName: traderRequests.ukCompanyName,
+        ukCompanyNumber: traderRequests.ukCompanyNumber,
+        status: traderRequests.status,
+        submittedAt: traderRequests.submittedAt,
+        reviewedAt: traderRequests.reviewedAt,
+        reviewedBy: traderRequests.reviewedBy,
+        rejectionReason: traderRequests.rejectionReason,
+        createdAt: traderRequests.createdAt,
+        updatedAt: traderRequests.updatedAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          role: users.role,
+        },
+      })
+      .from(traderRequests)
+      .leftJoin(users, eq(traderRequests.userId, users.id))
+      .$dynamic();
+
+    if (status && typeof status === "string") {
+      baseQuery = baseQuery.where(eq(traderRequests.status, status as any));
+    }
+
+    const requests = await baseQuery.orderBy(desc(traderRequests.submittedAt));
+
+    res.json(requests);
+  } catch (error) {
+    console.error("Error fetching trader requests:", error);
+    res.status(500).json({ error: "Failed to fetch trader requests" });
+  }
+});
+
+// Approve trader request
+adminRouter.post("/trader-requests/:id/approve", verifyToken, async (req, res) => {
+  try {
+    if (req.role !== "admin") {
+      return res.status(401).json({ error: "Unauthorized access" });
+    }
+
+    const requestId = parseInt(req.params.id);
+    if (isNaN(requestId)) {
+      return res.status(400).json({ error: "Invalid request ID" });
+    }
+
+    // Get the trader request
+    const [request] = await db
+      .select()
+      .from(traderRequests)
+      .where(eq(traderRequests.id, requestId))
+      .limit(1);
+
+    if (!request) {
+      return res.status(404).json({ error: "Trader request not found" });
+    }
+
+    if (request.status !== "PENDING") {
+      return res.status(400).json({ 
+        error: `Request has already been ${request.status.toLowerCase()}` 
+      });
+    }
+    // Update user role to trader
+    console.log("updating user role");
+    await db.update(users)
+      .set({ role: "trader" })
+      .where(eq(users.id, request.userId));
+
+    // Update the user's session role in Redis
+    await updateUserRoleInSession(request.userId, "trader");
+
+    // Update trader request status
+    await db.update(traderRequests)
+      .set({
+        status: "APPROVED",
+        reviewedAt: new Date(),
+        reviewedBy: req.userId,
+      })
+      .where(eq(traderRequests.id, requestId));
+
+    // TODO: Send notification to user
+
+    res.json({ 
+      success: true, 
+      message: "Trader request approved successfully" 
+    });
+  } catch (error) {
+    console.error("Error approving trader request:", error);
+    res.status(500).json({ error: "Failed to approve trader request" });
+  }
+});
+
+// Reject trader request
+adminRouter.post("/trader-requests/:id/reject", verifyToken, async (req, res) => {
+  try {
+    if (req.role !== "admin") {
+      return res.status(401).json({ error: "Unauthorized access" });
+    }
+
+    const requestId = parseInt(req.params.id);
+    const { rejectionReason } = req.body;
+
+    if (isNaN(requestId)) {
+      return res.status(400).json({ error: "Invalid request ID" });
+    }
+
+    if (!rejectionReason) {
+      return res.status(400).json({ error: "Rejection reason is required" });
+    }
+
+    // Get the trader request
+    const [request] = await db
+      .select()
+      .from(traderRequests)
+      .where(eq(traderRequests.id, requestId))
+      .limit(1);
+
+    if (!request) {
+      return res.status(404).json({ error: "Trader request not found" });
+    }
+
+    if (request.status !== "PENDING") {
+      return res.status(400).json({ 
+        error: `Request has already been ${request.status.toLowerCase()}` 
+      });
+    }
+
+    // Update trader request status
+    await db.update(traderRequests)
+      .set({
+        status: "REJECTED",
+        reviewedAt: new Date(),
+        reviewedBy: req.userId,
+        rejectionReason,
+      })
+      .where(eq(traderRequests.id, requestId));
+
+    // TODO: Send notification to user
+    // You can add notification logic here if needed
+
+    res.json({ 
+      success: true, 
+      message: "Trader request rejected successfully" 
+    });
+  } catch (error) {
+    console.error("Error rejecting trader request:", error);
+    res.status(500).json({ error: "Failed to reject trader request" });
+  }
+});
 
 export default adminRouter;

@@ -23,6 +23,7 @@ import raffleRouter from "./serverRoutes/raffleRouter";
 import brandRouter from "./serverRoutes/brandRouter";
 import packageRouter from "./serverRoutes/packageRouter";
 import sellerRouter from "./serverRoutes/sellerRouter";
+import traderRouter from "./serverRoutes/traderRouter";
 import { systemConfig } from "../shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -70,6 +71,7 @@ app.use("/api/raffle", raffleRouter)
 app.use('/api/brand', brandRouter);
 app.use('/api/package', packageRouter);
 app.use('/api/seller', sellerRouter);
+app.use('/api/trader', traderRouter);
 
 
 // Add diagnostic endpoint

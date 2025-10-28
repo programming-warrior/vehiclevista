@@ -95,6 +95,12 @@ import {
 } from "./package-api";
 import { adminGetPaymentHistory } from "./admin-api/payment-api";
 import { adminGetChatHistory } from "./admin-api/buyer-seller-chat-api";
+import { 
+  adminGetTraderRequests, 
+  adminApproveTraderRequest, 
+  adminRejectTraderRequest 
+} from "./admin-api/trader-api";
+import { submitTraderRequest, getMyTraderRequest } from "./trader-api";
 import {
   AuctionData,
   AuctionDraftCacheStore,
@@ -549,4 +555,9 @@ export {
   getPackagesWithAmount,
   selectPackage,
   verifyPayment,
+  submitTraderRequest,
+  getMyTraderRequest,
+  adminGetTraderRequests,
+  adminApproveTraderRequest,
+  adminRejectTraderRequest,
 };

@@ -32,6 +32,8 @@ import AuctionPage from "@/pages/auction/auction";
 import Register from "@/pages/register";
 import SellerDashboard from "@/pages/seller";
 import SellerVehicleUpload from "./pages/seller/upload";
+import TraderCreate from "@/pages/trader/trader-create";
+import AdminTraderRequests from "@/pages/admin/trader-requests";
 import { useUser } from "./hooks/use-store";
 import { useValidateSession } from "./hooks/use-validatesession";
 import Loader from "./components/loader";
@@ -243,6 +245,9 @@ export default function App() {
             <Route path="/admin/pricing">
               <ProtectedRoute component={AdminPricing} adminOnly />
             </Route>
+            <Route path="/admin/trader-requests">
+              <ProtectedRoute component={AdminTraderRequests} adminOnly />
+            </Route>
 
             {/* Seller Routes */}
             {/* <Route path="/seller" >
@@ -262,6 +267,7 @@ export default function App() {
             </Route> */}
 
             {/* Trader Routes */}
+            <Route path="/trader/create" component={TraderCreate} />
             <Route path="/trader/dashboard">
               <ProtectedRoute
                 component={TraderDashboard}

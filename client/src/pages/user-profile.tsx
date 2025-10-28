@@ -34,6 +34,9 @@ import {
   Clock,
   MousePointer,
   TrendingUp,
+  Building2,
+  CheckCircle,
+  ArrowRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -45,6 +48,7 @@ import {
   getUsersAuctionListings,
   getUsersClassifiedListings,
   updateUserCardInfo,
+  getMyTraderRequest,
 } from "@/api";
 import Loader from "@/components/loader";
 import { loadStripe } from "@stripe/stripe-js";
@@ -61,6 +65,9 @@ import { useLocation } from "wouter";
 import ProfileAuctionTab from "@/components/user/auction-tab";
 import ProfileFavouriteVehicleTab from "@/components/user/favourite-vehicle-tab";
 import ProfileFavouriteAuctionTab from "@/components/user/favourite-auction-tab";
+import TraderRequestStatus from "@/components/user/trader-request-status";
+import { Link } from "wouter";
+import type { TraderRequest } from "@shared/schema";
 
 const stripePromise = loadStripe(STRIPE_PUBLIC_KEY);
 
@@ -174,7 +181,10 @@ export default function UserProfile() {
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
   const [classifiedListings, setClassifiedListings] = useState<any[]>([]);
   const [auctionListings, setAuctionListings] = useState<any[]>([]);
+  const [traderRequest, setTraderRequest] = useState<TraderRequest | null>(null);
+  const [loadingTraderRequest, setLoadingTraderRequest] = useState(true);
 
+  console.log("role: ", role)
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
@@ -196,9 +206,21 @@ export default function UserProfile() {
       }
     };
 
-    // fetchAucionListings();
+    const fetchTraderRequest = async () => {
+      try {
+        setLoadingTraderRequest(true);
+        const request = await getMyTraderRequest();
+        setTraderRequest(request);
+      } catch (error) {
+        console.error("Error fetching trader request:", error);
+      } finally {
+        setLoadingTraderRequest(false);
+      }
+    };
+
     fetchUserDetails();
     fetchUserBids();
+    fetchTraderRequest();
   }, [userId]);
 
   // Form state
@@ -342,6 +364,47 @@ export default function UserProfile() {
                   Member since {userData.memberSince}
                 </p>
 
+                {/* Role Badge */}
+                <div className="mt-4 flex justify-center">
+                  {role === "trader" && (
+                    <Badge className="bg-blue-600 text-white px-4 py-2 text-sm flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Verified Trader
+                    </Badge>
+                  )}
+
+                </div>
+
+                {/* Trader Application Section */}
+                {!loadingTraderRequest && (
+                  <div className="mt-6 space-y-3">
+                    {role === "trader" || role === "garage" ? (
+                      // User is already a trader - show status message
+                      <Alert className="bg-green-50 border-green-200 text-left">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <AlertDescription className="text-green-800 text-sm">
+                          You have full trader access and benefits.
+                        </AlertDescription>
+                      </Alert>
+                    ) : traderRequest ? (
+                      // User has a pending/approved/rejected request
+                      null // Will show in the trader status tab
+                    ) : (
+                      // User hasn't applied yet - show apply button
+                      <Link href="/trader/create">
+                        <Button 
+                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                          size="lg"
+                        >
+                          <Building2 className="mr-2 h-5 w-5" />
+                          Become a Trader
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                )}
+
                 {/* <div className="grid grid-cols-2 gap-4 mt-6">
                   <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
                     <p className="text-2xl font-bold text-blue-600">
@@ -379,7 +442,7 @@ export default function UserProfile() {
               onValueChange={handleTabChange}
               className="h-full"
             >
-              <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-6 bg-gray-100">
+              <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6 bg-gray-100">
                 <TabsTrigger
                   value="account"
                   className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
@@ -387,6 +450,15 @@ export default function UserProfile() {
                   <User size={16} />
                   <span className="hidden md:inline">Account</span>
                 </TabsTrigger>
+                {traderRequest && (
+                  <TabsTrigger
+                    value="trader-status"
+                    className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  >
+                    <Building2 size={16} />
+                    <span className="hidden md:inline">Trader</span>
+                  </TabsTrigger>
+                )}
                 <TabsTrigger
                   value="classified"
                   className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
@@ -625,6 +697,12 @@ export default function UserProfile() {
                     </CardFooter>
                   </Card>
                 </TabsContent>
+
+                {traderRequest && (
+                  <TabsContent value="trader-status" className="mt-0">
+                    <TraderRequestStatus request={traderRequest} />
+                  </TabsContent>
+                )}
 
                 <TabsContent value="classified" className="mt-0">
                   <ProfileClassifiedTab />

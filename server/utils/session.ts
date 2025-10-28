@@ -59,3 +59,47 @@ function setCookie(sessionId: string, cookies: Pick<Cookies, "set">) {
     expires: Date.now() + SESSION_EXPIRY_SECONDS * 1000,
   });
 }
+
+/**
+ * Update user role in Redis session
+ * @param userId - The user ID whose session needs to be updated
+ * @param newRole - The new role to set
+ */
+export async function updateUserRoleInSession(userId: number, newRole: typeof userRoles[number]) {
+  try {
+    const redisClient = await RedisClientSingleton.getRedisClient();
+    
+    // Find all session keys (this is a pattern search)
+    const sessionKeys = await redisClient.keys('session:*');
+    
+    // Iterate through sessions to find the one belonging to this user
+    for (const key of sessionKeys) {
+      const sessionData = await redisClient.get(key);
+      if (sessionData) {
+        const parsed = JSON.parse(sessionData);
+        if (parsed.id === userId) {
+          // Update the role in the session
+          parsed.role = newRole;
+          
+          // Get the remaining TTL to preserve expiry
+          const ttl = await redisClient.ttl(key);
+          
+          // Update the session with new role, preserving TTL
+          if (ttl > 0) {
+            await redisClient.set(key, JSON.stringify(parsed), {
+              EX: ttl,
+            });
+          } else {
+            // If TTL is -1 (no expiry) or -2 (key doesn't exist), set with default
+            await redisClient.set(key, JSON.stringify(parsed), {
+              EX: newRole === 'admin' ? ADMIN_SESSION_EXPIRY_SECONDS : SESSION_EXPIRY_SECONDS,
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error updating user role in session:', error);
+    throw error;
+  }
+}

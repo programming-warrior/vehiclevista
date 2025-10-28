@@ -855,6 +855,41 @@ export type InsertOffer = z.infer<typeof insertOfferSchema>;
 export type PricingPlan = typeof pricingPlans.$inferSelect;
 export type InsertPricingPlan = z.infer<typeof insertPricingPlanSchema>;
 
+// Trader request status enum
+export const traderRequestStatus = [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+] as const;
+export const traderRequestStatusEnum = pgEnum("trader_request_status", traderRequestStatus);
+
+// Trader requests table
+export const traderRequests = pgTable("trader_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  ukCompanyName: text("uk_company_name").notNull(),
+  ukCompanyNumber: text("uk_company_number").notNull(),
+  status: traderRequestStatusEnum().notNull().default("PENDING"),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTraderRequestSchema = createInsertSchema(traderRequests).omit({
+  id: true,
+  submittedAt: true,
+  reviewedAt: true,
+  reviewedBy: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type TraderRequest = typeof traderRequests.$inferSelect;
+export type InsertTraderRequest = z.infer<typeof insertTraderRequestSchema>;
+
 export const searchSchema = z.object({
   query: z.string().optional(),
   category: z.string().optional(),

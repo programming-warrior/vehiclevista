@@ -38,6 +38,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/payment-history", label: "Payment History", icon: CreditCard },
     { href: "/admin/buyer-seller-chat", label: "Buyer-Seller Chats", icon: MessageCircle },
     { href: "/admin/packages", label: "Packages", icon: Ticket },
+    { href: "/admin/trader-requests", label: "Trader Requests", icon: Ticket },
   ];
 
   return (
