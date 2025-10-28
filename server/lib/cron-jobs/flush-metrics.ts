@@ -41,7 +41,11 @@ export async function flushMetrics() {
   }
 
   for (const key of raffleKeys) {
-    const [_, raffleId, metric] = key.split(":"); // example: vehicle:123:views
+    const [_, raffleId, metric] = key.split(":"); 
+    if(isNaN(parseInt(raffleId))) {
+      await redisClient.del(key);
+      continue;
+    }
     const value = await redisClient.get(key);
     console.log(value);
     if (!value) continue;
