@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   TicketCheckIcon,
   CheckCheck,
+  Package,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -156,7 +157,7 @@ export default function Navbar() {
         const res = await advanceVehicleSearch(searchParam);
         const filteredSchema = res.filterSchema;
         setSearch({
-          brand: filteredSchema.brand ?? "",
+          make: filteredSchema.brand ?? "",
           model: filteredSchema.model ?? "",
           variant: filteredSchema.variant ?? "",
           vehicleType: filteredSchema.type ?? "",
@@ -195,18 +196,18 @@ export default function Navbar() {
   }
 
   return (
-    <div className="border-b border-gray-200 bg-white shadow-sm  border-none sticky top-0 z-50">
+    <div className="border-b border-gray-200 bg-white shadow-sm border-none sticky top-0 z-50">
       {/* Top Navigation */}
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <Car className="h-8 w-8 text-blue-600" />
-          <span className="text-xl font-bold text-gray-900">
+      <div className="container mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-1.5 sm:gap-2">
+          <Car className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
+          <span className="text-base sm:text-xl font-bold text-gray-900 truncate max-w-[150px] sm:max-w-none">
             Auto World Trader
           </span>
         </Link>
 
         {/* Desktop Search Bar */}
-        <div className="hidden md:block flex-1 max-w-2xl mx-8">
+        <div className="hidden lg:block flex-1 max-w-2xl mx-4 lg:mx-8">
           <div className="relative">
             <form onSubmit={handleSearchSubmit}>
               <input
@@ -214,18 +215,18 @@ export default function Navbar() {
                 type="text"
                 name="search"
                 placeholder="Your Next Car, Just a Smart Search Away"
-                className="w-full h-10 pl-4 pr-10 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-all"
+                className="w-full h-9 sm:h-10 pl-3 sm:pl-4 pr-10 text-sm sm:text-base rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-all"
               />
               <button type="submit" className="hidden">
                 Search
               </button>
             </form>
-            <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+            <Search className="absolute right-3 top-2 sm:top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
           </div>
         </div>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-2 xl:gap-4">
           {isAdmin && (
             <Button
               variant="ghost"
@@ -240,18 +241,18 @@ export default function Navbar() {
           )}
           <Button
             variant="ghost"
-            className="flex items-center gap-1 text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+            className="flex items-center gap-1 text-gray-700 hover:text-blue-600 hover:bg-blue-50 text-sm"
             size="sm"
           >
             <HelpCircle className="h-4 w-4" />
-            <span>Need Help</span>
+            <span className="hidden xl:inline">Need Help</span>
           </Button>
 
           <div className="relative" ref={notificationMenuRef}>
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full relative text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+              className="rounded-full relative text-gray-700 hover:text-blue-600 hover:bg-blue-50 h-9 w-9"
               onClick={() =>
                 setNotificationMenuOpen(
                   (notificationMenuOpen) => !notificationMenuOpen
@@ -262,7 +263,7 @@ export default function Navbar() {
               {unReadCount > 0 && (
                 <Badge
                   variant="destructive"
-                  className="absolute -top-0 -right-0 h-3 w-3  flex items-center justify-center p-[1px] text-xs bg-red-500 hover:bg-red-500"
+                  className="absolute -top-0 -right-0 h-3 w-3 flex items-center justify-center p-[1px] text-xs bg-red-500 hover:bg-red-500"
                 >
                 </Badge>
               )}
@@ -340,7 +341,7 @@ export default function Navbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="rounded-full text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+                className="rounded-full text-gray-700 hover:text-blue-600 hover:bg-blue-50 h-9 w-9"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
                 <User className="h-5 w-5" />
@@ -370,9 +371,12 @@ export default function Navbar() {
             <Button
               variant="outline"
               asChild
-              className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+              className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white text-sm h-9"
             >
-              <Link href="/login">Sign In/Join</Link>
+              <Link href="/login">
+                <span className="hidden xl:inline">Sign In/Join</span>
+                <span className="xl:hidden">Sign In</span>
+              </Link>
             </Button>
           )}
         </div>
@@ -381,36 +385,36 @@ export default function Navbar() {
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+          className="lg:hidden text-gray-700 hover:text-blue-600 hover:bg-blue-50 h-9 w-9"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           {mobileMenuOpen ? (
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5 sm:h-6 sm:w-6" />
           ) : (
-            <Menu className="h-6 w-6" />
+            <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
           )}
         </Button>
       </div>
 
       {/* Desktop Secondary Navigation */}
-      <div className="hidden md:block bg-blue-600 text-white py-2">
-        <div className="container mx-auto px-4 h-12 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="hidden lg:block bg-blue-600 text-white py-2">
+        <div className="container mx-auto px-4 h-10 sm:h-12 flex items-center justify-between">
+          <div className="flex items-center gap-2 xl:gap-4">
             <Button
               variant="secondary"
-              className="bg-red-500 hover:bg-red-600 text-white border-0"
+              className="bg-red-500 hover:bg-red-600 text-white border-0 h-8 sm:h-9 text-xs sm:text-sm px-3 sm:px-4"
               onClick={() => setLocation("/seller/vehicle/upload")}
             >
               Sell Your Car
             </Button>
             <Button
               variant="secondary"
-              className="bg-yellow-500 hover:bg-yellow-600 text-white border-0"
+              className="bg-yellow-500 hover:bg-yellow-600 text-white border-0 h-8 sm:h-9 text-xs sm:text-sm px-3 sm:px-4"
               onClick={() => setLocation("/seller/auction/create")}
             >
               Create Auction
             </Button>
-            <nav className="flex items-center gap-6">
+            <nav className="flex items-center gap-3 xl:gap-6">
               <Link
                 href="/"
                 className="text-sm font-medium hover:text-blue-200 transition-colors"
@@ -448,25 +452,44 @@ export default function Navbar() {
           </div>
           <Button
             variant="secondary"
-            className="bg-pink-500 hover:bg-pink-600 text-white border-0"
+            className="bg-pink-500 hover:bg-pink-600 text-white border-0 h-8 sm:h-9 text-xs sm:text-sm px-3 sm:px-4"
             onClick={() => searchRef.current?.focus()}
           >
-            Advanced Search
+            <span className="hidden xl:inline">Advanced Search</span>
+            <span className="xl:hidden">Search</span>
           </Button>
         </div>
       </div>
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-white md:hidden">
-          <div className="container mx-auto px-4 py-6">
+        <div className="fixed inset-0 z-50 bg-white lg:hidden overflow-y-auto">
+          <div className="container mx-auto px-4 py-4">
+            {/* Mobile Header with Close Button */}
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+              <Link href="/" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
+                <Car className="h-6 w-6 text-blue-600" />
+                <span className="text-lg font-bold text-gray-900">
+                  Auto World Trader
+                </span>
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-gray-700 hover:text-red-600 hover:bg-red-50 h-9 w-9"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+
             {/* Mobile Search */}
             <div className="relative mb-6">
               <form onSubmit={handleSearchSubmit}>
                 <input
                   type="text"
-                  placeholder="Your Next Car, Just a Smart Search Away"
-                  className="w-full h-10 pl-4 pr-10 rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
+                  placeholder="Search for your next car..."
+                  className="w-full h-10 pl-4 pr-10 text-sm rounded-lg border border-gray-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
                 />
                 <button type="submit" className="hidden">
                   Search
@@ -476,79 +499,102 @@ export default function Navbar() {
             </div>
 
             {/* Mobile Navigation Links */}
-            <nav className="flex flex-col space-y-4 mb-6">
+            <nav className="flex flex-col space-y-3 mb-6">
               {isAdmin && (
                 <Link
                   href="/admin"
-                  className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                  className="flex items-center gap-3 text-base font-medium text-gray-900 hover:text-blue-600 hover:bg-blue-50 p-3 rounded-lg transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
+                  <Settings className="h-5 w-5" />
                   Admin Panel
                 </Link>
               )}
               <Link
                 href="/"
-                className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-3 text-base font-medium text-gray-900 hover:text-blue-600 hover:bg-blue-50 p-3 rounded-lg transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
+                <Car className="h-5 w-5" />
                 Home
               </Link>
               <Link
                 href="/classified"
-                className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-3 text-base font-medium text-gray-900 hover:text-blue-600 hover:bg-blue-50 p-3 rounded-lg transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
+                <Package className="h-5 w-5" />
                 Classified
               </Link>
-              <Link
-                href="/auction"
-                className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Auction
-              </Link>
+              {systemConfig && systemConfig.isAuctionVisible && (
+                <Link
+                  href="/auction"
+                  className="flex items-center gap-3 text-base font-medium text-gray-900 hover:text-blue-600 hover:bg-blue-50 p-3 rounded-lg transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <TicketCheckIcon className="h-5 w-5" />
+                  Auction
+                </Link>
+              )}
               <Link
                 href="/about"
-                className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-3 text-base font-medium text-gray-900 hover:text-blue-600 hover:bg-blue-50 p-3 rounded-lg transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
+                <Info className="h-5 w-5" />
                 About
               </Link>
               <Link
                 href="/support"
-                className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-3 text-base font-medium text-gray-900 hover:text-blue-600 hover:bg-blue-50 p-3 rounded-lg transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
+                <HelpCircle className="h-5 w-5" />
                 Support
               </Link>
             </nav>
 
             {/* Mobile User Options */}
             {userId && role ? (
-              <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
+              <div className="space-y-2 mb-6 pb-6 border-b border-gray-200">
                 <Link
                   href="/profile"
-                  className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors block"
+                  className="flex items-center gap-3 text-base font-medium text-gray-900 hover:text-blue-600 hover:bg-blue-50 p-3 rounded-lg transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
+                  <User className="h-5 w-5" />
                   Profile
+                </Link>
+                <Link
+                  href="/notifications"
+                  className="flex items-center gap-3 text-base font-medium text-gray-900 hover:text-blue-600 hover:bg-blue-50 p-3 rounded-lg transition-colors relative"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Bell className="h-5 w-5" />
+                  Notifications
+                  {unReadCount > 0 && (
+                    <Badge className="bg-red-500 hover:bg-red-500 text-white ml-auto">
+                      {unReadCount}
+                    </Badge>
+                  )}
                 </Link>
                 <button
                   onClick={() => {
                     handleLogout();
                     setMobileMenuOpen(false);
                   }}
-                  className="text-lg font-medium text-gray-900 hover:text-red-600 transition-colors block w-full text-left"
+                  className="flex items-center gap-3 text-base font-medium text-gray-900 hover:text-red-600 hover:bg-red-50 p-3 rounded-lg transition-colors w-full text-left"
                 >
+                  <LogOut className="h-5 w-5" />
                   Logout
                 </button>
               </div>
             ) : null}
 
             {/* Mobile Action Buttons */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <Button
-                className="w-full bg-red-500 hover:bg-red-600 text-white"
+                className="w-full bg-red-500 hover:bg-red-600 text-white h-11 text-base font-medium shadow-sm"
                 onClick={() => {
                   setLocation("/seller/vehicle/upload");
                   setMobileMenuOpen(false);
@@ -557,7 +603,16 @@ export default function Navbar() {
                 Sell Your Car
               </Button>
               <Button
-                className="w-full bg-pink-500 hover:bg-pink-600 text-white"
+                className="w-full bg-yellow-500 hover:bg-yellow-600 text-white h-11 text-base font-medium shadow-sm"
+                onClick={() => {
+                  setLocation("/seller/auction/create");
+                  setMobileMenuOpen(false);
+                }}
+              >
+                Create Auction
+              </Button>
+              <Button
+                className="w-full bg-pink-500 hover:bg-pink-600 text-white h-11 text-base font-medium shadow-sm"
                 onClick={() => {
                   searchRef.current?.focus();
                   setMobileMenuOpen(false);
@@ -568,11 +623,11 @@ export default function Navbar() {
               {!userId && (
                 <Button
                   variant="outline"
-                  className="w-full border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                  className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white h-11 text-base font-medium"
                   asChild
                 >
                   <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                    Sign In/Join
+                    Sign In / Join
                   </Link>
                 </Button>
               )}

@@ -333,42 +333,42 @@ export default function UserProfile() {
 
   return (
     <Elements stripe={stripePromise}>
-      <div className="container mx-auto py-8 px-4 max-w-6xl bg-white">
+      <div className="container mx-auto py-4 sm:py-6 md:py-8 px-3 sm:px-4 md:px-6 max-w-6xl bg-white min-h-screen">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="flex flex-col md:flex-row gap-6 mb-8"
+          className="flex flex-col lg:flex-row gap-4 md:gap-6 mb-6 md:mb-8"
         >
-          <div className="md:w-1/3">
+          <div className="w-full lg:w-1/3">
             <Card className="h-full border-gray-200">
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-2 pt-4 sm:pt-6">
                 <div className="flex justify-center">
-                  <Avatar className="h-24 w-24">
+                  <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
                     <AvatarImage
                       src={userData.avatarUrl}
                       alt={userData.username}
                     />
-                    <AvatarFallback className="bg-blue-100 text-blue-800">
+                    <AvatarFallback className="bg-blue-100 text-blue-800 text-lg sm:text-xl">
                       {userData.username.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </div>
               </CardHeader>
-              <CardContent className="text-center">
-                <h2 className="text-2xl font-bold text-black">
+              <CardContent className="text-center px-4 sm:px-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-black break-words">
                   {userData.username}
                 </h2>
-                <p className="text-gray-600">{userData.email}</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm sm:text-base text-gray-600 break-all">{userData.email}</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
                   Member since {userData.memberSince}
                 </p>
 
                 {/* Role Badge */}
-                <div className="mt-4 flex justify-center">
+                <div className="mt-3 sm:mt-4 flex justify-center">
                   {role === "trader" && (
-                    <Badge className="bg-blue-600 text-white px-4 py-2 text-sm flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
+                    <Badge className="bg-blue-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+                      <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       Verified Trader
                     </Badge>
                   )}
@@ -377,12 +377,12 @@ export default function UserProfile() {
 
                 {/* Trader Application Section */}
                 {!loadingTraderRequest && (
-                  <div className="mt-6 space-y-3">
+                  <div className="mt-4 sm:mt-6 space-y-3">
                     {role === "trader" || role === "garage" ? (
                       // User is already a trader - show status message
                       <Alert className="bg-green-50 border-green-200 text-left">
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                        <AlertDescription className="text-green-800 text-sm">
+                        <AlertDescription className="text-green-800 text-xs sm:text-sm">
                           You have full trader access and benefits.
                         </AlertDescription>
                       </Alert>
@@ -393,12 +393,13 @@ export default function UserProfile() {
                       // User hasn't applied yet - show apply button
                       <Link href="/trader/create">
                         <Button 
-                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all duration-200 text-sm sm:text-base"
                           size="lg"
                         >
-                          <Building2 className="mr-2 h-5 w-5" />
-                          Become a Trader
-                          <ArrowRight className="ml-2 h-4 w-4" />
+                          <Building2 className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                          <span className="hidden xs:inline">Become a Trader</span>
+                          <span className="xs:hidden">Trader</span>
+                          <ArrowRight className="ml-1.5 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </Link>
                     )}
@@ -435,57 +436,65 @@ export default function UserProfile() {
             </Card>
           </div>
 
-          <div className="md:w-2/3">
+          <div className="w-full lg:w-2/3">
             <Tabs
               defaultValue="account"
               value={activeTab}
               onValueChange={handleTabChange}
               className="h-full"
             >
-              <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6 bg-gray-100">
+              <TabsList className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-4 sm:mb-6 bg-gray-100 w-full h-auto gap-1 p-1">
                 <TabsTrigger
                   value="account"
-                  className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm px-2 py-2 sm:py-2.5"
                 >
-                  <User size={16} />
-                  <span className="hidden md:inline">Account</span>
+                  <User size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Account</span>
+                  <span className="sm:hidden">Acct</span>
                 </TabsTrigger>
                 {traderRequest && (
                   <TabsTrigger
                     value="trader-status"
-                    className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                    className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm px-2 py-2 sm:py-2.5"
                   >
-                    <Building2 size={16} />
-                    <span className="hidden md:inline">Trader</span>
+                    <Building2 size={14} className="sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Trader</span>
+                    <span className="sm:hidden">Trade</span>
                   </TabsTrigger>
                 )}
                 <TabsTrigger
                   value="classified"
-                  className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm px-2 py-2 sm:py-2.5"
                 >
-                  <Package size={16} />
-                  <span className="hidden md:inline">Classified</span>
+                  <Package size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Classified</span>
+                  <span className="sm:hidden">Class</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="auctions"
-                  className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm px-2 py-2 sm:py-2.5"
                 >
-                  <History size={16} />
-                  <span className="hidden md:inline">Auctions</span>
+                  <History size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Auctions</span>
+                  <span className="sm:hidden">Auct</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="favourite-vehicles"
-                  className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm px-2 py-2 sm:py-2.5"
                 >
-                  <Heart size={16} />
-                  <span className="hidden md:inline">Saved Vehi..</span>
+                  <Heart size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden lg:inline">Saved Vehi..</span>
+                  <span className="hidden sm:inline lg:hidden">Vehicles</span>
+                  <span className="sm:hidden">Cars</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="favourite-auctions"
-                  className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm px-2 py-2 sm:py-2.5"
                 >
-                  <Heart size={16} />
-                  <span className="hidden md:inline">Saved Auc..</span>
+                  <Heart size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden lg:inline">Saved Auc..</span>
+                  <span className="hidden sm:inline lg:hidden">Auctions</span>
+                  <span className="sm:hidden">Bids</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -498,24 +507,24 @@ export default function UserProfile() {
               >
                 <TabsContent value="account" className="mt-0">
                   <Card className="border-gray-200">
-                    <CardHeader>
-                      <CardTitle className="text-black">
+                    <CardHeader className="px-4 sm:px-6 py-4 sm:py-6">
+                      <CardTitle className="text-lg sm:text-xl text-black">
                         Account Settings
                       </CardTitle>
-                      <CardDescription className="text-gray-600">
+                      <CardDescription className="text-sm sm:text-base text-gray-600">
                         Manage your account details and preferences
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
                       {formSuccess && (
                         <Alert className="bg-blue-50 text-blue-800 border-blue-200">
-                          <AlertTitle>Success</AlertTitle>
-                          <AlertDescription>{formSuccess}</AlertDescription>
+                          <AlertTitle className="text-sm sm:text-base">Success</AlertTitle>
+                          <AlertDescription className="text-xs sm:text-sm">{formSuccess}</AlertDescription>
                         </Alert>
                       )}
 
                       <div className="space-y-2">
-                        <Label htmlFor="username" className="text-black">
+                        <Label htmlFor="username" className="text-sm sm:text-base text-black">
                           Username
                         </Label>
                         <Input
@@ -523,12 +532,12 @@ export default function UserProfile() {
                           type="text"
                           defaultValue={userData.username}
                           disabled={true}
-                          className="border-gray-200"
+                          className="border-gray-200 text-sm sm:text-base"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="text-black">
+                        <Label htmlFor="email" className="text-sm sm:text-base text-black">
                           Email Address
                         </Label>
                         <Input
@@ -536,7 +545,7 @@ export default function UserProfile() {
                           type="email"
                           defaultValue={userData.email}
                           disabled={true}
-                          className="border-gray-200"
+                          className="border-gray-200 text-sm sm:text-base break-all"
                         />
                       </div>
 
@@ -546,10 +555,10 @@ export default function UserProfile() {
                             setIsPasswordFormOpen(!isPasswordFormOpen)
                           }
                           variant="outline"
-                          className="w-full justify-between border-gray-200 text-black hover:bg-gray-50"
+                          className="w-full justify-between border-gray-200 text-black hover:bg-gray-50 text-sm sm:text-base h-10 sm:h-11"
                         >
                           Change Password
-                          <Settings size={16} />
+                          <Settings size={14} className="sm:w-4 sm:h-4" />
                         </Button>
 
                         {isPasswordFormOpen && (
@@ -558,24 +567,24 @@ export default function UserProfile() {
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.3 }}
-                            className="mt-4 p-4 border border-gray-200 rounded-md"
+                            className="mt-3 sm:mt-4 p-3 sm:p-4 border border-gray-200 rounded-md"
                           >
                             <form onSubmit={handlePasswordSubmit}>
                               {formError && (
-                                <Alert className="mb-4 bg-red-50 text-red-800 border-red-200">
+                                <Alert className="mb-3 sm:mb-4 bg-red-50 text-red-800 border-red-200">
                                   <AlertCircle className="h-4 w-4" />
-                                  <AlertTitle>Error</AlertTitle>
-                                  <AlertDescription>
+                                  <AlertTitle className="text-sm sm:text-base">Error</AlertTitle>
+                                  <AlertDescription className="text-xs sm:text-sm">
                                     {formError}
                                   </AlertDescription>
                                 </Alert>
                               )}
 
-                              <div className="space-y-4">
+                              <div className="space-y-3 sm:space-y-4">
                                 <div className="space-y-2">
                                   <Label
                                     htmlFor="currentPassword"
-                                    className="text-black"
+                                    className="text-sm sm:text-base text-black"
                                   >
                                     Current Password
                                   </Label>
@@ -589,14 +598,14 @@ export default function UserProfile() {
                                         currentPassword: e.target.value,
                                       })
                                     }
-                                    className="border-gray-200"
+                                    className="border-gray-200 text-sm sm:text-base"
                                   />
                                 </div>
 
                                 <div className="space-y-2">
                                   <Label
                                     htmlFor="newPassword"
-                                    className="text-black"
+                                    className="text-sm sm:text-base text-black"
                                   >
                                     New Password
                                   </Label>
@@ -610,14 +619,14 @@ export default function UserProfile() {
                                         newPassword: e.target.value,
                                       })
                                     }
-                                    className="border-gray-200"
+                                    className="border-gray-200 text-sm sm:text-base"
                                   />
                                 </div>
 
                                 <div className="space-y-2">
                                   <Label
                                     htmlFor="confirmPassword"
-                                    className="text-black"
+                                    className="text-sm sm:text-base text-black"
                                   >
                                     Confirm New Password
                                   </Label>
@@ -631,22 +640,22 @@ export default function UserProfile() {
                                         confirmPassword: e.target.value,
                                       })
                                     }
-                                    className="border-gray-200"
+                                    className="border-gray-200 text-sm sm:text-base"
                                   />
                                 </div>
 
-                                <div className="flex justify-end gap-2">
+                                <div className="flex flex-col sm:flex-row justify-end gap-2">
                                   <Button
                                     type="button"
                                     variant="outline"
                                     onClick={() => setIsPasswordFormOpen(false)}
-                                    className="border-gray-200 text-black hover:bg-gray-50"
+                                    className="border-gray-200 text-black hover:bg-gray-50 text-sm sm:text-base w-full sm:w-auto"
                                   >
                                     Cancel
                                   </Button>
                                   <Button
                                     type="submit"
-                                    className="bg-blue-600 hover:bg-blue-700"
+                                    className="bg-blue-600 hover:bg-blue-700 text-sm sm:text-base w-full sm:w-auto"
                                   >
                                     Update Password
                                   </Button>
@@ -663,10 +672,10 @@ export default function UserProfile() {
                             setIsPaymentFormOpen(!isPaymentFormOpen)
                           }
                           variant="outline"
-                          className="w-full justify-between border-gray-200 text-black hover:bg-gray-50"
+                          className="w-full justify-between border-gray-200 text-black hover:bg-gray-50 text-sm sm:text-base h-10 sm:h-11"
                         >
                           Payment Methods
-                          <CreditCard size={16} />
+                          <CreditCard size={14} className="sm:w-4 sm:h-4" />
                         </Button>
 
                         {isPaymentFormOpen && (
@@ -675,7 +684,7 @@ export default function UserProfile() {
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.3 }}
-                            className="mt-4 p-4 border border-gray-200 rounded-md"
+                            className="mt-3 sm:mt-4 p-3 sm:p-4 border border-gray-200 rounded-md"
                           >
                             <StripeCardForm
                               onCardVerified={(id) => setPaymentMethodId(id)}
@@ -684,14 +693,14 @@ export default function UserProfile() {
                         )}
                       </div>
                     </CardContent>
-                    <CardFooter className="flex justify-between">
+                    <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between px-4 sm:px-6 py-4 sm:py-6">
                       <Button
                         variant="outline"
-                        className="border-gray-200 text-black hover:bg-gray-50"
+                        className="border-gray-200 text-black hover:bg-gray-50 w-full sm:w-auto text-sm sm:text-base"
                       >
                         Cancel
                       </Button>
-                      <Button className="bg-blue-600 hover:bg-blue-700">
+                      <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto text-sm sm:text-base">
                         Save Changes
                       </Button>
                     </CardFooter>
