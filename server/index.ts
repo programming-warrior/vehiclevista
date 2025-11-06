@@ -24,6 +24,7 @@ import brandRouter from "./serverRoutes/brandRouter";
 import packageRouter from "./serverRoutes/packageRouter";
 import sellerRouter from "./serverRoutes/sellerRouter";
 import traderRouter from "./serverRoutes/traderRouter";
+import webhookRouter from "./serverRoutes/webhookRouter";
 import { systemConfig } from "../shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -57,6 +58,9 @@ app.use(
 );
 
 app.use(cookieParser());
+
+// Webhook route MUST come BEFORE express.json() to get raw body
+app.use("/api/webhook", express.raw({ type: "application/json" }), webhookRouter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

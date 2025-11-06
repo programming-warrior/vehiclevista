@@ -40,6 +40,8 @@ const paymentWorker = new Worker(
         if (!session || session[0].status !== "PENDING") return;
 
         let listing_id: number | undefined = undefined;
+        let auctionDataForQueue: { auctionId: number; endTime: Date; delay: number } | null = null;
+        let packageDataForQueue: { userPackageListingId: number; listingId: number; expiresAt: Date } | null = null;
 
         await db.transaction(async (tx) => {
           //update the payment session
@@ -131,7 +133,7 @@ const paymentWorker = new Worker(
                 if (!row)
                   throw new Error(
                     "Draft Vehicle Data not found for draft Auction : " +
-                      draftData.id
+                    draftData.id
                   );
                 // vehicle_draft_id= row.id
                 const [savedValue] = await tx
@@ -176,7 +178,7 @@ const paymentWorker = new Worker(
                 if (!numberPlateRow)
                   throw new Error(
                     "Draft NumberPlate Data not found for draft Auction : " +
-                      draftData.id
+                    draftData.id
                   );
 
                 await tx
@@ -208,22 +210,14 @@ const paymentWorker = new Worker(
                 0,
                 savedAuction.startDate.getTime() - Date.now()
               );
-              console.log("Pushing auction to auctionQueue");
-              await auctionQueue.add(
-                "startAuction",
-                {
-                  auctionId: savedAuction.id,
-                  endTime: savedAuction.endDate,
-                },
-                {
-                  delay: delay,
-                  attempts: 3,
-                  backoff: {
-                    type: "exponential",
-                    delay: 1000,
-                  },
-                }
-              );
+
+              // Store auction data to add to queue after transaction succeeds
+              auctionDataForQueue = {
+                auctionId: savedAuction.id,
+                endTime: savedAuction.endDate,
+                delay: delay
+              };
+
               listing_id = savedAuction.id;
             }
 
@@ -244,23 +238,13 @@ const paymentWorker = new Worker(
               })
               .returning();
 
-            //add auto package expiry logic
-            await packageQueue.add(
-              "expire-package",
-              {
-                userPackageListingId: userPackageListingDetail.id,
-                listingId: listing_id,
-              },
-              {
-                jobId: `user-listing-package:${userPackageListingDetail.id}`,
-                delay: expires_at.getTime() - Date.now(),
-                attempts: 3,
-                backoff: {
-                  type: "exponential",
-                  delay: 1000,
-                },
-              }
-            );
+            // Store package expiry data to add to queue after transaction succeeds
+            packageDataForQueue = {
+              userPackageListingId: userPackageListingDetail.id,
+              listingId: listing_id as number,
+              expiresAt: expires_at
+            };
+
             console.log("updating payment session with listingId");
             await tx
               .update(paymentSession)
@@ -283,6 +267,54 @@ const paymentWorker = new Worker(
             }
           }
         });
+
+        // Transaction succeeded, now add auction to queue if needed
+        if (auctionDataForQueue) {
+          console.log("Pushing auction to auctionQueue");
+          const { auctionId, endTime, delay } = auctionDataForQueue;
+          await auctionQueue.add(
+            "startAuction",
+            {
+              auctionId,
+              endTime,
+            },
+            {
+              delay,
+              attempts: 3,
+              backoff: {
+                type: "exponential",
+                delay: 1000,
+              },
+            }
+          );
+        }
+
+        // Add package expiry to queue if needed
+        if (packageDataForQueue) {
+          console.log("Adding package expiry to packageQueue");
+          const { userPackageListingId, listingId, expiresAt } = packageDataForQueue as {
+            userPackageListingId: number;
+            listingId: number;
+            expiresAt: Date;
+          };
+          await packageQueue.add(
+            "expire-package",
+            {
+              userPackageListingId,
+              listingId,
+            },
+            {
+              jobId: `user-listing-package:${userPackageListingId}`,
+              delay: (expiresAt as Date).getTime() - Date.now(),
+              attempts: 3,
+              backoff: {
+                type: "exponential",
+                delay: 1000,
+              },
+            }
+          );
+        }
+
         await notificationQueue.add("listing-creation-success", {
           userId,
           listingId: listing_id,
@@ -290,9 +322,19 @@ const paymentWorker = new Worker(
         });
       } catch (e) {
         console.error("Listing creation failed:", e);
-        
-        // Get payment session to retrieve payment intent
+
+        // Update payment session status to FAILED and process refund
         try {
+          // Update payment session status to FAILED
+          await db
+            .update(paymentSession)
+            .set({
+              status: "FAILED",
+              updatedAt: new Date()
+            })
+            .where(eq(paymentSession.paymentIntentId, paymentIntentId));
+
+          // Get payment session details for refund
           const [session] = await db
             .select()
             .from(paymentSession)
@@ -306,11 +348,11 @@ const paymentWorker = new Worker(
               .where(eq(packages.id, packageId));
 
             // Determine refund reason based on package type
-            const refundReason = packageDetails?.type === "AUCTION" 
-              ? "AUCTION_CREATION_FAILED" 
+            const refundReason = packageDetails?.type === "AUCTION"
+              ? "AUCTION_CREATION_FAILED"
               : "CLASSIFIED_CREATION_FAILED";
 
-            
+
             // Process refund with logging
             await createAndLogRefund({
               userId,
@@ -335,7 +377,7 @@ const paymentWorker = new Worker(
         }).catch((error) => {
           console.error("Failed to queue listing-creation-failed notification:", error);
         });
-        
+
         console.log(e);
       }
     }

@@ -92,27 +92,23 @@ export async function createAndLogRefund(params: {
       amount
     );
 
-    console.log(`Stripe refund processed: ${stripeRefund.id}`);
+    console.log(`Stripe refund initiated: ${stripeRefund.id}, status: ${stripeRefund.status}`);
 
-    // Update refund record with success status
+    // Update refund record with PROCESSING status and Stripe refund ID
+    // We'll wait for webhook confirmation before marking as COMPLETED
     await db
       .update(refunds)
       .set({
-        status: "COMPLETED",
+        status: "PROCESSING",
         stripeRefundId: stripeRefund.id,
-        completedAt: new Date(),
       })
       .where(eq(refunds.id, refundRecord.id));
 
-    console.log(`Refund completed successfully for user ${userId}`);
+    console.log(`Refund processing initiated for user ${userId}. Waiting for webhook confirmation.`);
 
-    // Queue notification to user about successful refund
-    await notificationQueue.add("refund-completed", {
-      userId,
-      refundId: refundRecord.id,
-      amount: refundRecord.amount,
-      reason: refundReason,
-    });
+    // NOTE: Do NOT send notification here!
+    // Notification will be sent via webhook when refund is actually completed
+    // See: refund.succeeded webhook handler
 
     return {
       success: true,

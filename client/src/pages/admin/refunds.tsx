@@ -53,6 +53,8 @@ export default function AdminRefunds() {
     switch (status) {
       case "COMPLETED":
         return <Badge className="bg-green-500 hover:bg-green-600"><CheckCircle className="w-3 h-3 mr-1" /> Completed</Badge>;
+      case "PROCESSING":
+        return <Badge className="bg-blue-500 hover:bg-blue-600"><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Processing</Badge>;
       case "PENDING":
         return <Badge className="bg-yellow-500 hover:bg-yellow-600"><AlertCircle className="w-3 h-3 mr-1" /> Pending</Badge>;
       case "FAILED":
@@ -219,6 +221,7 @@ export default function AdminRefunds() {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="PROCESSING">Processing</SelectItem>
                   <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="FAILED">Failed</SelectItem>
                 </SelectContent>

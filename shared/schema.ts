@@ -167,7 +167,7 @@ export const refundReasons = [
 ] as const;
 export const refundReasonsEnum = pgEnum("refund_reasons", refundReasons);
 
-export const refundStatus = ["PENDING", "COMPLETED", "FAILED"] as const;
+export const refundStatus = ["PENDING", "PROCESSING", "COMPLETED", "FAILED"] as const;
 export const refundStatusEnum = pgEnum("refund_status", refundStatus);
 
 export const refunds = pgTable("refunds", {
