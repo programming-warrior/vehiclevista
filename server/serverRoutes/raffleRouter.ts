@@ -219,12 +219,22 @@ raffleRouter.post("/purchase/verify-payment", verifyToken, async (req, res) => {
         paymentIntent.metadata;
       await redis.del(`paymentSession:${paymentIntentId}`);
       console.log('deleted from redis payment session');
-      await bidQueue.add("processRaffleTicket", {
-        userId: req.userId,
-        paymentIntentId,
-        raffleId: Number(raffleId),
-        ticketQuantity: Number(ticketQuantity),
-      });
+      
+      // Add job with deduplication to prevent concurrent ticket processing
+      await bidQueue.add(
+        "processRaffleTicket", 
+        {
+          userId: req.userId,
+          paymentIntentId,
+          raffleId: Number(raffleId),
+          ticketQuantity: Number(ticketQuantity),
+        },
+        {
+          jobId: `raffle:${paymentIntentId}`, // Prevents duplicate jobs
+          removeOnComplete: true,
+          removeOnFail: false,
+        }
+      );
       return res.status(200).json({ success: true });
     } else {
       return res.status(400).json({ error: "Payment not successful yet" });

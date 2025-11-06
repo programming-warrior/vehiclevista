@@ -61,6 +61,7 @@ import AdminPackagesPage from "./pages/admin/packages";
 import { getSystemConfig } from "./api";
 import { useAutoLogout } from "./lib/use-auto-logout";
 import SuspensionAlert from "./components/suspension-alert";
+import AdminRefunds from "./pages/admin/refunds";
 
 export default function App() {
   const { userId, role, card_verified, setSuspended, setActive } = useUser();
@@ -248,6 +249,9 @@ export default function App() {
             </Route>
             <Route path="/admin/payment-history">
               <ProtectedRoute component={AdminPaymentHistory} adminOnly />
+            </Route>
+            <Route path="/admin/refunds">
+              <ProtectedRoute component={AdminRefunds} adminOnly />
             </Route>
             <Route path="/admin/buyer-seller-chat">
               <ProtectedRoute

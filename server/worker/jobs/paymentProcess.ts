@@ -15,6 +15,7 @@ import {
   numberPlate,
 } from "../../../shared/schema";
 import { eq, and } from "drizzle-orm";
+import { createAndLogRefund } from "../../utils/stripe";
 import { auctionQueue, packageQueue, notificationQueue } from "../queue";
 
 const paymentWorker = new Worker(
@@ -288,14 +289,52 @@ const paymentWorker = new Worker(
           packageId,
         });
       } catch (e) {
-        await notificationQueue.add("listing-creation-failed", {
+        console.error("Listing creation failed:", e);
+        
+        // Get payment session to retrieve payment intent
+        try {
+          const [session] = await db
+            .select()
+            .from(paymentSession)
+            .where(eq(paymentSession.paymentIntentId, paymentIntentId))
+            .limit(1);
+
+          if (session) {
+            const [packageDetails] = await db
+              .select()
+              .from(packages)
+              .where(eq(packages.id, packageId));
+
+            // Determine refund reason based on package type
+            const refundReason = packageDetails?.type === "AUCTION" 
+              ? "AUCTION_CREATION_FAILED" 
+              : "CLASSIFIED_CREATION_FAILED";
+
+            
+            // Process refund with logging
+            await createAndLogRefund({
+              userId,
+              paymentIntentId,
+              amount: Math.round(session.amount * 100), // Convert to cents
+              refundReason: refundReason as any,
+              reasonDetails: `Listing creation failed: ${e instanceof Error ? e.message : String(e)}`,
+              packageId,
+              listingType: packageDetails?.type,
+            });
+
+            console.log(`Refund processed successfully for user ${userId}`);
+          }
+        } catch (refundError) {
+          console.error("Failed to process refund:", refundError);
+        }
+
+        notificationQueue.add("listing-creation-failed", {
           userId,
           draftId,
           packageId,
+        }).catch((error) => {
+          console.error("Failed to queue listing-creation-failed notification:", error);
         });
-        //TODO
-        //ADD REFUND LOGIC HERE
-        
         
         console.log(e);
       }

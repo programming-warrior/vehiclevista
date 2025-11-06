@@ -274,12 +274,22 @@ packageRouter.post("/verify-payment", verifyToken, async (req, res) => {
 
     if (paymentIntent.status === "succeeded") {
       await redis.del(`paymentSession:${paymentIntentId}`);
-      await paymentQueue.add("processPackagePayment", {
-        userId: req.userId,
-        paymentIntentId,
-        packageId,
-        draftId,
-      });
+      
+      // Add job with deduplication using jobId to prevent concurrent processing
+      await paymentQueue.add(
+        "processPackagePayment", 
+        {
+          userId: req.userId,
+          paymentIntentId,
+          packageId,
+          draftId,
+        },
+        {
+          jobId: `payment:${paymentIntentId}`, // Prevents duplicate jobs
+          removeOnComplete: true,
+          removeOnFail: false,
+        }
+      );
       return res.status(200).json({ success: true });
     } else {
       return res.status(400).json({ error: "Payment not successful yet" });

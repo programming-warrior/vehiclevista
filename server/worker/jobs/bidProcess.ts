@@ -12,7 +12,7 @@ import {
   Auction,
 } from "../../../shared/schema";
 import { eq, sql } from "drizzle-orm";
-import { createRefund } from "../../utils/stripe";
+import { createAndLogRefund } from "../../utils/stripe";
 import { notificationQueue } from "../queue";
 
 const bidWorker = new Worker(
@@ -88,24 +88,46 @@ const bidWorker = new Worker(
         });
 
       } catch (e) {
-        const refund = await createRefund(
-          paymentIntentId,
-          "requested_by_customer"
-        );
-        console.log(refund);
-        await db
-          .update(paymentSession)
-          .set({
-            status: "FAILED",
-            updatedAt: new Date(),
-          })
-          .where(eq(paymentSession.paymentIntentId, paymentIntentId));
+        console.error("Bid processing failed:", e);
+        
+        try {
+          
+          // Get payment session amount
+          const [session] = await db
+            .select()
+            .from(paymentSession)
+            .where(eq(paymentSession.paymentIntentId, paymentIntentId))
+            .limit(1);
+
+          // Process refund with complete logging
+          await createAndLogRefund({
+            userId: Number(userId),
+            paymentIntentId,
+            amount: session ? Math.round(session.amount * 100) : Math.round(bidAmount * 100),
+            refundReason: "BID_FAILED",
+            reasonDetails: `Bid placement failed: ${e instanceof Error ? e.message : String(e)}`,
+            listingId: auctionId,
+            listingType: "AUCTION",
+          });
+
+          await db
+            .update(paymentSession)
+            .set({
+              status: "FAILED",
+              updatedAt: new Date(),
+            })
+            .where(eq(paymentSession.paymentIntentId, paymentIntentId));
+
+          console.log(`Refund processed for failed bid by user ${userId}`);
+        } catch (refundError) {
+          console.error("Failed to process refund:", refundError);
+        }
 
         await notificationQueue.add("auctionBid-placed-failed", {
           userId,
           auctionId,
           bidAmount,
-          refund,
+          refund: true,
         });
         console.log(e);
       }
@@ -186,22 +208,47 @@ const bidWorker = new Worker(
         );
         console.log("bid published to redis");
       } catch (e) {
-        const refund = await createRefund(
-          paymentIntentId,
-          "requested_by_customer"
-        );
-        await db
-          .update(paymentSession)
-          .set({
-            status: "FAILED",
-            updatedAt: new Date(),
-          })
-          .where(eq(paymentSession.paymentIntentId, paymentIntentId));
+        console.error("Raffle ticket purchase failed:", e);
+        
+        try {
+          const { createAndLogRefund } = await import("../../utils/stripe");
+          
+          // Get payment session amount
+          const [session] = await db
+            .select()
+            .from(paymentSession)
+            .where(eq(paymentSession.paymentIntentId, paymentIntentId))
+            .limit(1);
+
+          // Process refund with complete logging
+          await createAndLogRefund({
+            userId,
+            paymentIntentId,
+            amount: session ? Math.round(session.amount * 100) : 0,
+            refundReason: "RAFFLE_TICKET_FAILED",
+            reasonDetails: `Raffle ticket purchase failed: ${e instanceof Error ? e.message : String(e)}`,
+            listingId: raffleId,
+            listingType: "RAFFLE",
+          });
+
+          await db
+            .update(paymentSession)
+            .set({
+              status: "FAILED",
+              updatedAt: new Date(),
+            })
+            .where(eq(paymentSession.paymentIntentId, paymentIntentId));
+
+          console.log(`Refund processed for failed raffle ticket purchase by user ${userId}`);
+        } catch (refundError) {
+          console.error("Failed to process refund:", refundError);
+        }
+
         await notificationQueue.add("raffle-ticketpurchase-failed", {
           userId,
           raffleId,
           ticketQuantity,
-          refund,
+          refund: true,
         });
         console.log(e);
       }

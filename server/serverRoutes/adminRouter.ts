@@ -19,6 +19,7 @@ import {
   packages,
   contactAttempts,
   adminIpLogs,
+  refunds,
 } from "../../shared/schema";
 import {
   eq,
@@ -2081,6 +2082,187 @@ adminRouter.post("/trader-requests/:id/reject", verifyToken, async (req, res) =>
   } catch (error) {
     console.error("Error rejecting trader request:", error);
     res.status(500).json({ error: "Failed to reject trader request" });
+  }
+});
+
+// ==================== REFUND MANAGEMENT ENDPOINTS ====================
+
+/**
+ * GET /api/admin/refunds
+ * Get all refunds with filtering options
+ */
+adminRouter.get("/refunds", verifyToken, async (req, res) => {
+  try {
+    const { status, reason, userId, page = 1, limit = 50 } = req.query;
+
+    const offset = (Number(page) - 1) * Number(limit);
+
+    // Build where conditions
+    let whereConditions: any[] = [];
+    if (status && (status === "PENDING" || status === "COMPLETED" || status === "FAILED")) {
+      whereConditions.push(eq(refunds.status, status));
+    }
+    if (reason) {
+      whereConditions.push(eq(refunds.reason, reason as any));
+    }
+    if (userId) {
+      whereConditions.push(eq(refunds.userId, Number(userId)));
+    }
+
+    // Get refunds with user information
+    const refundsData = await db
+      .select({
+        refund: refunds,
+        user: {
+          id: users.id,
+          username: users.username,
+          email: users.email,
+        },
+      })
+      .from(refunds)
+      .leftJoin(users, eq(refunds.userId, users.id))
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+      .orderBy(desc(refunds.createdAt))
+      .limit(Number(limit))
+      .offset(offset);
+
+    // Get total count
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(refunds)
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+
+    res.json({
+      refunds: refundsData,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: Number(countResult?.count || 0),
+        totalPages: Math.ceil(Number(countResult?.count || 0) / Number(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching refunds:", error);
+    res.status(500).json({ error: "Failed to fetch refunds" });
+  }
+});
+
+/**
+ * GET /api/admin/refunds/stats
+ * Get refund statistics
+ */
+adminRouter.get("/refunds/stats", verifyToken, async (req, res) => {
+  try {
+    // Total refunds by status
+    const statusStats = await db
+      .select({
+        status: refunds.status,
+        count: sql<number>`count(*)`,
+        totalAmount: sql<number>`sum(${refunds.amount})`,
+      })
+      .from(refunds)
+      .groupBy(refunds.status);
+
+    // Total refunds by reason
+    const reasonStats = await db
+      .select({
+        reason: refunds.reason,
+        count: sql<number>`count(*)`,
+        totalAmount: sql<number>`sum(${refunds.amount})`,
+      })
+      .from(refunds)
+      .groupBy(refunds.reason);
+
+    // Recent refunds (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [recentStats] = await db
+      .select({
+        count: sql<number>`count(*)`,
+        totalAmount: sql<number>`sum(${refunds.amount})`,
+      })
+      .from(refunds)
+      .where(gte(refunds.createdAt, thirtyDaysAgo));
+
+    res.json({
+      byStatus: statusStats,
+      byReason: reasonStats,
+      last30Days: recentStats,
+    });
+  } catch (error) {
+    console.error("Error fetching refund stats:", error);
+    res.status(500).json({ error: "Failed to fetch refund statistics" });
+  }
+});
+
+/**
+ * GET /api/admin/refunds/:id
+ * Get detailed information about a specific refund
+ */
+adminRouter.get("/refunds/:id", verifyToken, async (req, res) => {
+  try {
+    const refundId = parseInt(req.params.id);
+
+    const [refundData] = await db
+      .select({
+        refund: refunds,
+        user: {
+          id: users.id,
+          username: users.username,
+          email: users.email,
+        },
+      })
+      .from(refunds)
+      .leftJoin(users, eq(refunds.userId, users.id))
+      .where(eq(refunds.id, refundId))
+      .limit(1);
+
+    if (!refundData) {
+      return res.status(404).json({ error: "Refund not found" });
+    }
+
+    res.json(refundData);
+  } catch (error) {
+    console.error("Error fetching refund details:", error);
+    res.status(500).json({ error: "Failed to fetch refund details" });
+  }
+});
+
+/**
+ * POST /api/admin/refunds/manual
+ * Manually initiate a refund (admin action)
+ */
+adminRouter.post("/refunds/manual", verifyToken, async (req, res) => {
+  try {
+    const { userId, paymentIntentId, amount, reason, reasonDetails } = req.body;
+
+    if (!userId || !paymentIntentId || !amount) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const { createAndLogRefund } = await import("../utils/stripe");
+
+    const result = await createAndLogRefund({
+      userId: Number(userId),
+      paymentIntentId,
+      amount: Math.round(Number(amount) * 100), // Convert to cents
+      refundReason: reason || "REQUESTED_BY_ADMIN",
+      reasonDetails: reasonDetails || "Manual refund initiated by admin",
+      processedBy: req.userId,
+    });
+
+    res.json({
+      success: true,
+      refund: result.refundRecord,
+      stripeRefund: result.stripeRefund,
+    });
+  } catch (error: any) {
+    console.error("Error processing manual refund:", error);
+    res.status(500).json({ 
+      error: "Failed to process refund",
+      details: error.message 
+    });
   }
 });
 

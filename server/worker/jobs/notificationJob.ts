@@ -10,6 +10,7 @@ import {
   raffle,
   bids,
   packages,
+  refunds,
 } from "../../../shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -568,6 +569,67 @@ const notificationWorker = new Worker(
         );
       } catch (e) {
         console.log(e);
+      }
+    } else if (job.name === "refund-completed") {
+      const { userId, refundId, amount, reason } = job.data;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId));
+
+        if (!user) throw new Error("User not found");
+
+        // Format reason for display
+        const reasonMap: Record<string, string> = {
+          AUCTION_CREATION_FAILED: "Auction listing creation failed",
+          CLASSIFIED_CREATION_FAILED: "Classified listing creation failed",
+          BID_FAILED: "Bid placement failed",
+          RAFFLE_TICKET_FAILED: "Raffle ticket purchase failed",
+          CONDITION_NOT_MET: "Payment condition not met",
+          REQUESTED_BY_ADMIN: "Refund requested by administrator",
+          OTHER: "Refund processed",
+        };
+
+        const formattedReason = reasonMap[reason] || "Refund processed";
+
+        const formattedMessage = {
+          title: `Refund Completed - £${amount.toFixed(2)}`,
+          from: {
+            name: "VehicleVista Billing",
+            email: "billing@vehiclevista.com",
+          },
+          body: `Your refund of £${amount.toFixed(2)} has been successfully processed. Reason: ${formattedReason}. The funds should appear in your account within 5-10 business days.`,
+        };
+
+        console.log("Creating refund completion notification:", formattedMessage);
+
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "REFUND_COMPLETED",
+            sentTo: user.id,
+            message: formattedMessage,
+          })
+          .returning();
+
+        console.log("Notification saved, publishing to Redis");
+
+        await connection.publish(
+          `RECEIVE_NOTIFICATION`,
+          JSON.stringify({
+            type: "REFUND_COMPLETED",
+            notificationId: notification.id,
+            to: userId,
+            message: formattedMessage,
+            createdAt: notification.createdAt,
+          })
+        );
+
+        console.log("Refund notification published successfully");
+      } catch (e) {
+        console.error("Failed to send refund notification:", e);
       }
     }
   },

@@ -367,12 +367,22 @@ auctionRouter.post("/bids/verify-payment", verifyToken, async (req, res) => {
     if (paymentIntent.status === "succeeded") {
       const { auctionId, userId, bidAmount } = paymentIntent.metadata;
       await redis.del(`paymentSession:${paymentIntentId}`);
-      await bidQueue.add("processBid", {
-        userId: req.userId,
-        paymentIntentId,
-        auctionId,
-        bidAmount,
-      });
+      
+      // Add job with deduplication to prevent concurrent bid processing
+      await bidQueue.add(
+        "processBid", 
+        {
+          userId: req.userId,
+          paymentIntentId,
+          auctionId,
+          bidAmount,
+        },
+        {
+          jobId: `bid:${paymentIntentId}`, // Prevents duplicate jobs
+          removeOnComplete: true,
+          removeOnFail: false,
+        }
+      );
       return res.status(200).json({ success: true });
     } else {
       return res.status(400).json({ error: "Payment not successful yet" });

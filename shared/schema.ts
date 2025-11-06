@@ -156,6 +156,40 @@ export const paymentSession = pgTable("payment_session", {
   expiresAt: timestamp("expires_at").notNull(),
 });
 
+export const refundReasons = [
+  "AUCTION_CREATION_FAILED",
+  "CLASSIFIED_CREATION_FAILED", 
+  "BID_FAILED",
+  "RAFFLE_TICKET_FAILED",
+  "CONDITION_NOT_MET",
+  "REQUESTED_BY_ADMIN",
+  "OTHER"
+] as const;
+export const refundReasonsEnum = pgEnum("refund_reasons", refundReasons);
+
+export const refundStatus = ["PENDING", "COMPLETED", "FAILED"] as const;
+export const refundStatusEnum = pgEnum("refund_status", refundStatus);
+
+export const refunds = pgTable("refunds", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  paymentIntentId: text("payment_intent_id").notNull(),
+  stripeRefundId: text("stripe_refund_id"),
+  amount: real("amount").notNull(),
+  currency: text("currency").notNull().default("gbp"),
+  reason: refundReasonsEnum().notNull(),
+  reasonDetails: text("reason_details"), // Additional context about the refund
+  status: refundStatusEnum().notNull().default("PENDING"),
+  listingId: integer("listing_id"), // Reference to auction or classified listing if applicable
+  listingType: text("listing_type"), // "AUCTION", "CLASSIFIED", "RAFFLE"
+  bidId: integer("bid_id"), // Reference to bid if applicable
+  packageId: integer("package_id"), // Reference to package if applicable
+  processedBy: integer("processed_by"), // Admin user ID if manually processed
+  errorMessage: text("error_message"), // Error details if refund failed
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
 export const auctionDrafts = pgTable("auction_drafts", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -889,6 +923,15 @@ export const insertTraderRequestSchema = createInsertSchema(traderRequests).omit
 
 export type TraderRequest = typeof traderRequests.$inferSelect;
 export type InsertTraderRequest = z.infer<typeof insertTraderRequestSchema>;
+
+export const insertRefundSchema = createInsertSchema(refunds).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export type Refund = typeof refunds.$inferSelect;
+export type InsertRefund = z.infer<typeof insertRefundSchema>;
 
 export const searchSchema = z.object({
   query: z.string().optional(),
