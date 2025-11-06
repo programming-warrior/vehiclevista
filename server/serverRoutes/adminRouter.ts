@@ -36,6 +36,7 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { notificationQueue, raffleQueue } from "../worker/queue";
+import RedisClientSingleton from "../utils/redis";
 
 // import { notEq } from "drizzle-orm/pg-core";
 
@@ -639,6 +640,7 @@ adminRouter.put("/black-list/users/:userId", verifyToken, async (req, res) => {
   if (!userId || !reason || isNaN(userId)) {
     return res.status(400).json({ error: "missing required fields" });
   }
+  
   const [user] = await db
     .update(users)
     .set({
@@ -648,9 +650,36 @@ adminRouter.put("/black-list/users/:userId", verifyToken, async (req, res) => {
     .where(eq(users.id, userId))
     .returning()
     .execute();
+    
   if (!user) {
     return res.status(404).json({ error: "user not found" });
   }
+
+  // Invalidate all user sessions
+  try {
+    const redisClient = await RedisClientSingleton.getRedisClient();
+    const sessionKeys = await redisClient.keys('session:*');
+    
+    for (const key of sessionKeys) {
+      const sessionData = await redisClient.get(key);
+      if (sessionData) {
+        const parsed = JSON.parse(sessionData);
+        if (parsed.id === userId) {
+          await redisClient.del(key);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error invalidating user sessions:', error);
+  }
+
+  // Queue notification for user suspension
+  await notificationQueue.add("user-suspended", {
+    userId: user.id,
+    reason: reason,
+    suspendedBy: req.userId,
+  });
+
   return res.status(200).json({
     message: "user blacklisted successfully",
     userId: user.id,
@@ -714,6 +743,13 @@ adminRouter.put(
     if (!user) {
       return res.status(404).json({ error: "user not found" });
     }
+
+    // Queue notification for user unsuspension
+    await notificationQueue.add("user-unsuspended", {
+      userId: user.id,
+      unsuspendedBy: req.userId,
+    });
+
     return res.status(200).json({
       message: "user unblacklisted successfully",
       userId: user.id,

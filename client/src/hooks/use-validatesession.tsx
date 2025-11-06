@@ -20,7 +20,9 @@ export function useValidateSession() {
         setUser({
           userId: userData.userId,
           role: userData.role, 
-          card_Verified: userData.card_verified
+          card_Verified: userData.card_verified,
+          userStatus: userData.userStatus || "active",
+          blacklistReason: userData.blacklistReason || null,
         });
         
       } catch (error) {

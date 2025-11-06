@@ -23,22 +23,42 @@ type UserState = {
   userId: string;
   role: string;
   card_verified: boolean;
+  userStatus: string; // active, blacklisted, inactive
+  blacklistReason: string | null;
   setUser: (user: {
     userId: string;
     role: string;
     card_Verified: boolean;
+    userStatus?: string;
+    blacklistReason?: string | null;
   }) => void;
+  setSuspended: (reason: string) => void;
+  setActive: () => void;
 };
 
 export const useUser = create<UserState>((set) => ({
   userId: "",
   role: "",
   card_verified: false,
+  userStatus: "active",
+  blacklistReason: null,
   setUser: (newUser) =>
     set(() => ({
       userId: newUser.userId,
       role: newUser.role,
       card_verified: newUser.card_Verified,
+      userStatus: newUser.userStatus || "active",
+      blacklistReason: newUser.blacklistReason || null,
+    })),
+  setSuspended: (reason) =>
+    set(() => ({
+      userStatus: "blacklisted",
+      blacklistReason: reason,
+    })),
+  setActive: () =>
+    set(() => ({
+      userStatus: "active",
+      blacklistReason: null,
     })),
 }));
 

@@ -2,7 +2,10 @@ import { NextFunction, Request, Response } from "express";
 import RedisClientSingleton from "../utils/redis";
 import { userSessionSchema } from "../utils/session";
 import { ADMIN_SESSION_EXPIRY_SECONDS } from "../utils/session";
-import z from "zod"
+import z from "zod";
+import { db } from "../db";
+import { users } from "../../shared/schema";
+import { eq } from "drizzle-orm";
 
 export async function verifyToken(req: Request, res: Response, next: NextFunction) {
  
@@ -21,6 +24,30 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
     return res.status(403).json({ error: "Invalid session" });
   }
   const session: z.infer<typeof userSessionSchema> = JSON.parse(sessionData);
+
+  // Check if user is blacklisted
+  const [user] = await db
+    .select({ status: users.status, blacklistReason: users.blacklistReason })
+    .from(users)
+    .where(eq(users.id, session.id))
+    .limit(1);
+
+  if (!user) {
+    res.clearCookie("sessionId");
+    await redisClient.del(`session:${sessionId}`);
+    return res.status(403).json({ error: "User not found" });
+  }
+
+  if (user.status === "blacklisted") {
+    res.clearCookie("sessionId");
+    await redisClient.del(`session:${sessionId}`);
+    return res.status(403).json({ 
+      error: "Account suspended", 
+      message: "Your account has been suspended",
+      reason: user.blacklistReason,
+      isBlacklisted: true
+    });
+  }
 
   if(session.role=='admin'){
     await redisClient.expire(`session:${sessionId}`, ADMIN_SESSION_EXPIRY_SECONDS);

@@ -484,6 +484,91 @@ const notificationWorker = new Worker(
       } catch (e) {
         console.log(e);
       }
+    } else if (job.name === "user-suspended") {
+      const { userId, reason, suspendedBy } = job.data;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId));
+
+        if (!user) return;
+
+        const formattedMessage = {
+          title: `Account Suspended`,
+          from: {
+            name: `system-generated`,
+            email: `system-generated`,
+          },
+          body: `Your account has been suspended. Reason: ${reason}. You can only view public content until your account is reinstated.`,
+        };
+
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "ACCOUNT_SUSPENDED",
+            sentTo: user.id,
+            message: formattedMessage,
+          })
+          .returning();
+
+        await connection.publish(
+          `USER_SUSPENDED:${userId}`,
+          JSON.stringify({
+            type: "ACCOUNT_SUSPENDED",
+            notificationId: notification.id,
+            userId: userId,
+            message: formattedMessage,
+            reason: reason,
+            createdAt: notification.createdAt,
+          })
+        );
+      } catch (e) {
+        console.log(e);
+      }
+    } else if (job.name === "user-unsuspended") {
+      const { userId, unsuspendedBy } = job.data;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId));
+
+        if (!user) return;
+
+        const formattedMessage = {
+          title: `Account Reinstated`,
+          from: {
+            name: `system-generated`,
+            email: `system-generated`,
+          },
+          body: `Good news! Your account has been reinstated. You now have full access to all features.`,
+        };
+
+        const [notification] = await db
+          .insert(notifications)
+          .values({
+            type: "ACCOUNT_UNSUSPENDED",
+            sentTo: user.id,
+            message: formattedMessage,
+          })
+          .returning();
+
+        await connection.publish(
+          `USER_UNSUSPENDED:${userId}`,
+          JSON.stringify({
+            type: "ACCOUNT_UNSUSPENDED",
+            notificationId: notification.id,
+            userId: userId,
+            message: formattedMessage,
+            createdAt: notification.createdAt,
+          })
+        );
+      } catch (e) {
+        console.log(e);
+      }
     }
   },
   {

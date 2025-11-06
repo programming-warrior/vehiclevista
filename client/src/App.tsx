@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -60,9 +60,10 @@ import { useRecentViews, useSystemConfigStore } from "./hooks/use-store";
 import AdminPackagesPage from "./pages/admin/packages";
 import { getSystemConfig } from "./api";
 import { useAutoLogout } from "./lib/use-auto-logout";
+import SuspensionAlert from "./components/suspension-alert";
 
 export default function App() {
-  const { userId, role, card_verified } = useUser();
+  const { userId, role, card_verified, setSuspended, setActive } = useUser();
   const { isValidating } = useValidateSession();
   const { setSocket, socket, closeSocket } = useWebSocket();
   const { toast } = useToast();
@@ -74,6 +75,8 @@ export default function App() {
   } = useNotification();
   const { setRecentView } = useRecentViews();
   const {setSystemConfig} = useSystemConfigStore();
+  const [showSuspensionAlert, setShowSuspensionAlert] = useState(false);
+  const [suspensionReason, setSuspensionReason] = useState("");
 
   useEffect(() => {
     const sessionId = localStorage.getItem("sessionId");
@@ -139,6 +142,25 @@ export default function App() {
           console.log(unReadCount);
           setUnReadCount(unReadCount + 1);
           setTotalNotifications((prev: number) => prev + 1);
+        } else if (data.event === "USER_SUSPENDED") {
+          console.log("USER_SUSPENDED");
+          const { reason } = data.message;
+          setSuspended(reason || "Your account has been suspended");
+          setSuspensionReason(reason || "Your account has been suspended");
+          setShowSuspensionAlert(true);
+          toast({
+            variant: "destructive",
+            title: "Account Suspended",
+            description: "Your account has been suspended by an administrator",
+          });
+        } else if (data.event === "USER_UNSUSPENDED") {
+          console.log("USER_UNSUSPENDED");
+          setActive();
+          setShowSuspensionAlert(false);
+          toast({
+            title: "Account Restored",
+            description: "Your account has been reactivated",
+          });
         }
       };
 
@@ -293,6 +315,11 @@ export default function App() {
         </main>
         <Footer />
         <Toaster />
+        <SuspensionAlert 
+          open={showSuspensionAlert}
+          onClose={() => setShowSuspensionAlert(false)}
+          reason={suspensionReason}
+        />
       </div>
     </QueryClientProvider>
   );

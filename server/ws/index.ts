@@ -100,6 +100,14 @@ wss.on("connection", async (ws: WebSocketWithAlive, req: any) => {
   clients[ws_id] = ws;
   console.log("Client connected:", ws_id);
 
+  // Subscribe to user suspension events for authenticated users
+  if (decodedValue && decodedValue.id) {
+    const suspensionHandler = await subscribeToUserSuspension();
+    const unsuspensionHandler = await subscribeToUserUnsuspension();
+    await suspensionHandler(ws_id);
+    await unsuspensionHandler(ws_id);
+  }
+
   ws.isAlive = true;
 
   ws.on("pong", () => {
@@ -233,6 +241,49 @@ async function subscribeToBidPlace() {
       sendToClient(clientId, wsData);
     });
   });
+}
+
+async function subscribeToUserSuspension() {
+  // Subscribe to all user suspension events with pattern
+  const subscribedUserIds = new Set<string>();
+  
+  // We'll subscribe dynamically when users connect
+  // For now, set up a general handler
+  return async (userId: string) => {
+    const channel = `USER_SUSPENDED:${userId}`;
+    if (subscribedUserIds.has(userId)) return;
+    
+    await subscribeOnce(channel, (message, channel) => {
+      console.log(`Message received from ${channel}: ${message}`);
+      const data = JSON.parse(message);
+      const wsData = {
+        event: "USER_SUSPENDED",
+        message: data,
+      };
+      sendToClient(userId, wsData);
+    });
+    subscribedUserIds.add(userId);
+  };
+}
+
+async function subscribeToUserUnsuspension() {
+  const subscribedUserIds = new Set<string>();
+  
+  return async (userId: string) => {
+    const channel = `USER_UNSUSPENDED:${userId}`;
+    if (subscribedUserIds.has(userId)) return;
+    
+    await subscribeOnce(channel, (message, channel) => {
+      console.log(`Message received from ${channel}: ${message}`);
+      const data = JSON.parse(message);
+      const wsData = {
+        event: "USER_UNSUSPENDED",
+        message: data,
+      };
+      sendToClient(userId, wsData);
+    });
+    subscribedUserIds.add(userId);
+  };
 }
 
 async function subscribeToReceiveNofication() {

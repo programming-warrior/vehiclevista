@@ -248,10 +248,22 @@ authRouter.get("/authenticate", async (req, res) => {
 
     const userData = JSON.parse(sessionData);
 
+    // Fetch current user status from database
+    const [userFromDb] = await db
+      .select({
+        status: users.status,
+        blacklistReason: users.blacklistReason,
+      })
+      .from(users)
+      .where(eq(users.id, userData.id))
+      .limit(1);
+
     return res.status(200).json({
       userId: userData.id,
       role: userData.role,
       card_verified: userData.card_verified,
+      userStatus: userFromDb?.status || "active",
+      blacklistReason: userFromDb?.blacklistReason || null,
     });
   } catch (error) {
     console.error("Session validation error:", error);
